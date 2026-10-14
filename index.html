@@ -17,9 +17,9 @@
     .reader{position:fixed;inset:0;background:rgba(8,15,14,.72);z-index:80;display:none;place-items:center;padding:14px}.reader.open{display:grid}.reader-sheet{background:var(--paper);width:min(760px,100%);max-height:92vh;overflow:auto;border-radius:18px;box-shadow:var(--shadow)}.reader-cover{width:100%;height:260px;object-fit:cover}.reader-body{padding:28px clamp(20px,6vw,56px) 50px}.reader-body h2{font:800 clamp(2rem,6vw,3.3rem)/1.15 'Noto Serif SC',serif}.reader-body h3{font:700 1.35rem/1.3 'Noto Serif SC',serif;margin-top:30px}.reader-body p{line-height:1.9;color:var(--muted)}.reader-close{position:sticky;top:12px;float:right;margin:12px;background:var(--nav);color:var(--nav-ink);border:0;border-radius:99px;width:42px;height:42px;font-size:1.3rem;cursor:pointer}
     .tools-intro,.panel-intro{padding:30px 4px 16px}.tools-intro h1,.panel-intro h1{font:800 clamp(2.3rem,6vw,4.8rem)/1.05 'Noto Serif SC',serif;max-width:850px;margin:10px 0 18px}.tools-intro p,.panel-intro p{color:var(--muted);font-size:1.05rem;line-height:1.75;max-width:720px}.filter-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 24px}.filter{border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:9px 14px;border-radius:99px;cursor:pointer}.filter.active{background:var(--accent-2);color:white;border-color:var(--accent-2)}.tool-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.tool-card{background:var(--paper);border:1px solid var(--line);padding:18px;text-decoration:none;min-height:145px;display:flex;flex-direction:column;transition:border-color .2s,transform .2s}.tool-card:hover{border-color:var(--accent-2);transform:translateY(-2px)}.tool-card[hidden]{display:none}.tool-top{display:flex;justify-content:space-between;gap:12px}.tool-mark{width:42px;height:42px;display:grid;place-items:center;background:var(--soft);color:var(--accent-2);font-weight:800;border-radius:12px}.tool-card h3{margin:16px 0 5px}.tool-card p{color:var(--muted);font-size:.9rem;line-height:1.55;margin:0}.tool-arrow{color:var(--accent);font-size:1.25rem}.source-note{font-size:.82rem;color:var(--muted);margin-top:22px}.source-note a{color:var(--accent-2)}
     .demo-badge{display:inline-flex;align-items:center;gap:7px;background:var(--yellow);color:#27210e;padding:7px 11px;border-radius:99px;font-size:.78rem;font-weight:700}.chat-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px;height:620px}.chat-window,.account-panel,.file-panel{background:var(--paper);border:1px solid var(--line)}.chat-window{display:flex;flex-direction:column;min-height:0}.chat-head{padding:17px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px}.chat-head b{font-family:'Noto Serif SC',serif}.chat-user{font-size:.82rem;color:var(--muted);white-space:nowrap}.messages{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:16px}.message-state{margin:auto;text-align:center;color:var(--muted);line-height:1.7;padding:24px;max-width:420px}.msg{display:grid;grid-template-columns:38px minmax(0,1fr);gap:10px;max-width:84%}.msg.me{align-self:flex-end;grid-template-columns:minmax(0,1fr) 38px}.msg.me .avatar{order:2}.bubble{background:var(--soft);padding:11px 13px;border-radius:4px 16px 16px 16px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}.msg.me .bubble{background:var(--accent-2);color:#fff;border-radius:16px 4px 16px 16px}.meta{font-size:.75rem;color:var(--muted);margin-bottom:5px}.avatar{width:38px;height:38px;border-radius:50%;background:var(--accent);color:white;display:grid;place-items:center;font-weight:700}.composer{border-top:1px solid var(--line);padding:12px;display:flex;gap:9px}.composer input,.auth-form input{min-width:0;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:12px 14px;border-radius:12px;outline:none}.composer input{flex:1}.composer input:focus,.auth-form input:focus{border-color:var(--accent-2)}.send-btn,.auth-submit{border:0;background:var(--accent);color:white;border-radius:12px;padding:0 18px;font-weight:700;cursor:pointer}.send-btn:disabled,.auth-submit:disabled{opacity:.55;cursor:wait}.account-panel{padding:20px;overflow:auto}.account-panel h2{font:700 1.35rem/1.3 'Noto Serif SC',serif;margin-bottom:8px}.account-panel>p{color:var(--muted);font-size:.88rem;line-height:1.6}.auth-tabs{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line);margin:20px 0}.auth-tab{border:0;border-bottom:2px solid transparent;background:transparent;color:var(--muted);padding:10px 5px;cursor:pointer}.auth-tab.active{color:var(--ink);border-color:var(--accent)}.auth-form{display:grid;gap:10px}.auth-form label{font-size:.82rem;font-weight:600}.auth-help{font-size:.76rem;color:var(--muted);line-height:1.5}.auth-submit{padding:12px 16px;margin-top:4px}.auth-error{min-height:1.4em;color:var(--accent);font-size:.82rem;line-height:1.45;margin:2px 0 0}.signed-in{display:none}.account-name{font:700 1.3rem/1.3 'Noto Serif SC',serif;margin:14px 0 4px}.account-state{color:var(--muted);font-size:.82rem}.logout-btn{width:100%;border:1px solid var(--line);background:transparent;color:var(--ink);padding:10px 12px;border-radius:10px;margin-top:22px;cursor:pointer}
-    .file-layout{display:grid;grid-template-columns:.8fr 1.2fr;gap:14px}.upload-zone{background:var(--paper);border:2px dashed var(--line);min-height:330px;display:grid;place-items:center;text-align:center;padding:26px;cursor:pointer}.upload-zone.drag{border-color:var(--accent-2);background:var(--soft)}.upload-icon{width:76px;height:76px;border-radius:50%;background:var(--soft);display:grid;place-items:center;margin:auto;color:var(--accent-2)}.upload-icon svg{width:34px}.upload-zone h2{font-family:'Noto Serif SC',serif;margin:18px 0 8px}.upload-zone p{color:var(--muted);line-height:1.6}.choose-btn{display:inline-block;background:var(--accent-2);color:#fff;padding:11px 16px;border-radius:10px;font-weight:700}.file-panel{padding:20px}.file-panel h2{font-family:'Noto Serif SC',serif}.file-item{display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}.file-type{width:40px;height:46px;background:var(--soft);color:var(--accent-2);display:grid;place-items:center;font-size:.72rem;font-weight:800;border-radius:7px}.file-name{font-weight:700;overflow-wrap:anywhere}.file-info{font-size:.8rem;color:var(--muted);margin-top:4px}.file-action{border:0;background:transparent;color:var(--accent-2);font-weight:700}.empty-note{color:var(--muted);font-size:.85rem;margin-top:18px}.toast{position:fixed;left:50%;bottom:30px;transform:translate(-50%,20px);opacity:0;background:var(--nav);color:var(--nav-ink);padding:11px 16px;border-radius:99px;z-index:100;transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:translate(-50%,0)}
-    @media(max-width:800px){.shell{padding:10px 12px 100px}.topbar{position:fixed;top:auto;bottom:max(10px,env(safe-area-inset-bottom));left:12px;right:12px}.nav-btn{flex-direction:column;font-size:.71rem;gap:3px;padding:7px 4px}.view{padding-top:10px}.lead-grid{grid-template-columns:1fr;padding-top:34px}.edition{justify-self:start;width:100%;transform:none}.articles{grid-template-columns:1fr}.article-card:first-child{grid-row:auto}.article-card:first-child img,.article-card img{height:210px}.tool-grid{grid-template-columns:1fr 1fr}.chat-layout,.file-layout{grid-template-columns:1fr;height:auto}.chat-window{height:570px}.account-panel{order:-1}.tool-card{min-height:132px}}
-    @media(max-width:480px){.tool-grid{grid-template-columns:1fr}.msg{max-width:94%}.reader{padding:0}.reader-sheet{max-height:100vh;height:100%;border-radius:0}.reader-cover{height:220px}.lead h1{font-size:2.75rem}.tools-intro h1,.panel-intro h1{font-size:2.35rem}}
+    .chat-shell{display:grid;grid-template-columns:230px minmax(0,1fr) 270px;gap:14px;height:650px}.room-panel{background:var(--paper);border:1px solid var(--line);display:flex;flex-direction:column;min-height:0}.room-panel-head{padding:17px 16px 12px;border-bottom:1px solid var(--line)}.room-panel-head h2{font:700 1.2rem/1.3 'Noto Serif SC',serif;margin:0 0 4px}.room-panel-head p{font-size:.78rem;color:var(--muted);margin:0}.room-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:11px;border-bottom:1px solid var(--line)}.room-action{border:1px solid var(--line);background:transparent;color:var(--ink);padding:8px 5px;border-radius:9px;font-size:.78rem;font-weight:600;cursor:pointer}.room-action:hover,.room-action.active{border-color:var(--accent-2);color:var(--accent-2)}.room-list{padding:8px;overflow:auto;display:flex;flex-direction:column;gap:4px}.room-button{border:0;background:transparent;color:var(--ink);padding:10px;border-radius:10px;text-align:left;cursor:pointer;display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;align-items:center}.room-button:hover{background:var(--soft)}.room-button.active{background:var(--soft);color:var(--accent-2);font-weight:700}.room-symbol{width:28px;height:28px;border:1px solid var(--line);border-radius:8px;display:grid;place-items:center;font-size:.78rem}.room-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.room-empty{font-size:.8rem;color:var(--muted);padding:15px 9px;line-height:1.5}.room-form{padding:12px;border-top:1px solid var(--line);display:grid;gap:9px}.room-form label{font-size:.78rem;font-weight:700}.room-form input{width:100%;min-width:0;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:10px 11px;border-radius:10px}.privacy-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}.privacy-choice{position:relative}.privacy-choice input{position:absolute;opacity:0}.privacy-choice span{display:block;border:1px solid var(--line);padding:8px 6px;border-radius:8px;text-align:center;font-size:.76rem;cursor:pointer}.privacy-choice input:checked+span{border-color:var(--accent-2);background:var(--soft);color:var(--accent-2);font-weight:700}.form-buttons{display:flex;gap:7px}.small-primary,.small-quiet{border:0;border-radius:9px;padding:9px 10px;font-size:.78rem;font-weight:700;cursor:pointer}.small-primary{background:var(--accent-2);color:white;flex:1}.small-quiet{background:var(--soft);color:var(--ink)}.room-form-error{min-height:1.2em;color:var(--accent);font-size:.74rem;margin:0}.chat-room-title{display:flex;align-items:center;gap:8px;min-width:0}.chat-room-title b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.room-badge{font-size:.68rem;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:3px 7px;white-space:nowrap}.chat-head-actions{display:flex;align-items:center;gap:7px}.manage-toggle{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:6px 9px;font-size:.76rem;font-weight:700;cursor:pointer}.management{border-bottom:1px solid var(--line);background:var(--bg);padding:10px 12px;display:flex;gap:8px;flex-wrap:wrap}.management button{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:8px;padding:7px 9px;font-size:.74rem;cursor:pointer}.management button.danger{color:var(--accent);border-color:var(--accent)}.invite-row{display:flex;gap:7px;flex:1;min-width:220px}.invite-row input{min-width:0;flex:1;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:8px;padding:7px 9px;font-size:.76rem}.msg-content{min-width:0}.message-tools{margin-top:5px;display:flex;justify-content:flex-end}.delete-message{border:0;background:transparent;color:var(--muted);padding:2px 3px;font-size:.72rem;cursor:pointer;text-decoration:underline}.msg.me .delete-message{color:var(--muted)}.account-admin{display:inline-block;margin-top:7px;background:var(--yellow);color:#27210e;border-radius:99px;padding:4px 8px;font-size:.7rem;font-weight:700}.chat-status{font-size:.74rem;color:var(--muted);padding:0 12px 8px;text-align:center;min-height:1.2em}.file-layout{display:grid;grid-template-columns:.8fr 1.2fr;gap:14px}.upload-zone{background:var(--paper);border:2px dashed var(--line);min-height:330px;display:grid;place-items:center;text-align:center;padding:26px;cursor:pointer}.upload-zone.drag{border-color:var(--accent-2);background:var(--soft)}.upload-icon{width:76px;height:76px;border-radius:50%;background:var(--soft);display:grid;place-items:center;margin:auto;color:var(--accent-2)}.upload-icon svg{width:34px}.upload-zone h2{font-family:'Noto Serif SC',serif;margin:18px 0 8px}.upload-zone p{color:var(--muted);line-height:1.6}.choose-btn{display:inline-block;background:var(--accent-2);color:#fff;padding:11px 16px;border-radius:10px;font-weight:700}.file-panel{padding:20px}.file-panel h2{font-family:'Noto Serif SC',serif}.file-item{display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}.file-type{width:40px;height:46px;background:var(--soft);color:var(--accent-2);display:grid;place-items:center;font-size:.72rem;font-weight:800;border-radius:7px}.file-name{font-weight:700;overflow-wrap:anywhere}.file-info{font-size:.8rem;color:var(--muted);margin-top:4px}.file-action{border:0;background:transparent;color:var(--accent-2);font-weight:700}.empty-note{color:var(--muted);font-size:.85rem;margin-top:18px}.toast{position:fixed;left:50%;bottom:30px;transform:translate(-50%,20px);opacity:0;background:var(--nav);color:var(--nav-ink);padding:11px 16px;border-radius:99px;z-index:100;transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:800px){.shell{padding:10px 12px 100px}.topbar{position:fixed;top:auto;bottom:max(10px,env(safe-area-inset-bottom));left:12px;right:12px}.nav-btn{flex-direction:column;font-size:.71rem;gap:3px;padding:7px 4px}.view{padding-top:10px}.lead-grid{grid-template-columns:1fr;padding-top:34px}.edition{justify-self:start;width:100%;transform:none}.articles{grid-template-columns:1fr}.article-card:first-child{grid-row:auto}.article-card:first-child img,.article-card img{height:210px}.tool-grid{grid-template-columns:1fr 1fr}.chat-layout,.chat-shell,.file-layout{grid-template-columns:1fr;height:auto}.chat-window{height:570px}.account-panel{order:-1}.room-panel{max-height:none}.room-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:190px}.room-form{border-top:1px solid var(--line)}.tool-card{min-height:132px}}
+    @media(max-width:480px){.tool-grid{grid-template-columns:1fr}.room-list{grid-template-columns:1fr}.msg{max-width:94%}.chat-head{align-items:flex-start}.chat-head-actions{align-items:flex-end;flex-direction:column}.management{flex-direction:column}.invite-row{min-width:0;width:100%}.reader{padding:0}.reader-sheet{max-height:100vh;height:100%;border-radius:0}.reader-cover{height:220px}.lead h1{font-size:2.75rem}.tools-intro h1,.panel-intro h1{font-size:2.35rem}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
   </style>
 </head>
@@ -66,13 +66,33 @@
     </section>
 
     <section id="chat" class="view">
-      <div class="panel-intro"><span class="eyebrow">真人群聊</span><h1>一起把事情聊明白</h1><p>注册或登录后即可进入创作协作室，查看最近消息并与其他成员实时交流。</p></div>
-      <div class="chat-layout">
-        <div class="chat-window" id="chatWindow" hidden><div class="chat-head"><b># 创作协作室</b><span class="chat-user" id="chatUser"></span></div><div class="messages" id="messages"><p class="message-state">正在加载消息…</p></div><form class="composer" id="chatForm"><input id="chatInput" aria-label="聊天消息" placeholder="输入消息…" maxlength="1000" autocomplete="off"><button class="send-btn" id="sendBtn" type="submit">发送</button></form></div>
-        <div class="chat-window" id="chatLocked"><p class="message-state">请先注册或登录，进入群聊后即可查看和发送消息。</p></div>
+      <div class="panel-intro"><span class="eyebrow">真人聊天</span><h1>群聊与单聊，各自在自己的房间里</h1><p>登录后可进入大厅、已加入的群聊和单聊；每个房间的消息互不混在一起。</p></div>
+      <div class="chat-shell">
+        <aside class="room-panel" id="roomPanel" hidden>
+          <div class="room-panel-head"><h2>聊天房间</h2><p>大厅、群聊与单聊</p></div>
+          <div class="room-actions"><button class="room-action" id="createRoomToggle" type="button">创建群聊</button><button class="room-action" id="startDmToggle" type="button">发起单聊</button></div>
+          <div class="room-list" id="roomList"><p class="room-empty">正在加载房间…</p></div>
+          <form class="room-form" id="createRoomForm" hidden>
+            <label for="roomName">群聊名称</label><input id="roomName" maxlength="20" minlength="2" placeholder="2–20 位" autocomplete="off" required>
+            <div class="privacy-row"><label class="privacy-choice"><input type="radio" name="roomPrivacy" value="public" checked><span>公开群</span></label><label class="privacy-choice"><input type="radio" name="roomPrivacy" value="private"><span>私密群</span></label></div>
+            <div class="form-buttons"><button class="small-primary" type="submit">创建</button><button class="small-quiet" type="button" data-close-room-form>取消</button></div><p class="room-form-error" id="createRoomError" role="alert"></p>
+          </form>
+          <form class="room-form" id="dmForm" hidden>
+            <label for="dmUsername">对方用户名</label><input id="dmUsername" maxlength="16" minlength="2" placeholder="输入用户名" autocomplete="off" required>
+            <div class="form-buttons"><button class="small-primary" type="submit">开始单聊</button><button class="small-quiet" type="button" data-close-room-form>取消</button></div><p class="room-form-error" id="dmError" role="alert"></p>
+          </form>
+        </aside>
+        <div class="chat-window" id="chatWindow" hidden>
+          <div class="chat-head"><div class="chat-room-title"><b id="roomTitle"># 大厅</b><span class="room-badge" id="roomBadge">公开</span></div><div class="chat-head-actions"><span class="chat-user" id="chatUser"></span><button class="manage-toggle" id="manageToggle" type="button" hidden>管理</button></div></div>
+          <div class="management" id="management" hidden><form class="invite-row" id="inviteForm" hidden><input id="inviteUsername" maxlength="16" placeholder="邀请用户名" aria-label="邀请用户名" autocomplete="off"><button class="small-primary" type="submit">邀请</button></form><button id="clearRoomBtn" class="danger" type="button">清空本房间</button><button id="deleteRoomBtn" class="danger" type="button">解散房间</button></div>
+          <div class="chat-status" id="chatStatus" role="status"></div>
+          <div class="messages" id="messages"><p class="message-state">正在加载消息…</p></div>
+          <form class="composer" id="chatForm"><input id="chatInput" aria-label="聊天消息" placeholder="输入消息…" maxlength="1000" autocomplete="off"><button class="send-btn" id="sendBtn" type="submit">发送</button></form>
+        </div>
+        <div class="chat-window" id="chatLocked"><p class="message-state">请先注册或登录，登录后可以进入大厅、创建群聊或发起单聊。</p></div>
         <aside class="account-panel">
-          <div id="authArea"><h2>进入群聊</h2><p>已有账号直接登录；第一次来可以先注册。</p><div class="auth-tabs" role="tablist" aria-label="账号操作"><button class="auth-tab active" type="button" role="tab" aria-selected="true" data-auth-mode="login">登录</button><button class="auth-tab" type="button" role="tab" aria-selected="false" data-auth-mode="register">注册</button></div><form class="auth-form" id="authForm" novalidate><label for="username">用户名</label><input id="username" name="username" autocomplete="username" minlength="2" maxlength="16" required placeholder="2–16 位"><div class="auth-help">支持中文、字母、数字和下划线</div><label for="password">密码</label><input id="password" name="password" type="password" autocomplete="current-password" minlength="6" maxlength="64" required placeholder="6–64 位"><button class="auth-submit" id="authSubmit" type="submit">登录</button><p class="auth-error" id="authError" role="alert"></p></form></div>
-          <div class="signed-in" id="signedIn"><h2>当前账号</h2><div class="account-name" id="accountName"></div><div class="account-state">已登录 · 消息每 3 秒自动刷新</div><button class="logout-btn" id="logoutBtn" type="button">退出登录</button></div>
+          <div id="authArea"><h2>进入聊天</h2><p>已有账号直接登录；第一次来可以先注册。</p><div class="auth-tabs" role="tablist" aria-label="账号操作"><button class="auth-tab active" type="button" role="tab" aria-selected="true" data-auth-mode="login">登录</button><button class="auth-tab" type="button" role="tab" aria-selected="false" data-auth-mode="register">注册</button></div><form class="auth-form" id="authForm" novalidate><label for="username">用户名</label><input id="username" name="username" autocomplete="username" minlength="2" maxlength="16" required placeholder="2–16 位"><div class="auth-help">支持中文、字母、数字和下划线</div><label for="password">密码</label><input id="password" name="password" type="password" autocomplete="current-password" minlength="6" maxlength="64" required placeholder="6–64 位"><button class="auth-submit" id="authSubmit" type="submit">登录</button><p class="auth-error" id="authError" role="alert"></p></form></div>
+          <div class="signed-in" id="signedIn"><h2>当前账号</h2><div class="account-name" id="accountName"></div><span class="account-admin" id="adminBadge" hidden>管理员</span><div class="account-state">已登录 · 当前房间每 3 秒刷新</div><button class="logout-btn" id="logoutBtn" type="button">退出登录</button></div>
         </aside>
       </div>
     </section>
@@ -104,80 +124,108 @@
   const form=document.getElementById('chatForm'),input=document.getElementById('chatInput'),messages=document.getElementById('messages'),sendBtn=document.getElementById('sendBtn');
   const authForm=document.getElementById('authForm'),authSubmit=document.getElementById('authSubmit'),authError=document.getElementById('authError'),usernameInput=document.getElementById('username'),passwordInput=document.getElementById('password');
   const authArea=document.getElementById('authArea'),signedIn=document.getElementById('signedIn'),accountName=document.getElementById('accountName'),chatUser=document.getElementById('chatUser'),chatWindow=document.getElementById('chatWindow'),chatLocked=document.getElementById('chatLocked');
-  let authMode='login',currentUser='',pollTimer=null,loadingMessages=false;
+  const roomPanel=document.getElementById('roomPanel'),roomList=document.getElementById('roomList'),roomTitle=document.getElementById('roomTitle'),roomBadge=document.getElementById('roomBadge'),chatStatus=document.getElementById('chatStatus');
+  const createRoomForm=document.getElementById('createRoomForm'),dmForm=document.getElementById('dmForm'),createRoomError=document.getElementById('createRoomError'),dmError=document.getElementById('dmError');
+  const manageToggle=document.getElementById('manageToggle'),management=document.getElementById('management'),inviteForm=document.getElementById('inviteForm'),adminBadge=document.getElementById('adminBadge');
+  let authMode='login',currentUser='',isAdmin=false,pollTimer=null,loadingMessages=false,rooms=[],activeRoom=null;
   async function api(path,options){
     const config=Object.assign({},options||{}, {credentials:'include'});
     if(config.body)config.headers=Object.assign({'Content-Type':'application/json'},config.headers||{});
     const response=await fetch(API+path,config);
     let data={};
     try{data=await response.json()}catch(_){data={}}
-    if(!response.ok){const error=new Error(data.msg||'请求失败，请稍后再试');error.status=response.status;throw error}
+    if(!response.ok){const error=new Error(data.msg||data.error||'请求失败，请稍后再试');error.status=response.status;throw error}
     return data;
   }
-  function setLoggedIn(name){
-    currentUser=name||'';const yes=Boolean(currentUser);
-    authArea.style.display=yes?'none':'block';signedIn.style.display=yes?'block':'none';chatWindow.hidden=!yes;chatLocked.hidden=yes;
-    accountName.textContent=currentUser;chatUser.textContent=yes?'@'+currentUser:'';
-    clearInterval(pollTimer);pollTimer=null;
-    if(yes){loadMessages(true);pollTimer=setInterval(()=>loadMessages(false),3000)}else{messages.replaceChildren();input.value=''}
+  function normalizeRoom(raw){
+    const id=String(raw.id||raw.room_id||raw.room||raw.slug||'lobby');
+    const type=String(raw.type||raw.kind||'').toLowerCase();
+    const name=String(raw.name||raw.title||raw.username||(id==='lobby'?'大厅':'未命名房间'));
+    return {id,name,isDm:Boolean(raw.is_dm||type==='dm'||type==='direct'),isPrivate:Boolean(raw.is_private||raw.private||type==='private'),isLobby:Boolean(raw.is_lobby||id==='lobby'||name==='大厅')};
+  }
+  function setLoggedIn(user){
+    currentUser=user?String(user.username||user.name||''):'';isAdmin=Boolean(user&&(user.is_admin===true||user.isAdmin===true));const yes=Boolean(currentUser);
+    authArea.style.display=yes?'none':'block';signedIn.style.display=yes?'block':'none';chatWindow.hidden=!yes;chatLocked.hidden=yes;roomPanel.hidden=!yes;
+    accountName.textContent=currentUser;chatUser.textContent=yes?'@'+currentUser:'';adminBadge.hidden=!isAdmin;manageToggle.hidden=!isAdmin;
+    clearInterval(pollTimer);pollTimer=null;rooms=[];activeRoom=null;management.hidden=true;
+    if(yes){loadRooms().then(()=>{if(activeRoom)loadMessages(true)});pollTimer=setInterval(()=>loadMessages(false),3000)}else{messages.replaceChildren();roomList.replaceChildren();input.value=''}
   }
   async function checkSession(){
-    try{const data=await api('/api/me');const user=data.user||data;setLoggedIn(user.username||user.name||'');return Boolean(currentUser)}
-    catch(error){setLoggedIn('');return false}
+    try{const data=await api('/api/me');const user=data.user||data;setLoggedIn(user);return Boolean(currentUser)}
+    catch(error){setLoggedIn(null);return false}
   }
+  function roomLabel(room){return (room.isDm?'@ ':'# ')+room.name}
+  function renderRooms(){
+    roomList.replaceChildren();
+    if(!rooms.length){const empty=document.createElement('p');empty.className='room-empty';empty.textContent='还没有可用房间。';roomList.appendChild(empty);return}
+    rooms.forEach(room=>{const button=document.createElement('button');button.type='button';button.className='room-button'+(activeRoom&&activeRoom.id===room.id?' active':'');button.dataset.roomId=room.id;
+      const symbol=document.createElement('span');symbol.className='room-symbol';symbol.textContent=room.isDm?'@':'#';const label=document.createElement('span');label.className='room-label';label.textContent=room.name;button.append(symbol,label);button.addEventListener('click',()=>switchRoom(room));roomList.appendChild(button)});
+  }
+  async function loadRooms(preferredId){
+    try{
+      const data=await api('/api/rooms');const list=Array.isArray(data)?data:(Array.isArray(data.rooms)?data.rooms:[]);rooms=list.map(normalizeRoom);
+      if(!rooms.some(r=>r.isLobby))rooms.unshift(normalizeRoom({id:'lobby',name:'大厅',is_lobby:true}));
+      const preferred=preferredId&&rooms.find(r=>r.id===String(preferredId));const current=activeRoom&&rooms.find(r=>r.id===activeRoom.id);activeRoom=preferred||current||rooms.find(r=>r.isLobby)||rooms[0];renderRooms();updateRoomHeader();
+    }catch(error){const state=document.createElement('p');state.className='room-empty';state.textContent=error.message;roomList.replaceChildren(state)}
+  }
+  function updateRoomHeader(){
+    if(!activeRoom)return;roomTitle.textContent=roomLabel(activeRoom);roomBadge.textContent=activeRoom.isDm?'单聊':(activeRoom.isPrivate?'私密':'公开');
+    manageToggle.hidden=!isAdmin;document.getElementById('deleteRoomBtn').hidden=activeRoom.isLobby;inviteForm.hidden=!(isAdmin&&activeRoom.isPrivate&&!activeRoom.isDm);input.placeholder='发消息到'+roomLabel(activeRoom)+'…';
+  }
+  function switchRoom(room){activeRoom=room;management.hidden=true;chatStatus.textContent='';renderRooms();updateRoomHeader();messages.replaceChildren(Object.assign(document.createElement('p'),{className:'message-state',textContent:'正在加载消息…'}));loadMessages(true)}
   function messageTime(value){
-    if(!value)return '';
-    let date;if(typeof value==='number')date=new Date(value<1e12?value*1000:value);else date=new Date(value);
+    if(!value)return '';let date;if(typeof value==='number')date=new Date(value<1e12?value*1000:value);else date=new Date(value);
     return Number.isNaN(date.getTime())?'':date.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
   }
   function addMessage(item){
-    const name=String(item.username||(item.user&&item.user.username)||item.author||'成员');const text=String(item.text||item.message||'');
-    const row=document.createElement('div');row.className='msg'+(name===currentUser?' me':'');
-    const av=document.createElement('div');av.className='avatar';av.textContent=Array.from(name)[0]||'·';
-    const wrap=document.createElement('div'),meta=document.createElement('div'),bubble=document.createElement('div');
-    meta.className='meta';meta.textContent=name+(messageTime(item.created_at||item.createdAt||item.time)?' · '+messageTime(item.created_at||item.createdAt||item.time):'');
-    bubble.className='bubble';bubble.textContent=text;
-    wrap.append(meta,bubble);row.append(av,wrap);messages.appendChild(row);
+    const name=String(item.username||(item.user&&item.user.username)||item.author||'成员'),text=String(item.text||item.message||''),id=item.id||item.message_id;
+    const row=document.createElement('div');row.className='msg'+(name===currentUser?' me':'');const av=document.createElement('div');av.className='avatar';av.textContent=Array.from(name)[0]||'·';
+    const wrap=document.createElement('div');wrap.className='msg-content';const meta=document.createElement('div'),bubble=document.createElement('div');meta.className='meta';const time=messageTime(item.created_at||item.createdAt||item.time);meta.textContent=name+(time?' · '+time:'');bubble.className='bubble';bubble.textContent=text;wrap.append(meta,bubble);
+    if(id&&(name===currentUser||isAdmin)){const tools=document.createElement('div'),del=document.createElement('button');tools.className='message-tools';del.className='delete-message';del.type='button';del.textContent='删除';del.addEventListener('click',()=>deleteMessage(id,del));tools.appendChild(del);wrap.appendChild(tools)}
+    row.append(av,wrap);messages.appendChild(row);
+  }
+  async function deleteMessage(id,button){
+    button.disabled=true;
+    try{await api('/api/messages/'+encodeURIComponent(id),{method:'DELETE'});await loadMessages(false);toast('消息已删除')}
+    catch(error){toast(error.message);button.disabled=false}
   }
   async function loadMessages(forceBottom){
-    if(!currentUser||loadingMessages)return;loadingMessages=true;
-    const nearBottom=messages.scrollHeight-messages.scrollTop-messages.clientHeight<90;
+    if(!currentUser||!activeRoom||loadingMessages)return;loadingMessages=true;const requestedRoom=activeRoom.id;const nearBottom=messages.scrollHeight-messages.scrollTop-messages.clientHeight<90;
     try{
-      const data=await api('/api/messages?limit=50');const list=Array.isArray(data)?data:(Array.isArray(data.messages)?data.messages:[]);
-      messages.replaceChildren();
-      if(!list.length){const empty=document.createElement('p');empty.className='message-state';empty.textContent='还没有消息，来发第一条吧。';messages.appendChild(empty)}else list.forEach(addMessage);
-      if(forceBottom||nearBottom)messages.scrollTop=messages.scrollHeight;
-    }catch(error){
-      if(error.status===401){setLoggedIn('');authError.textContent='登录已失效，请重新登录。'}
-      else if(!messages.querySelector('.msg')){const state=document.createElement('p');state.className='message-state';state.textContent=error.message;messages.replaceChildren(state)}
-    }finally{loadingMessages=false}
+      const data=await api('/api/messages?room='+encodeURIComponent(requestedRoom)+'&limit=50');if(!activeRoom||activeRoom.id!==requestedRoom)return;
+      const list=Array.isArray(data)?data:(Array.isArray(data.messages)?data.messages:[]);messages.replaceChildren();if(!list.length){const empty=document.createElement('p');empty.className='message-state';empty.textContent='这个房间还没有消息，来发第一条吧。';messages.appendChild(empty)}else list.forEach(addMessage);if(forceBottom||nearBottom)messages.scrollTop=messages.scrollHeight;
+    }catch(error){if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}else if(!messages.querySelector('.msg')){const state=document.createElement('p');state.className='message-state';state.textContent=error.message;messages.replaceChildren(state)}}finally{loadingMessages=false}
   }
+  function closeRoomForms(){createRoomForm.hidden=true;dmForm.hidden=true;document.getElementById('createRoomToggle').classList.remove('active');document.getElementById('startDmToggle').classList.remove('active');createRoomError.textContent='';dmError.textContent=''}
+  document.getElementById('createRoomToggle').addEventListener('click',()=>{const opening=createRoomForm.hidden;closeRoomForms();if(opening){createRoomForm.hidden=false;document.getElementById('createRoomToggle').classList.add('active');document.getElementById('roomName').focus()}});
+  document.getElementById('startDmToggle').addEventListener('click',()=>{const opening=dmForm.hidden;closeRoomForms();if(opening){dmForm.hidden=false;document.getElementById('startDmToggle').classList.add('active');document.getElementById('dmUsername').focus()}});
+  document.querySelectorAll('[data-close-room-form]').forEach(button=>button.addEventListener('click',closeRoomForms));
+  createRoomForm.addEventListener('submit',async e=>{
+    e.preventDefault();const name=document.getElementById('roomName').value.trim(),privacy=createRoomForm.querySelector('input[name="roomPrivacy"]:checked').value;createRoomError.textContent='';
+    if(name.length<2||name.length>20){createRoomError.textContent='群名需为 2–20 位。';return}const submit=createRoomForm.querySelector('[type="submit"]');submit.disabled=true;
+    try{const data=await api('/api/rooms',{method:'POST',body:JSON.stringify({name,is_private:privacy==='private'})});document.getElementById('roomName').value='';closeRoomForms();const room=normalizeRoom(data.room||data);await loadRooms(room.id);if(activeRoom)await loadMessages(true);toast('群聊已创建')}
+    catch(error){createRoomError.textContent=error.message}finally{submit.disabled=false}
+  });
+  dmForm.addEventListener('submit',async e=>{
+    e.preventDefault();const username=document.getElementById('dmUsername').value.trim();dmError.textContent='';if(!username){dmError.textContent='请输入对方用户名。';return}const submit=dmForm.querySelector('[type="submit"]');submit.disabled=true;
+    try{const data=await api('/api/dm/'+encodeURIComponent(username));const room=normalizeRoom(data.room||data);document.getElementById('dmUsername').value='';closeRoomForms();await loadRooms(room.id);if(!rooms.some(r=>r.id===room.id)){rooms.push(room);activeRoom=room;renderRooms();updateRoomHeader()}await loadMessages(true)}
+    catch(error){dmError.textContent=error.message}finally{submit.disabled=false}
+  });
+  manageToggle.addEventListener('click',()=>{management.hidden=!management.hidden;manageToggle.setAttribute('aria-expanded',String(!management.hidden))});
+  inviteForm.addEventListener('submit',async e=>{e.preventDefault();if(!activeRoom)return;const field=document.getElementById('inviteUsername'),username=field.value.trim();if(!username)return;try{await api('/api/rooms/'+encodeURIComponent(activeRoom.id)+'/invite',{method:'POST',body:JSON.stringify({username})});field.value='';toast('邀请已发送')}catch(error){toast(error.message)}});
+  function armDanger(button,armedText,action){if(button.dataset.armed==='true'){button.dataset.armed='';button.textContent=button.dataset.label;action();return}button.dataset.label=button.textContent;button.dataset.armed='true';button.textContent=armedText;setTimeout(()=>{if(button.dataset.armed==='true'){button.dataset.armed='';button.textContent=button.dataset.label}},3500)}
+  document.getElementById('clearRoomBtn').addEventListener('click',function(){armDanger(this,'再点一次确认清空',async()=>{try{await api('/api/rooms/'+encodeURIComponent(activeRoom.id)+'/messages',{method:'DELETE'});await loadMessages(true);toast('本房间记录已清空')}catch(error){toast(error.message)}})});
+  document.getElementById('deleteRoomBtn').addEventListener('click',function(){if(!activeRoom||activeRoom.isLobby)return;armDanger(this,'再点一次确认解散',async()=>{try{await api('/api/rooms/'+encodeURIComponent(activeRoom.id),{method:'DELETE'});toast('房间已解散');await loadRooms();if(activeRoom)await loadMessages(true)}catch(error){toast(error.message)}})});
   document.querySelectorAll('[data-auth-mode]').forEach(tab=>tab.addEventListener('click',()=>{
-    authMode=tab.dataset.authMode;document.querySelectorAll('[data-auth-mode]').forEach(x=>{const active=x===tab;x.classList.toggle('active',active);x.setAttribute('aria-selected',String(active))});
-    authSubmit.textContent=authMode==='login'?'登录':'注册';passwordInput.autocomplete=authMode==='login'?'current-password':'new-password';authError.textContent='';
+    authMode=tab.dataset.authMode;document.querySelectorAll('[data-auth-mode]').forEach(x=>{const active=x===tab;x.classList.toggle('active',active);x.setAttribute('aria-selected',String(active))});authSubmit.textContent=authMode==='login'?'登录':'注册';passwordInput.autocomplete=authMode==='login'?'current-password':'new-password';authError.textContent='';
   }));
   authForm.addEventListener('submit',async e=>{
-    e.preventDefault();authError.textContent='';const username=usernameInput.value.trim(),password=passwordInput.value;
-    if(!/^[\u4e00-\u9fffA-Za-z0-9_]{2,16}$/.test(username)){authError.textContent='用户名需为 2–16 位中文、字母、数字或下划线。';return}
-    if(password.length<6||password.length>64){authError.textContent='密码长度需为 6–64 位。';return}
-    authSubmit.disabled=true;authSubmit.textContent=authMode==='login'?'正在登录…':'正在注册…';
-    try{
-      if(authMode==='register'){await api('/api/register',{method:'POST',body:JSON.stringify({username,password})});await api('/api/login',{method:'POST',body:JSON.stringify({username,password})})}
-      else await api('/api/login',{method:'POST',body:JSON.stringify({username,password})});
-      const active=await checkSession();if(!active)throw new Error('登录状态未生效，请确认浏览器允许此站点使用 Cookie。');passwordInput.value='';
-    }catch(error){authError.textContent=error.message}
-    finally{authSubmit.disabled=false;authSubmit.textContent=authMode==='login'?'登录':'注册'}
+    e.preventDefault();authError.textContent='';const username=usernameInput.value.trim(),password=passwordInput.value;if(!/^[\u4e00-\u9fffA-Za-z0-9_]{2,16}$/.test(username)){authError.textContent='用户名需为 2–16 位中文、字母、数字或下划线。';return}if(password.length<6||password.length>64){authError.textContent='密码长度需为 6–64 位。';return}
+    authSubmit.disabled=true;authSubmit.textContent=authMode==='login'?'正在登录…':'正在注册…';try{if(authMode==='register'){await api('/api/register',{method:'POST',body:JSON.stringify({username,password})});await api('/api/login',{method:'POST',body:JSON.stringify({username,password})})}else await api('/api/login',{method:'POST',body:JSON.stringify({username,password})});const active=await checkSession();if(!active)throw new Error('登录状态未生效，请确认浏览器允许此站点使用 Cookie。');passwordInput.value=''}catch(error){authError.textContent=error.message}finally{authSubmit.disabled=false;authSubmit.textContent=authMode==='login'?'登录':'注册'}
   });
-  document.getElementById('logoutBtn').addEventListener('click',async()=>{
-    const button=document.getElementById('logoutBtn');button.disabled=true;
-    try{await api('/api/logout',{method:'POST'});setLoggedIn('');toast('已退出登录')}
-    catch(error){toast(error.message)}finally{button.disabled=false}
-  });
+  document.getElementById('logoutBtn').addEventListener('click',async()=>{const button=document.getElementById('logoutBtn');button.disabled=true;try{await api('/api/logout',{method:'POST'});setLoggedIn(null);toast('已退出登录')}catch(error){toast(error.message)}finally{button.disabled=false}});
   form.addEventListener('submit',async e=>{
-    e.preventDefault();const text=input.value.trim();if(!text||!currentUser)return;sendBtn.disabled=true;
-    try{await api('/api/messages',{method:'POST',body:JSON.stringify({text})});input.value='';await loadMessages(true);input.focus()}
-    catch(error){if(error.status===401){setLoggedIn('');authError.textContent='登录已失效，请重新登录。'}else toast(error.message)}
-    finally{sendBtn.disabled=false}
+    e.preventDefault();const text=input.value.trim();if(!text||!currentUser||!activeRoom)return;sendBtn.disabled=true;try{const room=activeRoom.id;await api('/api/messages?room='+encodeURIComponent(room),{method:'POST',body:JSON.stringify({text,room})});input.value='';await loadMessages(true);input.focus()}catch(error){if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}else toast(error.message)}finally{sendBtn.disabled=false}
   });
   checkSession();
   const zone=document.getElementById('dropZone'),fileInput=document.getElementById('fileInput'),fileList=document.getElementById('fileList');
