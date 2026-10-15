@@ -252,7 +252,28 @@ function filterTools(){
   toolSearchClear.hidden=!query;
   toolResult.textContent=query||activeToolFilter!=='all'?'找到 '+shown+' 个工具':'共 '+shown+' 个工具';
 }
-  document.querySelectorAll('.filter').forEach(f=>f.addEventListener('click',()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));f.classList.add('active');activeToolFilter=f.dataset.filter;filterTools()}));toolSearch.addEventListener('input',filterTools);toolSearchClear.addEventListener('click',()=>{toolSearch.value='';toolSearch.focus();filterTools()});filterTools();
+  document.querySelectorAll('.filter').forEach(f=>f.addEventListener('click',()=>{
+  document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));f.classList.add('active');
+  const cat=f.dataset.filter;
+  if(cat==='all'){activeToolFilter='all';filterTools();}
+  else{
+    // 切到全部分组视图，定位到该分类并只展开它
+    activeToolFilter='all';toolSearch.value='';
+    filterTools();
+    const heads=[...document.querySelectorAll('.tool-cat-head')];
+    heads.forEach(h=>{
+      const name=h.textContent;
+      const isTarget=name.startsWith(toolCatNames[cat]||cat);
+      const cards=[];
+      let el=h.nextElementSibling;
+      while(el&&!el.classList.contains('tool-cat-head')){if(el.classList.contains('tool-card'))cards.push(el);el=el.nextElementSibling;}
+      h.classList.toggle('collapsed',!isTarget);
+      cards.forEach(c=>{c.style.display=isTarget?'':'none'});
+    });
+    const target=heads.find(h=>h.textContent.startsWith(toolCatNames[cat]||cat));
+    if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+}));toolSearch.addEventListener('input',filterTools);toolSearchClear.addEventListener('click',()=>{toolSearch.value='';toolSearch.focus();filterTools()});filterTools();
   const API='https://api.shmily.work';
   const form=document.getElementById('chatForm'),input=document.getElementById('chatInput'),messages=document.getElementById('messages'),sendBtn=document.getElementById('sendBtn');
   const rememberMe=document.getElementById('rememberMe');
