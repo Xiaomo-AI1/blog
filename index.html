@@ -146,7 +146,7 @@
         <div class="chat-window" id="chatLocked"><p class="message-state">请先注册或登录，登录后可以进入大厅、创建群聊或发起单聊。</p></div>
         <aside class="account-panel">
           <div id="authArea"><h2>进入聊天</h2><p>已有账号直接登录；第一次来可以先注册。</p><div class="auth-tabs" role="tablist" aria-label="账号操作"><button class="auth-tab active" type="button" role="tab" aria-selected="true" data-auth-mode="login">登录</button><button class="auth-tab" type="button" role="tab" aria-selected="false" data-auth-mode="register">注册</button></div><form class="auth-form" id="authForm" novalidate><label for="username">账号</label><input id="username" name="username" autocomplete="username" minlength="2" maxlength="16" required placeholder="2–16 位数字或字母"><div class="auth-help">登录用账号，不可更改；显示名在注册时另设</div><label for="regUsername" id="regUsernameLabel" hidden>用户名（显示名）</label><input id="regUsername" name="regUsername" autocomplete="off" minlength="2" maxlength="16" placeholder="2–16 位，不填则与账号相同" hidden><div class="auth-help" id="regUsernameHelp" hidden>聊天里显示的名字，可随时更改</div><label for="password">密码</label><input id="password" name="password" type="password" autocomplete="current-password" minlength="5" maxlength="64" required placeholder="5–64 位数字或字母"><button class="forgot-password" id="forgotPassword" type="button">忘记密码？</button><p class="forgot-note" id="forgotNote" hidden>请联系管理员重置密码</p><label for="regAvatar" id="regAvatarLabel" hidden>头像（可选）</label><div id="regAvatarRow" hidden style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><img id="regAvatarPreview" alt="头像预览" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:#eee;display:none"><input id="regAvatar" type="file" accept="image/*" aria-label="选择头像图片"></div><div class="auth-help" id="regAvatarHelp" hidden>图片不超过 2MB，可不传，登录后也能换</div><div class="captcha-row" id="captchaRow" hidden><span class="captcha-question" id="captchaQuestion">正在加载…</span><button class="captcha-refresh" id="refreshCaptcha" type="button">换一张</button><input id="captchaAnswer" inputmode="numeric" autocomplete="off" aria-label="验证码答案" placeholder="输入上方算式答案"></div><label style="display:flex;align-items:center;gap:6px;margin:8px 0;font-size:14px;cursor:pointer"><input type="checkbox" id="rememberMe" style="width:16px;height:16px"> 记住密码</label><button class="auth-submit" id="authSubmit" type="submit">登录</button><p class="auth-error" id="authError" role="alert"></p></form></div>
-          <div class="signed-in" id="signedIn"><h2>当前账号</h2><div class="account-current-label">登录账号（不可更改）</div><div class="account-name" id="accountId"></div><div class="account-current-label" style="margin-top:8px">用户名（聊天显示）</div><div class="account-name" id="accountName"></div><span class="account-admin" id="adminBadge" hidden>管理员</span><div class="account-state">已登录 · 当前房间每 3 秒刷新</div><section class="account-setting" aria-labelledby="usernameSettingTitle"><h3 id="usernameSettingTitle">修改用户名（仅改显示名，账号不变）</h3><form class="username-form" id="usernameForm" novalidate><label for="newUsername">新用户名</label><div class="username-row"><input id="newUsername" name="newUsername" autocomplete="off" minlength="2" maxlength="16" placeholder="2–16 位" required><button id="usernameSubmit" type="submit">确认修改</button></div><p class="username-status" id="usernameStatus" role="status"></p></form></section><section class="account-setting" aria-labelledby="avatarSettingTitle"><h3 id="avatarSettingTitle">自定义头像</h3><div class="username-row avatar-upload-row"><img class="avatar-preview" id="avatarPreview" alt="当前头像"><input id="avatarInput" type="file" accept="image/*" aria-label="选择头像图片"></div><div class="username-row" style="margin-top:8px"><span class="username-status" style="align-self:center">图片不超过 2MB</span><button id="avatarUploadBtn" type="button">上传头像</button></div><p class="username-status" id="avatarStatus" role="status"></p></section><button class="account-admin-btn" id="accountAdminBtn" type="button" hidden>进入管理后台</button><button class="logout-btn" id="logoutBtn" type="button">退出登录</button><button class="delete-account-btn" id="deleteAccountBtn" type="button">注销账号</button></div>
+          <div class="signed-in" id="signedIn"><h2>当前账号</h2><div class="account-current-label">登录账号（不可更改）</div><div class="account-name" id="accountId"></div><div class="account-current-label" style="margin-top:8px">用户名（聊天显示）</div><div class="account-name" id="accountName"></div><span class="account-admin" id="adminBadge" hidden>管理员</span><div class="account-state">已登录 · <span id="wsStatus">连接中…</span></div><section class="account-setting" aria-labelledby="usernameSettingTitle"><h3 id="usernameSettingTitle">修改用户名（仅改显示名，账号不变）</h3><form class="username-form" id="usernameForm" novalidate><label for="newUsername">新用户名</label><div class="username-row"><input id="newUsername" name="newUsername" autocomplete="off" minlength="2" maxlength="16" placeholder="2–16 位" required><button id="usernameSubmit" type="submit">确认修改</button></div><p class="username-status" id="usernameStatus" role="status"></p></form></section><section class="account-setting" aria-labelledby="avatarSettingTitle"><h3 id="avatarSettingTitle">自定义头像</h3><div class="username-row avatar-upload-row"><img class="avatar-preview" id="avatarPreview" alt="当前头像"><input id="avatarInput" type="file" accept="image/*" aria-label="选择头像图片"></div><div class="username-row" style="margin-top:8px"><span class="username-status" style="align-self:center">图片不超过 2MB</span><button id="avatarUploadBtn" type="button">上传头像</button></div><p class="username-status" id="avatarStatus" role="status"></p></section><button class="account-admin-btn" id="accountAdminBtn" type="button" hidden>进入管理后台</button><button class="logout-btn" id="logoutBtn" type="button">退出登录</button><button class="delete-account-btn" id="deleteAccountBtn" type="button">注销账号</button></div>
         </aside>
       </div>
     </section>
@@ -281,6 +281,10 @@ function wsUrl(){
     return u.origin+"/api/ws";
   }catch(e){ return "wss://api.shmily.work/api/ws"; }
 }
+function updateWsStatus(){
+  const el=document.getElementById('wsStatus');
+  if(el) el.textContent=wsOk?'实时推送已连接':'轮询模式';
+}
 function connectWS(){
   if(!currentUser) return;
   try{ if(wsClient) wsClient.close(); }catch(e){}
@@ -289,7 +293,7 @@ function connectWS(){
   try{ ws=new WebSocket(wsUrl()); }catch(e){ scheduleWsRetry(); return; }
   wsClient=ws;
   ws.onopen=()=>{
-    wsOk=true; wsRetryMs=1000;
+    wsOk=true; wsRetryMs=1000; updateWsStatus();
     stopAdaptivePoll(); // WS 接管，轮询全停
     clearInterval(wsPingTimer);
     wsPingTimer=setInterval(()=>{ try{ ws.send(JSON.stringify({type:"ping"})); }catch(e){} },30000);
@@ -316,7 +320,7 @@ function connectWS(){
     }
   };
   ws.onclose=()=>{
-    wsOk=false; clearInterval(wsPingTimer);
+    wsOk=false; clearInterval(wsPingTimer); updateWsStatus();
     if(currentUser){ startAdaptivePoll(); scheduleWsRetry(); }
   };
   ws.onerror=()=>{ try{ ws.close(); }catch(e){} };
@@ -396,7 +400,7 @@ async function loadRooms(preferredId){
     if(!currentUser||!activeRoom||loadingMessages)return;loadingMessages=true;const requestedRoom=activeRoom.id;const nearBottom=messages.scrollHeight-messages.scrollTop-messages.clientHeight<90;
     try{
       const data=await api('/api/messages?room='+encodeURIComponent(requestedRoom)+'&limit=50');if(!activeRoom||activeRoom.id!==requestedRoom)return;
-      const list=Array.isArray(data)?data:(Array.isArray(data.messages)?data.messages:[]);const maxId=list.reduce((m,it)=>Math.max(m,Number(it.id)||0),0);list.forEach(it=>{ if(it.id) seenMsgIds.add(String(it.id)); });if(maxId>lastSeenMsgId){lastSeenMsgId=maxId;markActivity()};revokeMessageObjectUrls();messages.replaceChildren();if(!list.length){const empty=document.createElement('p');empty.className='message-state';empty.textContent='这个房间还没有消息，来发第一条吧。';messages.appendChild(empty)}else list.forEach(addMessage);if(forceBottom||nearBottom)messages.scrollTop=messages.scrollHeight;
+      const list=Array.isArray(data)?data:(Array.isArray(data.messages)?data.messages:[]);const maxId=list.reduce((m,it)=>Math.max(m,Number(it.id)||0),0);list.forEach(it=>{ if(it.id) seenMsgIds.add(String(it.id)); });if(maxId>lastSeenMsgId){lastSeenMsgId=maxId;markActivity()}else{if(!forceBottom)return};revokeMessageObjectUrls();messages.replaceChildren();if(!list.length){const empty=document.createElement('p');empty.className='message-state';empty.textContent='这个房间还没有消息，来发第一条吧。';messages.appendChild(empty)}else list.forEach(addMessage);if(forceBottom||nearBottom)messages.scrollTop=messages.scrollHeight;
     }catch(error){if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}else if(!messages.querySelector('.msg')){const state=document.createElement('p');state.className='message-state';state.textContent=error.message;messages.replaceChildren(state)}}finally{loadingMessages=false}
   }
   function closeRoomForms(){createRoomForm.hidden=true;dmForm.hidden=true;document.getElementById('createRoomToggle').classList.remove('active');document.getElementById('startDmToggle').classList.remove('active');createRoomError.textContent='';dmError.textContent=''}
