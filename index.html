@@ -216,62 +216,69 @@
   document.getElementById('readerClose').addEventListener('click',closeReader);reader.addEventListener('click',e=>{if(e.target===reader)closeReader()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeReader()});
   const toolSearch=document.getElementById('toolSearch'),toolSearchClear=document.getElementById('toolSearchClear'),toolResult=document.getElementById('toolResult');let activeToolFilter='all';
   const toolCatNames={};document.querySelectorAll('.filter').forEach(f=>{if(f.dataset.filter!=='all')toolCatNames[f.dataset.filter]=f.textContent.trim()});
-function filterTools(){
-  const query=toolSearch.value.trim().toLowerCase(),cards=[...document.querySelectorAll('.tool-card')],grid=document.querySelector('.tool-grid');
-  let shown=0;
-  // 全部+无搜索时：按分类分组
-  if(activeToolFilter==='all'&&!query){
-    // 清掉旧分组头
-    grid.querySelectorAll('.tool-cat-head').forEach(h=>h.remove());
-    const order=[...document.querySelectorAll('.filter')].map(f=>f.dataset.filter).filter(c=>c!=='all');
-    // 把卡片按分类重新排列
-    const byCat={};
-    cards.forEach(card=>{const c=card.dataset.cat;(byCat[c]=byCat[c]||[]).push(card);card.hidden=false});
-    order.forEach(cat=>{
-      const list=byCat[cat];
-      if(!list||!list.length) return;
-      const head=document.createElement('h2');head.className='tool-cat-head';head.textContent=(toolCatNames[cat]||cat)+' ('+list.length+')';
-      head.title='点击折叠/展开';
-      head.addEventListener('click',()=>{
-        const collapsed=head.classList.toggle('collapsed');
-        list.forEach(card=>{card.style.display=collapsed?'none':''});
-      });
-      // 找到该分类第一张卡片，插到它前面
-      grid.insertBefore(head,list[0]);
-      list.forEach(card=>grid.appendChild(card));
-      shown+=list.length;
+const toolGrid=document.querySelector('.tool-grid');
+const allToolCards=[...toolGrid.querySelectorAll('.tool-card')];
+let expandedCat=null; // 手风琴：当前展开的分类，null=全部展开
+function buildToolGroups(){
+  // 清空并按分类重建
+  toolGrid.replaceChildren();
+  const order=[...document.querySelectorAll('.filter')].map(f=>f.dataset.filter).filter(c=>c!=='all');
+  const byCat={};
+  allToolCards.forEach(card=>{const c=card.dataset.cat;(byCat[c]=byCat[c]||[]).push(card);card.hidden=false;card.style.display='';});
+  order.forEach(cat=>{
+    const list=byCat[cat];
+    if(!list||!list.length) return;
+    const head=document.createElement('h2');
+    head.className='tool-cat-head';head.dataset.cat=cat;
+    head.textContent=(toolCatNames[cat]||cat)+' ('+list.length+')';
+    head.title='点击折叠/展开';
+    const collapsed=expandedCat!==null&&expandedCat!==cat;
+    if(collapsed)head.classList.add('collapsed');
+    head.addEventListener('click',()=>{
+      // 手风琴：点已展开的则收起，否则只展开这一个
+      expandedCat=(expandedCat===cat)?'__none__':cat;
+      buildToolGroups();
     });
-    // 未知分类的放最后
-    Object.keys(byCat).forEach(cat=>{
-      if(!order.includes(cat)) byCat[cat].forEach(card=>{card.hidden=false;grid.appendChild(card);shown++});
+    toolGrid.appendChild(head);
+    list.forEach(card=>{
+      card.style.display=collapsed?'none':'';
+      toolGrid.appendChild(card);
     });
-  }else{
-    grid.querySelectorAll('.tool-cat-head').forEach(h=>h.remove());
-    cards.forEach(card=>{card.style.display='';const categoryMatch=activeToolFilter==='all'||card.dataset.cat===activeToolFilter,searchMatch=!query||(card.dataset.search||card.textContent.toLowerCase()).includes(query);card.hidden=!(categoryMatch&&searchMatch);if(!card.hidden)shown++});
-  }
-  toolSearchClear.hidden=!query;
-  toolResult.textContent=query||activeToolFilter!=='all'?'找到 '+shown+' 个工具':'共 '+shown+' 个工具';
+  });
 }
-  document.querySelectorAll('.filter').forEach(f=>f.addEventListener('click',()=>{
+function filterTools(){
+  const query=toolSearch.value.trim().toLowerCase();
+  if(activeToolFilter==='all'&&!query){
+    expandedCat=expandedCat==='__none__'?'__none__':expandedCat;
+    buildToolGroups();
+    const shown=allToolCards.length;
+    toolSearchClear.hidden=true;
+    toolResult.textContent='共 '+shown+' 个工具';
+    return;
+  }
+  // 筛选/搜索：平铺
+  toolGrid.replaceChildren();
+  let shown=0;
+  allToolCards.forEach(card=>{
+    card.style.display='';
+    const categoryMatch=activeToolFilter==='all'||card.dataset.cat===activeToolFilter;
+    const searchMatch=!query||(card.dataset.search||card.textContent.toLowerCase()).includes(query);
+    card.hidden=!(categoryMatch&&searchMatch);
+    if(!card.hidden){toolGrid.appendChild(card);shown++;}
+  });
+  toolSearchClear.hidden=!query;
+  toolResult.textContent='找到 '+shown+' 个工具';
+}
+document.querySelectorAll('.filter').forEach(f=>f.addEventListener('click',()=>{
   document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));f.classList.add('active');
   const cat=f.dataset.filter;
-  if(cat==='all'){activeToolFilter='all';filterTools();}
-  else{
-    // 切到全部分组视图，定位到该分类并只展开它
-    activeToolFilter='all';toolSearch.value='';
-    filterTools();
-    const heads=[...document.querySelectorAll('.tool-cat-head')];
-    heads.forEach(h=>{
-      const name=h.textContent;
-      const isTarget=name.startsWith(toolCatNames[cat]||cat);
-      const cards=[];
-      let el=h.nextElementSibling;
-      while(el&&!el.classList.contains('tool-cat-head')){if(el.classList.contains('tool-card'))cards.push(el);el=el.nextElementSibling;}
-      h.classList.toggle('collapsed',!isTarget);
-      cards.forEach(c=>{c.style.display=isTarget?'':'none'});
-    });
-    const target=heads.find(h=>h.textContent.startsWith(toolCatNames[cat]||cat));
-    if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+  toolSearch.value='';
+  if(cat==='all'){activeToolFilter='all';expandedCat=null;}
+  else{activeToolFilter='all';expandedCat=cat;}
+  filterTools();
+  if(cat!=='all'){
+    const target=toolGrid.querySelector('.tool-cat-head[data-cat="'+cat+'"]');
+    if(target)setTimeout(()=>target.scrollIntoView({behavior:'smooth',block:'start'}),30);
   }
 }));toolSearch.addEventListener('input',filterTools);toolSearchClear.addEventListener('click',()=>{toolSearch.value='';toolSearch.focus();filterTools()});filterTools();
   const API='https://api.shmily.work';
