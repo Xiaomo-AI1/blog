@@ -455,7 +455,12 @@ async function loadRooms(preferredId){
   });
   dmForm.addEventListener('submit',async e=>{
     e.preventDefault();const selected=dmUserList.querySelector('input[type="checkbox"]:checked'),account=selected?selected.value:'';dmError.textContent='';if(!account){dmError.textContent='请勾选一位聊天对象。';return}const submit=dmForm.querySelector('[type="submit"]');submit.disabled=true;
-    try{const data=await api('/api/dm/'+encodeURIComponent(account));const room=normalizeRoom(data.room||data);closeRoomForms();await loadRooms(room.id);if(!rooms.some(r=>r.id===room.id)){rooms.push(room);activeRoom=room;renderRooms();updateRoomHeader()}await loadMessages(true)}
+    try{const data=await api('/api/dm/'+encodeURIComponent(account));if(!data||data.ok===false)throw new Error((data&&data.msg)||'创建单聊失败');const room=normalizeRoom(data.room||data);closeRoomForms();
+// 先直接加入列表，保证立即可见
+if(!rooms.some(r=>String(r.id)===String(room.id))){rooms.push(room)}
+activeRoom=room;renderRooms();updateRoomHeader();
+try{await loadRooms(room.id)}catch(_){}
+await loadMessages(true)}
     catch(error){dmError.textContent=error.message}finally{submit.disabled=false}
   });
   manageToggle.addEventListener('click',()=>{management.hidden=!management.hidden;manageToggle.setAttribute('aria-expanded',String(!management.hidden))});
