@@ -61,6 +61,8 @@
 .notif-text{font-size:13px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .notif-close{background:none;border:none;font-size:16px;cursor:pointer;color:#999;padding:0 0 0 6px;line-height:1}
 .notif-close:hover{color:#333}
+.tool-cat-head{grid-column:1/-1;font-size:1.05rem;margin:18px 0 2px;padding-bottom:6px;border-bottom:2px solid var(--accent-2);color:var(--ink)}
+.tool-cat-head:first-child{margin-top:4px}
 </style>
 </head>
 <body>
@@ -209,7 +211,38 @@
   function closeReader(){reader.classList.remove('open');document.body.style.overflow=''}
   document.getElementById('readerClose').addEventListener('click',closeReader);reader.addEventListener('click',e=>{if(e.target===reader)closeReader()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeReader()});
   const toolSearch=document.getElementById('toolSearch'),toolSearchClear=document.getElementById('toolSearchClear'),toolResult=document.getElementById('toolResult');let activeToolFilter='all';
-  function filterTools(){const query=toolSearch.value.trim().toLowerCase(),cards=[...document.querySelectorAll('.tool-card')];let shown=0;cards.forEach(card=>{const categoryMatch=activeToolFilter==='all'||card.dataset.cat===activeToolFilter,searchMatch=!query||(card.dataset.search||card.textContent.toLowerCase()).includes(query);card.hidden=!(categoryMatch&&searchMatch);if(!card.hidden)shown++});toolSearchClear.hidden=!query;toolResult.textContent=query||activeToolFilter!=='all'?'找到 '+shown+' 个工具':'共 '+cards.length+' 个工具'}
+  const toolCatNames={};document.querySelectorAll('.filter').forEach(f=>{if(f.dataset.filter!=='all')toolCatNames[f.dataset.filter]=f.textContent.trim()});
+function filterTools(){
+  const query=toolSearch.value.trim().toLowerCase(),cards=[...document.querySelectorAll('.tool-card')],grid=document.querySelector('.tool-grid');
+  let shown=0;
+  // 全部+无搜索时：按分类分组
+  if(activeToolFilter==='all'&&!query){
+    // 清掉旧分组头
+    grid.querySelectorAll('.tool-cat-head').forEach(h=>h.remove());
+    const order=[...document.querySelectorAll('.filter')].map(f=>f.dataset.filter).filter(c=>c!=='all');
+    // 把卡片按分类重新排列
+    const byCat={};
+    cards.forEach(card=>{const c=card.dataset.cat;(byCat[c]=byCat[c]||[]).push(card);card.hidden=false});
+    order.forEach(cat=>{
+      const list=byCat[cat];
+      if(!list||!list.length) return;
+      const head=document.createElement('h2');head.className='tool-cat-head';head.textContent=(toolCatNames[cat]||cat)+' ('+list.length+')';
+      // 找到该分类第一张卡片，插到它前面
+      grid.insertBefore(head,list[0]);
+      list.forEach(card=>grid.appendChild(card));
+      shown+=list.length;
+    });
+    // 未知分类的放最后
+    Object.keys(byCat).forEach(cat=>{
+      if(!order.includes(cat)) byCat[cat].forEach(card=>{card.hidden=false;grid.appendChild(card);shown++});
+    });
+  }else{
+    grid.querySelectorAll('.tool-cat-head').forEach(h=>h.remove());
+    cards.forEach(card=>{const categoryMatch=activeToolFilter==='all'||card.dataset.cat===activeToolFilter,searchMatch=!query||(card.dataset.search||card.textContent.toLowerCase()).includes(query);card.hidden=!(categoryMatch&&searchMatch);if(!card.hidden)shown++});
+  }
+  toolSearchClear.hidden=!query;
+  toolResult.textContent=query||activeToolFilter!=='all'?'找到 '+shown+' 个工具':'共 '+shown+' 个工具';
+}
   document.querySelectorAll('.filter').forEach(f=>f.addEventListener('click',()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));f.classList.add('active');activeToolFilter=f.dataset.filter;filterTools()}));toolSearch.addEventListener('input',filterTools);toolSearchClear.addEventListener('click',()=>{toolSearch.value='';toolSearch.focus();filterTools()});filterTools();
   const API='https://api.shmily.work';
   const form=document.getElementById('chatForm'),input=document.getElementById('chatInput'),messages=document.getElementById('messages'),sendBtn=document.getElementById('sendBtn');
