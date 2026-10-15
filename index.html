@@ -242,8 +242,8 @@
     currentUser=user?String(user.username||user.name||''):'';currentUserId=user?String(user.id||user.user_id||''):'';currentAccount=user?String(user.account||''):'';const userRole=String(user&&(user.role||user.user_role)||'').toLowerCase();isSuperAdmin=Boolean(user&&(user.is_super_admin===true||user.isSuperAdmin===true||userRole==='super_admin'||userRole==='superadmin'||userRole==='super'));isAdmin=Boolean(isSuperAdmin||(user&&(user.is_admin===true||user.isAdmin===true||userRole==='admin')));const yes=Boolean(currentUser);if(!yes)authToken='';
     authArea.style.display=yes?'none':'block';signedIn.style.display=yes?'block':'none';chatWindow.hidden=!yes;chatLocked.hidden=yes;roomPanel.hidden=!yes;fileLoginGate.hidden=yes;fileLoggedContent.hidden=!yes;
     accountName.textContent=currentUser;document.getElementById('accountId').textContent=currentAccount;myAvatarUrl=(user&&(user.avatar_url||user.avatarUrl))||'';refreshAvatarPreview();chatUser.textContent=yes?'@'+currentUser:'';adminBadge.textContent=isSuperAdmin?'超级管理员':'管理员';adminBadge.hidden=!isAdmin;manageToggle.hidden=!isAdmin;accountAdminBtn.hidden=!isAdmin;if(!yes){newUsernameInput.value='';usernameStatus.textContent='';usernameStatus.classList.remove('error','success')}
-    clearInterval(pollTimer);pollTimer=null;rooms=[];directoryUsers=[];activeRoom=null;management.hidden=true;if(!yes){if(adminDialog.classList.contains('active'))closeAdmin();closeRoomDeleteDialog()}
-    if(yes){loadRooms().then(()=>{if(activeRoom)loadMessages(true)});pollTimer=setInterval(()=>loadMessages(false),3000)}else{revokeMessageObjectUrls();messages.replaceChildren();roomList.replaceChildren();input.value='';clearPendingFile();clearPageFile();setUploadState(false,0)}
+    clearInterval(pollTimer);clearInterval(roomPollTimer);pollTimer=null;rooms=[];directoryUsers=[];activeRoom=null;management.hidden=true;if(!yes){if(adminDialog.classList.contains('active'))closeAdmin();closeRoomDeleteDialog()}
+    if(yes){loadRooms().then(()=>{if(activeRoom)loadMessages(true)});pollTimer=setInterval(()=>loadMessages(false),3000);roomPollTimer=setInterval(pollRooms,10000)}else{revokeMessageObjectUrls();messages.replaceChildren();roomList.replaceChildren();input.value='';clearPendingFile();clearPageFile();setUploadState(false,0)}
     loadFileLibrary();
   }
   async function checkSession(){
@@ -258,9 +258,11 @@
       const symbol=document.createElement('span');symbol.className='room-symbol';symbol.textContent=room.isDm?'@':'#';const label=document.createElement('span');label.className='room-label';label.textContent=room.name;button.append(symbol,label);button.addEventListener('click',()=>switchRoom(room));row.appendChild(button);
       if(!room.isLobby&&!room.isDm&&(isAdmin||room.isOwner)){const remove=document.createElement('button');remove.type='button';remove.className='room-delete';remove.textContent='解散';remove.setAttribute('aria-label','解散群聊 '+room.name);remove.addEventListener('click',()=>openRoomDeleteDialog(room));row.appendChild(remove)}roomList.appendChild(row)});
   }
-  async function loadRooms(preferredId){
+  let roomPollTimer=null,lastRoomIds='';
+async function pollRooms(){try{const data=await api('/api/rooms');const list=Array.isArray(data)?data:(Array.isArray(data.rooms)?data.rooms:[]);const ids=list.map(r=>String(r.id||r.room_id||'')).sort().join(',');if(ids&&ids!==lastRoomIds){const oldIds=new Set(lastRoomIds?lastRoomIds.split(','):[]);const newOnes=list.filter(r=>!oldIds.has(String(r.id||r.room_id||'')));lastRoomIds=ids;await loadRooms();newOnes.forEach(r=>{const nm=r.name||r.room_name||'新群聊';toast('你被拉入了「'+nm+'」')})}}catch(_){}}
+async function loadRooms(preferredId){
     try{
-      const data=await api('/api/rooms');const list=Array.isArray(data)?data:(Array.isArray(data.rooms)?data.rooms:[]);rooms=list.map(normalizeRoom);
+      const data=await api('/api/rooms');const list=Array.isArray(data)?data:(Array.isArray(data.rooms)?data.rooms:[]);rooms=list.map(normalizeRoom);lastRoomIds=rooms.map(r=>String(r.id)).sort().join(',');
       if(!rooms.some(r=>r.isLobby))rooms.unshift(normalizeRoom({id:'lobby',name:'大厅',is_lobby:true}));
       const preferred=preferredId&&rooms.find(r=>r.id===String(preferredId));const current=activeRoom&&rooms.find(r=>r.id===activeRoom.id);activeRoom=preferred||current||rooms.find(r=>r.isLobby)||rooms[0];renderRooms();updateRoomHeader();syncFileFolders();if(currentUser)loadFileLibrary();
     }catch(error){const state=document.createElement('p');state.className='room-empty';state.textContent=error.message;roomList.replaceChildren(state);syncFileFolders()}
