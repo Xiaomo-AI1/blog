@@ -63,6 +63,10 @@
 .notif-close:hover{color:#333}
 .tool-cat-head{grid-column:1/-1;font-size:1.05rem;margin:18px 0 2px;padding-bottom:6px;border-bottom:2px solid var(--accent-2);color:var(--ink)}
 .tool-cat-head:first-child{margin-top:4px}
+.tool-cat-head{cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px}
+.tool-cat-head::before{content:'▼';font-size:.75rem;color:var(--accent-2);transition:transform .18s}
+.tool-cat-head.collapsed::before{transform:rotate(-90deg)}
+.tool-cat-head.collapsed{border-bottom-color:var(--line)}
 </style>
 </head>
 <body>
@@ -227,6 +231,11 @@ function filterTools(){
       const list=byCat[cat];
       if(!list||!list.length) return;
       const head=document.createElement('h2');head.className='tool-cat-head';head.textContent=(toolCatNames[cat]||cat)+' ('+list.length+')';
+      head.title='点击折叠/展开';
+      head.addEventListener('click',()=>{
+        const collapsed=head.classList.toggle('collapsed');
+        list.forEach(card=>{card.style.display=collapsed?'none':''});
+      });
       // 找到该分类第一张卡片，插到它前面
       grid.insertBefore(head,list[0]);
       list.forEach(card=>grid.appendChild(card));
@@ -238,7 +247,7 @@ function filterTools(){
     });
   }else{
     grid.querySelectorAll('.tool-cat-head').forEach(h=>h.remove());
-    cards.forEach(card=>{const categoryMatch=activeToolFilter==='all'||card.dataset.cat===activeToolFilter,searchMatch=!query||(card.dataset.search||card.textContent.toLowerCase()).includes(query);card.hidden=!(categoryMatch&&searchMatch);if(!card.hidden)shown++});
+    cards.forEach(card=>{card.style.display='';const categoryMatch=activeToolFilter==='all'||card.dataset.cat===activeToolFilter,searchMatch=!query||(card.dataset.search||card.textContent.toLowerCase()).includes(query);card.hidden=!(categoryMatch&&searchMatch);if(!card.hidden)shown++});
   }
   toolSearchClear.hidden=!query;
   toolResult.textContent=query||activeToolFilter!=='all'?'找到 '+shown+' 个工具':'共 '+shown+' 个工具';
