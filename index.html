@@ -243,7 +243,7 @@
     authArea.style.display=yes?'none':'block';signedIn.style.display=yes?'block':'none';chatWindow.hidden=!yes;chatLocked.hidden=yes;roomPanel.hidden=!yes;fileLoginGate.hidden=yes;fileLoggedContent.hidden=!yes;
     accountName.textContent=currentUser;document.getElementById('accountId').textContent=currentAccount;myAvatarUrl=(user&&(user.avatar_url||user.avatarUrl))||'';refreshAvatarPreview();chatUser.textContent=yes?'@'+currentUser:'';adminBadge.textContent=isSuperAdmin?'超级管理员':'管理员';adminBadge.hidden=!isAdmin;manageToggle.hidden=!isAdmin;accountAdminBtn.hidden=!isAdmin;if(!yes){newUsernameInput.value='';usernameStatus.textContent='';usernameStatus.classList.remove('error','success')}
     clearInterval(pollTimer);clearInterval(roomPollTimer);pollTimer=null;rooms=[];directoryUsers=[];activeRoom=null;management.hidden=true;if(!yes){if(adminDialog.classList.contains('active'))closeAdmin();closeRoomDeleteDialog()}
-    if(yes){loadRooms().then(()=>{if(activeRoom)loadMessages(true)});pollTimer=setInterval(()=>loadMessages(false),3000);roomPollTimer=setInterval(pollRooms,10000)}else{revokeMessageObjectUrls();messages.replaceChildren();roomList.replaceChildren();input.value='';clearPendingFile();clearPageFile();setUploadState(false,0)}
+    if(yes){loadRooms().then(()=>{if(activeRoom)loadMessages(true)});pollTimer=setInterval(()=>loadMessages(false),3000);roomPollTimer=setInterval(pollRooms,5000)}else{revokeMessageObjectUrls();messages.replaceChildren();roomList.replaceChildren();input.value='';clearPendingFile();clearPageFile();setUploadState(false,0)}
     loadFileLibrary();
   }
   async function checkSession(){
