@@ -262,7 +262,7 @@
   }
   let pollTimer=null,roomPollTimer=null,lastRoomIds='',lastActivityAt=Date.now(),pollTimeout=null;let lastSeenMsgId=0;
 function markActivity(){lastActivityAt=Date.now()}
-function adaptiveInterval(){const idle=Date.now()-lastActivityAt;return idle<60000?3000:(idle<300000?15000:60000)}
+function adaptiveInterval(){const idle=Date.now()-lastActivityAt;return idle<60000?3000:(idle<300000?30000:300000)}
 function startAdaptivePoll(){stopAdaptivePoll();markActivity();schedulePoll()}
 function stopAdaptivePoll(){if(pollTimeout){clearTimeout(pollTimeout);pollTimeout=null}}
 async function schedulePoll(){stopAdaptivePoll();if(!currentUser||document.hidden)return;try{await loadMessages(false);await pollRooms()}catch(_){}pollTimeout=setTimeout(schedulePoll,adaptiveInterval())}
