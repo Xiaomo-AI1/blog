@@ -51,7 +51,8 @@
     .admin-readonly-view .msg{max-width:100%}
     .avatar-upload-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center}
     .avatar-preview{width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--soft);display:block}
-  </style>
+  .unread-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#e5484d;margin-left:6px;vertical-align:middle}
+</style>
 </head>
 <body>
   <main class="shell">
@@ -257,6 +258,7 @@
     roomList.replaceChildren();
     if(!rooms.length){const empty=document.createElement('p');empty.className='room-empty';empty.textContent='还没有可用房间。';roomList.appendChild(empty);return}
     rooms.forEach(room=>{const row=document.createElement('div'),button=document.createElement('button');row.className='room-row';button.type='button';button.className='room-button'+(activeRoom&&activeRoom.id===room.id?' active':'');button.dataset.roomId=room.id;
+      if(unreadRooms.has(String(room.id))){const dot=document.createElement('span');dot.className='unread-dot';button.appendChild(dot)}
       const symbol=document.createElement('span');symbol.className='room-symbol';symbol.textContent=room.isDm?'@':'#';const label=document.createElement('span');label.className='room-label';label.textContent=room.name;button.append(symbol,label);button.addEventListener('click',()=>switchRoom(room));row.appendChild(button);
       if(!room.isLobby&&!room.isDm&&(isAdmin||room.isOwner)){const remove=document.createElement('button');remove.type='button';remove.className='room-delete';remove.textContent='解散';remove.setAttribute('aria-label','解散群聊 '+room.name);remove.addEventListener('click',()=>openRoomDeleteDialog(room));row.appendChild(remove)}roomList.appendChild(row)});
   }
@@ -273,7 +275,7 @@ function handleVisibilityChange(){if(document.hidden){stopAdaptivePoll()}else if
 
 // ============ WebSocket 实时推送 ============
 // 连上后停掉轮询（零消耗）；断开则回退到自适应轮询并自动重连
-let wsClient=null, wsOk=false, wsRetryMs=1000, wsPingTimer=null;const seenMsgIds=new Set();
+let wsClient=null, wsOk=false, wsRetryMs=1000, wsPingTimer=null;const seenMsgIds=new Set();const unreadRooms=new Set();
 function wsUrl(){
   try{
     const u=new URL(API);
@@ -308,7 +310,7 @@ function connectWS(){
       if(m.id && seenMsgIds.has(String(m.id))) return; // 已显示过
       if(m.id) seenMsgIds.add(String(m.id));
       // 只处理我看得到的房间
-      if(String(m.room_id)!==String(activeRoom&&activeRoom.id)) { pollRooms(); return; }
+      if(String(m.room_id)!==String(activeRoom&&activeRoom.id)) { unreadRooms.add(String(m.room_id)); renderRooms(); pollRooms(); return; }
       addMessage(m); lastSeenMsgId=Math.max(lastSeenMsgId, Number(m.id)||0);
       const nearBottom=messages.scrollHeight-messages.scrollTop-messages.clientHeight<90;
       if(nearBottom) messages.scrollTop=messages.scrollHeight;
@@ -345,7 +347,7 @@ async function loadRooms(preferredId){
     if(!activeRoom)return;roomTitle.textContent=roomLabel(activeRoom);roomBadge.textContent=activeRoom.isDm?'单聊':(activeRoom.isPrivate?'私密':'公开');
     manageToggle.hidden=!isAdmin;document.getElementById('deleteRoomBtn').hidden=activeRoom.isLobby;membersToggle.hidden=!(activeRoom&&!activeRoom.isDm);inviteForm.hidden=!(isAdmin&&activeRoom.isPrivate&&!activeRoom.isDm);input.placeholder='发消息到'+roomLabel(activeRoom)+'…';
   }
-  function switchRoom(room){activeRoom=room;markActivity();lastSeenMsgId=0;if(seenMsgIds.size>2000)seenMsgIds.clear();management.hidden=true;document.getElementById('readonlyBanner').hidden=true;chatStatus.textContent='';clearPendingFile();renderRooms();updateRoomHeader();revokeMessageObjectUrls();messages.replaceChildren(Object.assign(document.createElement('p'),{className:'message-state',textContent:'正在加载消息…'}));loadMessages(true)}
+  function switchRoom(room){activeRoom=room;markActivity();lastSeenMsgId=0;unreadRooms.delete(String(room.id));if(seenMsgIds.size>2000)seenMsgIds.clear();management.hidden=true;document.getElementById('readonlyBanner').hidden=true;chatStatus.textContent='';clearPendingFile();renderRooms();updateRoomHeader();revokeMessageObjectUrls();messages.replaceChildren(Object.assign(document.createElement('p'),{className:'message-state',textContent:'正在加载消息…'}));loadMessages(true)}
   function messageTime(value){
     if(!value)return '';let date;if(typeof value==='number')date=new Date(value<1e12?value*1000:value);else date=new Date(value);
     return Number.isNaN(date.getTime())?'':date.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
