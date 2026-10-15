@@ -242,8 +242,8 @@
     currentUser=user?String(user.username||user.name||''):'';currentUserId=user?String(user.id||user.user_id||''):'';currentAccount=user?String(user.account||''):'';const userRole=String(user&&(user.role||user.user_role)||'').toLowerCase();isSuperAdmin=Boolean(user&&(user.is_super_admin===true||user.isSuperAdmin===true||userRole==='super_admin'||userRole==='superadmin'||userRole==='super'));isAdmin=Boolean(isSuperAdmin||(user&&(user.is_admin===true||user.isAdmin===true||userRole==='admin')));const yes=Boolean(currentUser);if(!yes)authToken='';
     authArea.style.display=yes?'none':'block';signedIn.style.display=yes?'block':'none';chatWindow.hidden=!yes;chatLocked.hidden=yes;roomPanel.hidden=!yes;fileLoginGate.hidden=yes;fileLoggedContent.hidden=!yes;
     accountName.textContent=currentUser;document.getElementById('accountId').textContent=currentAccount;myAvatarUrl=(user&&(user.avatar_url||user.avatarUrl))||'';refreshAvatarPreview();chatUser.textContent=yes?'@'+currentUser:'';adminBadge.textContent=isSuperAdmin?'超级管理员':'管理员';adminBadge.hidden=!isAdmin;manageToggle.hidden=!isAdmin;accountAdminBtn.hidden=!isAdmin;if(!yes){newUsernameInput.value='';usernameStatus.textContent='';usernameStatus.classList.remove('error','success')}
-    clearInterval(pollTimer);clearInterval(roomPollTimer);pollTimer=null;rooms=[];directoryUsers=[];activeRoom=null;management.hidden=true;if(!yes){if(adminDialog.classList.contains('active'))closeAdmin();closeRoomDeleteDialog()}
-    if(yes){loadRooms().then(()=>{if(activeRoom)loadMessages(true)});pollTimer=setInterval(()=>loadMessages(false),3000);roomPollTimer=setInterval(pollRooms,5000)}else{revokeMessageObjectUrls();messages.replaceChildren();roomList.replaceChildren();input.value='';clearPendingFile();clearPageFile();setUploadState(false,0)}
+    clearInterval(pollTimer);clearInterval(roomPollTimer);document.removeEventListener('visibilitychange',handleVisibilityChange);pollTimer=null;rooms=[];directoryUsers=[];activeRoom=null;management.hidden=true;if(!yes){if(adminDialog.classList.contains('active'))closeAdmin();closeRoomDeleteDialog()}
+    if(yes){loadRooms().then(()=>{if(activeRoom)loadMessages(true)});pollTimer=setInterval(()=>loadMessages(false),3000);roomPollTimer=setInterval(pollRooms,5000);setupVisibilityPolling()}else{revokeMessageObjectUrls();messages.replaceChildren();roomList.replaceChildren();input.value='';clearPendingFile();clearPageFile();setUploadState(false,0)}
     loadFileLibrary();
   }
   async function checkSession(){
@@ -260,6 +260,8 @@
   }
   let roomPollTimer=null,lastRoomIds='';
 async function pollRooms(){try{const data=await api('/api/rooms');const list=Array.isArray(data)?data:(Array.isArray(data.rooms)?data.rooms:[]);const ids=list.map(r=>String(r.id||r.room_id||'')).sort().join(',');if(ids&&ids!==lastRoomIds){const oldIds=new Set(lastRoomIds?lastRoomIds.split(','):[]);const newOnes=list.filter(r=>!oldIds.has(String(r.id||r.room_id||'')));lastRoomIds=ids;await loadRooms();newOnes.forEach(r=>{const nm=r.name||r.room_name||'新群聊';toast('你被拉入了「'+nm+'」')})}}catch(_){}}
+function setupVisibilityPolling(){document.removeEventListener('visibilitychange',handleVisibilityChange);document.addEventListener('visibilitychange',handleVisibilityChange)}
+function handleVisibilityChange(){if(document.hidden){clearInterval(pollTimer);clearInterval(roomPollTimer);pollTimer=null;roomPollTimer=null}else{if(currentUser){pollTimer=pollTimer||setInterval(()=>loadMessages(false),3000);roomPollTimer=roomPollTimer||setInterval(pollRooms,5000);loadMessages(true);pollRooms()}}}
 async function loadRooms(preferredId){
     try{
       const data=await api('/api/rooms');const list=Array.isArray(data)?data:(Array.isArray(data.rooms)?data.rooms:[]);rooms=list.map(normalizeRoom);lastRoomIds=rooms.map(r=>String(r.id)).sort().join(',');
