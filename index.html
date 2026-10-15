@@ -52,6 +52,15 @@
     .avatar-upload-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center}
     .avatar-preview{width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--soft);display:block}
   .unread-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#e5484d;margin-left:6px;vertical-align:middle}
+#notifStack{position:fixed;right:16px;bottom:16px;z-index:9999;display:flex;flex-direction:column;gap:10px;max-width:min(340px,90vw)}
+.notif{background:#fff;border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:12px 14px;display:flex;gap:10px;align-items:flex-start;cursor:pointer;transform:translateX(120%);opacity:0;transition:transform .35s cubic-bezier(.2,.9,.3,1.2),opacity .3s;position:relative;border-left:4px solid #1a7a6d}
+.notif.show{transform:translateX(0);opacity:1}
+.notif.hide{transform:translateX(120%);opacity:0}
+.notif-body{flex:1;min-width:0}
+.notif-title{font-weight:600;font-size:14px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.notif-text{font-size:13px;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.notif-close{background:none;border:none;font-size:16px;cursor:pointer;color:#999;padding:0 0 0 6px;line-height:1}
+.notif-close:hover{color:#333}
 </style>
 </head>
 <body>
@@ -176,7 +185,7 @@
   <div class="room-delete-dialog" id="roomDeleteDialog" role="alertdialog" aria-modal="true" aria-labelledby="roomDeleteTitle" aria-describedby="roomDeleteMessage"><section class="room-delete-sheet"><h2 id="roomDeleteTitle">解散群聊</h2><p id="roomDeleteMessage">确定解散该群？群内消息和文件将全部删除</p><div class="room-delete-actions"><button class="room-delete-cancel" id="roomDeleteCancel" type="button">取消</button><button class="room-delete-confirm" id="roomDeleteConfirm" type="button">确认解散</button></div></section></div>
   <div class="members-dialog" id="membersDialog" role="dialog" aria-modal="true" aria-labelledby="membersTitle"><section class="members-sheet"><h2 id="membersTitle">群成员</h2><p class="admin-note" id="membersHint" style="margin-top:0"></p><div id="membersList"></div><form class="invite-row" id="addMemberForm" hidden style="margin-top:12px"><input id="addMemberName" maxlength="16" placeholder="输入对方账号拉入群" aria-label="拉入群的账号" autocomplete="off"><button class="small-primary" type="submit">拉入</button></form><button class="temp-password-close" id="membersClose" type="button" style="margin-top:12px">关闭</button></section></div>
   <div class="image-viewer" id="imageViewer" role="dialog" aria-modal="true" aria-label="图片预览"><img id="imageViewerImg" alt=""></div>
-  <div class="toast" id="toast" role="status"></div>
+  <div id="notifStack"></div><div class="toast" id="toast" role="status"></div>
 <script>
 (function(){
   const nav=document.querySelectorAll('.nav-btn'),views=document.querySelectorAll('.view');
@@ -310,7 +319,16 @@ function connectWS(){
       if(m.id && seenMsgIds.has(String(m.id))) return; // 已显示过
       if(m.id) seenMsgIds.add(String(m.id));
       // 只处理我看得到的房间
-      if(String(m.room_id)!==String(activeRoom&&activeRoom.id)) { unreadRooms.add(String(m.room_id)); renderRooms(); pollRooms(); return; }
+      if(String(m.room_id)!==String(activeRoom&&activeRoom.id)) {
+        unreadRooms.add(String(m.room_id)); renderRooms();
+        const rm=rooms.find(r=>String(r.id)===String(m.room_id));
+        const rname=rm?rm.name:'新消息';
+        const preview=m.file_name?('[文件] '+(m.file_name||'')):(m.text||'').slice(0,40);
+        notify('💬 '+rname+' 有新消息',(m.username||'')+': '+preview,()=>{
+          const target=rooms.find(r=>String(r.id)===String(m.room_id));
+          if(target) switchRoom(target);
+        });
+        pollRooms(); return; }
       addMessage(m); lastSeenMsgId=Math.max(lastSeenMsgId, Number(m.id)||0);
       const nearBottom=messages.scrollHeight-messages.scrollTop-messages.clientHeight<90;
       if(nearBottom) messages.scrollTop=messages.scrollHeight;
@@ -599,13 +617,13 @@ authForm.addEventListener('submit',async e=>{
   document.getElementById('deleteAccountBtn').addEventListener('click',function(){armDanger(this,'再点一次确认注销',async()=>{this.disabled=true;try{await api('/api/me',{method:'DELETE'});authToken='';setLoggedIn(null);showView('chat');toast('账号已注销')}catch(error){toast(error.message);this.disabled=false}})});
   const blockedFileExtensions=/\.(exe|bat|cmd|com|scr|msi|sh|bash|zsh|ps1|vbs|jar|apk|dmg)$/i,hardStorageCap=9*1024*1024*1024;
   function setUploadState(active,percent){uploadProgress.hidden=!active;uploadBar.value=percent||0;uploadPercent.textContent=Math.round(percent||0)+'%';attachBtn.classList.toggle('busy',active);sendBtn.disabled=active;cancelFileBtn.disabled=active;uploadFileBtn.disabled=active||!selectedChatFile||selectedChatFile.size+storageUsed>storageCap}
-  function validateChatFile(file){if(!file)return '请选择文件。';if(file.size>20*1024*1024)return '单个文件不能超过 20MB。';if(blockedFileExtensions.test(file.name))return '不允许发送可执行文件或脚本文件。';return ''}
+  function validateChatFile(file){if(!file)return '请选择文件。';if(blockedFileExtensions.test(file.name))return '不允许发送可执行文件或脚本文件。';return ''}
   function clearPendingFile(){selectedChatFile=null;storageUsed=0;storageCap=hardStorageCap;chatFileInput.value='';filePreflight.hidden=true;selectedFileText.textContent='';storageCheck.textContent='';storageCheck.classList.remove('blocked');uploadFileBtn.disabled=true}
   async function preflightChatFile(file){if(!file||file!==selectedChatFile)return false;uploadFileBtn.disabled=true;storageCheck.classList.remove('blocked');storageCheck.textContent='正在检查存储空间…';try{const data=await api('/api/storage/usage'),usage=data.storage&&typeof data.storage==='object'?data.storage:data;if(file!==selectedChatFile)return false;storageUsed=Math.max(0,Number(usage.used)||0);storageCap=Math.min(Math.max(1,Number(usage.cap)||hardStorageCap),hardStorageCap);const blocked=file.size+storageUsed>storageCap;storageCheck.textContent='已用 '+formatBytes(storageUsed)+' / 9GB'+(blocked?' · 上传后将超过9GB上限，无法上传':'');storageCheck.classList.toggle('blocked',blocked);uploadFileBtn.disabled=blocked;return !blocked}catch(error){if(file!==selectedChatFile)return false;storageCheck.textContent=error.message;storageCheck.classList.add('blocked');uploadFileBtn.disabled=true;if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}return false}}
   function uploadChatFile(file,caption){return new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest(),body=new FormData();body.append('file',file);body.append('room',activeRoom.id);body.append('caption',caption);xhr.open('POST',API+'/api/upload');xhr.withCredentials=true;if(authToken)xhr.setRequestHeader('Authorization','Bearer '+authToken);xhr.upload.addEventListener('progress',event=>{if(event.lengthComputable)setUploadState(true,event.loaded/event.total*100)});xhr.addEventListener('load',()=>{let data={};try{data=JSON.parse(xhr.responseText||'{}')}catch(_){data={}}if(xhr.status>=200&&xhr.status<300)resolve(data);else{const error=new Error(data.msg||data.error||'上传失败，请稍后再试');error.status=xhr.status;reject(error)}});xhr.addEventListener('error',()=>reject(new Error('上传失败，请检查网络连接。')));xhr.addEventListener('abort',()=>reject(new Error('上传已取消。')));setUploadState(true,0);xhr.send(body)})}
   chatFileInput.addEventListener('change',async()=>{const file=chatFileInput.files&&chatFileInput.files[0];if(!file)return;const problem=validateChatFile(file);if(problem){toast(problem);clearPendingFile();return}if(!currentUser||!activeRoom){toast('请先登录并选择房间。');clearPendingFile();return}selectedChatFile=file;filePreflight.hidden=false;selectedFileText.textContent=file.name+' ('+formatBytes(file.size)+')';await preflightChatFile(file)});
   cancelFileBtn.addEventListener('click',clearPendingFile);
-  uploadFileBtn.addEventListener('click',async()=>{const file=selectedChatFile;if(!file||!currentUser||!activeRoom)return;const canUpload=await preflightChatFile(file);if(!canUpload||file!==selectedChatFile)return;try{const result=await uploadChatFile(file,input.value.trim());input.value='';clearPendingFile();await loadMessages(true);if(result&&Object.prototype.hasOwnProperty.call(result,'auto_cleaned'))toast('已自动清理 '+(Number(result.auto_cleaned)||0)+' 个最早文件','warning',6000);else if(result&&result.warning)toast(String(result.warning),'warning',6000);else toast('文件已发送')}catch(error){if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}else toast(error.message)}finally{setUploadState(false,0)}});
+  uploadFileBtn.addEventListener('click',async()=>{const file=selectedChatFile;if(!file||!currentUser||!activeRoom)return;const canUpload=await preflightChatFile(file);if(!canUpload||file!==selectedChatFile)return;try{const result=await uploadChatFile(file,input.value.trim());input.value='';clearPendingFile();await loadMessages(true);if(result&&Object.prototype.hasOwnProperty.call(result,'auto_cleaned'))toast('已自动清理 '+(Number(result.auto_cleaned)||0)+' 个最早文件','warning',6000);else if(result&&result.warning)toast(String(result.warning),'warning',6000);else notify('✅ 文件传输成功',(file&&file.name||'文件')+' 已发送到当前房间')}catch(error){if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}else toast(error.message)}finally{setUploadState(false,0)}});
   form.addEventListener('submit',async e=>{
     e.preventDefault();const text=input.value.trim();if(!text||!currentUser||!activeRoom)return;sendBtn.disabled=true;try{const room=activeRoom.id;await api('/api/messages?room='+encodeURIComponent(room),{method:'POST',body:JSON.stringify({text,room})});input.value='';markActivity();await loadMessages(true);input.focus()}catch(error){if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}else if(error.message&&error.message.includes('仅可查看')){document.getElementById('readonlyBanner').hidden=false;toast(error.message)}else toast(error.message)}finally{sendBtn.disabled=false}
   });
@@ -629,13 +647,31 @@ authForm.addEventListener('submit',async e=>{
   folderDelete.addEventListener('click',function(){if(!currentFolder)return;armDanger(this,'再点一次确认删除',async()=>{const name=currentFolder;this.disabled=true;try{await api('/api/folders/'+encodeURIComponent(name),{method:'DELETE'});knownFolders.delete(name);currentFolder='';folderStatus.textContent='已删除文件夹“'+name+'”，其中的文件已移回根目录。';toast('文件夹已删除');await loadFileLibrary();if(activeRoom)await loadMessages(false)}catch(error){folderStatus.textContent=error.message;folderStatus.classList.add('error')}finally{this.disabled=false}})});
   document.getElementById('folderRoot').addEventListener('click',()=>openFolder(''));
   filePageInput.addEventListener('change',()=>{const file=filePageInput.files&&filePageInput.files[0];filePageStatus.textContent='';filePageStatus.classList.remove('error');if(!file)return clearPageFile();const problem=validateChatFile(file);if(problem){clearPageFile();filePageStatus.textContent=problem;filePageStatus.classList.add('error');return}selectedPageFile=file;filePageSelected.textContent=file.name+' ('+formatBytes(file.size)+')';filePageUpload.disabled=false});
-  filePageUpload.addEventListener('click',async()=>{const file=selectedPageFile,room=fileRoomSelect.value,folder=fileFolderSelect.value;if(!file||!room||!currentUser)return;filePageUpload.disabled=true;fileRoomSelect.disabled=true;fileFolderSelect.disabled=true;filePageStatus.textContent='正在上传…';filePageStatus.classList.remove('error');try{await uploadPageFile(file,room,folder);if(folder)knownFolders.add(folder);clearPageFile();filePageStatus.textContent='上传成功';toast('文件已上传');currentFolder=folder||'';await loadFileLibrary();if(activeRoom&&activeRoom.id===room)await loadMessages(true)}catch(error){filePageStatus.textContent=error.message;filePageStatus.classList.add('error');if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}}finally{fileRoomSelect.disabled=false;fileFolderSelect.disabled=false;if(selectedPageFile)filePageUpload.disabled=false}});
+  filePageUpload.addEventListener('click',async()=>{const file=selectedPageFile,room=fileRoomSelect.value,folder=fileFolderSelect.value;if(!file||!room||!currentUser)return;filePageUpload.disabled=true;fileRoomSelect.disabled=true;fileFolderSelect.disabled=true;filePageStatus.textContent='正在上传…';filePageStatus.classList.remove('error');try{await uploadPageFile(file,room,folder);if(folder)knownFolders.add(folder);clearPageFile();filePageStatus.textContent='上传成功';notify('✅ 文件传输成功',(file&&file.name||'文件')+' 已上传');currentFolder=folder||'';await loadFileLibrary();if(activeRoom&&activeRoom.id===room)await loadMessages(true)}catch(error){filePageStatus.textContent=error.message;filePageStatus.classList.add('error');if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}}finally{fileRoomSelect.disabled=false;fileFolderSelect.disabled=false;if(selectedPageFile)filePageUpload.disabled=false}});
   fileRoomSelect.addEventListener('change',clearPageFile);fileFolderSelect.addEventListener('change',clearPageFile);
   ['dragenter','dragover'].forEach(type=>fileUploadZone.addEventListener(type,event=>{event.preventDefault();if(currentUser)fileUploadZone.classList.add('drag')}));['dragleave','drop'].forEach(type=>fileUploadZone.addEventListener(type,event=>{event.preventDefault();fileUploadZone.classList.remove('drag')}));fileUploadZone.addEventListener('drop',event=>{if(!currentUser)return;const file=event.dataTransfer&&event.dataTransfer.files&&event.dataTransfer.files[0];if(!file)return;const problem=validateChatFile(file);filePageStatus.classList.toggle('error',Boolean(problem));if(problem){filePageStatus.textContent=problem;return}selectedPageFile=file;filePageSelected.textContent=file.name+' ('+formatBytes(file.size)+')';filePageUpload.disabled=false});
   document.getElementById('fileLoginGo').addEventListener('click',()=>{showView('chat');usernameInput.focus()});
   document.getElementById('fileListRefresh').addEventListener('click',loadFileLibrary);
   setLoggedIn(null);
-  let timer;function toast(msg,kind,duration){const t=document.getElementById('toast');t.textContent=msg;t.classList.toggle('warning',kind==='warning');t.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>{t.classList.remove('show','warning')},duration||2200)}
+  let timer;function notify(title,text,onClick,duration){
+  const stack=document.getElementById('notifStack');
+  const el=document.createElement('div');el.className='notif';
+  const body=document.createElement('div');body.className='notif-body';
+  const t=document.createElement('div');t.className='notif-title';t.textContent=title;
+  const x=document.createElement('div');x.className='notif-text';x.textContent=text;
+  body.appendChild(t);body.appendChild(x);
+  const close=document.createElement('button');close.className='notif-close';close.textContent='\u2715';close.setAttribute('aria-label','关闭');
+  el.appendChild(body);el.appendChild(close);
+  let dead=false;
+  const dismiss=()=>{if(dead)return;dead=true;el.classList.add('hide');setTimeout(()=>el.remove(),350)};
+  close.addEventListener('click',e=>{e.stopPropagation();dismiss()});
+  if(onClick) el.addEventListener('click',()=>{dismiss();onClick()});
+  stack.appendChild(el);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('show')));
+  setTimeout(dismiss,duration||5000);
+  while(stack.children.length>4) stack.firstChild.remove();
+}
+function toast(msg,kind,duration){const t=document.getElementById('toast');t.textContent=msg;t.classList.toggle('warning',kind==='warning');t.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>{t.classList.remove('show','warning')},duration||2200)}
 })();
 </script>
 </body>
