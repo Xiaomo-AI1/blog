@@ -278,13 +278,30 @@ function startAdaptivePoll(){stopAdaptivePoll();markActivity();schedulePoll()}
 function stopAdaptivePoll(){if(pollTimeout){clearTimeout(pollTimeout);pollTimeout=null}}
 async function schedulePoll(){stopAdaptivePoll();if(!currentUser||document.hidden)return;try{await loadMessages(false);await pollRooms()}catch(_){}pollTimeout=setTimeout(schedulePoll,adaptiveInterval())}
 
-async function pollRooms(){try{const data=await api('/api/rooms');const list=Array.isArray(data)?data:(Array.isArray(data.rooms)?data.rooms:[]);const ids=list.map(r=>String(r.id||r.room_id||'')).sort().join(',');if(ids&&ids!==lastRoomIds){const oldIds=new Set(lastRoomIds?lastRoomIds.split(','):[]);const newOnes=list.filter(r=>!oldIds.has(String(r.id||r.room_id||'')));lastRoomIds=ids;await loadRooms();newOnes.forEach(r=>{const nm=r.name||r.room_name||'新群聊';toast('你被拉入了「'+nm+'」')})}}catch(_){}}
+async function pollRooms(){try{const data=await api('/api/rooms');const list=Array.isArray(data)?data:(Array.isArray(data.rooms)?data.rooms:[]);const ids=list.map(r=>String(r.id||r.room_id||'')).sort().join(',');
+if(ids&&ids!==lastRoomIds){const oldIds=new Set(lastRoomIds?lastRoomIds.split(','):[]);const newOnes=list.filter(r=>!oldIds.has(String(r.id||r.room_id||'')));lastRoomIds=ids;await loadRooms();newOnes.forEach(r=>{const nm=r.name||r.room_name||'新群聊';toast('你被拉入了「'+nm+'」')})}
+// 检测非当前房间的新消息（轮询兜底也弹通知+红点）
+for(const r of list){
+  const rid=String(r.id||r.room_id||''),lmid=Number(r.last_msg_id||0);
+  if(!rid) continue;
+  const prev=roomLastMsg.get(rid);
+  roomLastMsg.set(rid,lmid);
+  if(prev!==undefined&&lmid>prev&&rid!==String(activeRoom&&activeRoom.id)){
+    unreadRooms.add(rid);renderRooms();
+    const rname=r.name||r.room_name||'新消息';
+    notify('💬 '+rname+' 有新消息','点击查看',()=>{
+      const target=rooms.find(x=>String(x.id)===rid);
+      if(target) switchRoom(target);
+    });
+  }
+}
+}catch(_){}}
 function setupVisibilityPolling(){document.removeEventListener('visibilitychange',handleVisibilityChange);document.addEventListener('visibilitychange',handleVisibilityChange)}
 function handleVisibilityChange(){if(document.hidden){stopAdaptivePoll()}else if(currentUser){markActivity();startAdaptivePoll();loadMessages(true);pollRooms()}}
 
 // ============ WebSocket 实时推送 ============
 // 连上后停掉轮询（零消耗）；断开则回退到自适应轮询并自动重连
-let wsClient=null, wsOk=false, wsRetryMs=1000, wsPingTimer=null;const seenMsgIds=new Set();const unreadRooms=new Set();
+let wsClient=null, wsOk=false, wsRetryMs=1000, wsPingTimer=null;const seenMsgIds=new Set();const unreadRooms=new Set();const roomLastMsg=new Map();
 function wsUrl(){
   try{
     const u=new URL(API);
@@ -365,7 +382,7 @@ async function loadRooms(preferredId){
     if(!activeRoom)return;roomTitle.textContent=roomLabel(activeRoom);roomBadge.textContent=activeRoom.isDm?'单聊':(activeRoom.isPrivate?'私密':'公开');
     manageToggle.hidden=!isAdmin;document.getElementById('deleteRoomBtn').hidden=activeRoom.isLobby;membersToggle.hidden=!(activeRoom&&!activeRoom.isDm);inviteForm.hidden=!(isAdmin&&activeRoom.isPrivate&&!activeRoom.isDm);input.placeholder='发消息到'+roomLabel(activeRoom)+'…';
   }
-  function switchRoom(room){activeRoom=room;markActivity();lastSeenMsgId=0;unreadRooms.delete(String(room.id));if(seenMsgIds.size>2000)seenMsgIds.clear();management.hidden=true;document.getElementById('readonlyBanner').hidden=true;chatStatus.textContent='';clearPendingFile();renderRooms();updateRoomHeader();revokeMessageObjectUrls();messages.replaceChildren(Object.assign(document.createElement('p'),{className:'message-state',textContent:'正在加载消息…'}));loadMessages(true)}
+  function switchRoom(room){activeRoom=room;markActivity();lastSeenMsgId=0;unreadRooms.delete(String(room.id));renderRooms();if(seenMsgIds.size>2000)seenMsgIds.clear();management.hidden=true;document.getElementById('readonlyBanner').hidden=true;chatStatus.textContent='';clearPendingFile();renderRooms();updateRoomHeader();revokeMessageObjectUrls();messages.replaceChildren(Object.assign(document.createElement('p'),{className:'message-state',textContent:'正在加载消息…'}));loadMessages(true)}
   function messageTime(value){
     if(!value)return '';let date;if(typeof value==='number')date=new Date(value<1e12?value*1000:value);else date=new Date(value);
     return Number.isNaN(date.getTime())?'':date.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
