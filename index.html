@@ -214,7 +214,7 @@
   const tempPasswordDialog=document.getElementById('tempPasswordDialog'),tempPasswordValue=document.getElementById('tempPasswordValue'),tempPasswordNote=document.getElementById('tempPasswordNote');
   const roomDeleteDialog=document.getElementById('roomDeleteDialog'),roomDeleteCancel=document.getElementById('roomDeleteCancel'),roomDeleteConfirm=document.getElementById('roomDeleteConfirm');
   const imageViewer=document.getElementById('imageViewer'),imageViewerImg=document.getElementById('imageViewerImg');
-  let authMode='login',authToken='',captchaId='',currentUser='',currentUserId='',currentAccount='',isAdmin=false,isSuperAdmin=false,pollTimer=null,loadingMessages=false,rooms=[],activeRoom=null,pendingDeleteRoom=null,adminFileRecords=[],directoryUsers=[],selectedChatFile=null,selectedPageFile=null,storageUsed=0,storageCap=9*1024*1024*1024,allLibraryFiles=[],currentFolder='',knownFolders=new Set();
+  let authMode='login',authToken='',captchaId='',currentUser='',currentUserId='',currentAccount='',isAdmin=false,isSuperAdmin=false,loadingMessages=false,rooms=[],activeRoom=null,pendingDeleteRoom=null,adminFileRecords=[],directoryUsers=[],selectedChatFile=null,selectedPageFile=null,storageUsed=0,storageCap=9*1024*1024*1024,allLibraryFiles=[],currentFolder='',knownFolders=new Set();
   function requestHeaders(headers){
     const result=Object.assign({},headers||{});if(authToken)result.Authorization='Bearer '+authToken;return result;
   }
@@ -242,8 +242,8 @@
     currentUser=user?String(user.username||user.name||''):'';currentUserId=user?String(user.id||user.user_id||''):'';currentAccount=user?String(user.account||''):'';const userRole=String(user&&(user.role||user.user_role)||'').toLowerCase();isSuperAdmin=Boolean(user&&(user.is_super_admin===true||user.isSuperAdmin===true||userRole==='super_admin'||userRole==='superadmin'||userRole==='super'));isAdmin=Boolean(isSuperAdmin||(user&&(user.is_admin===true||user.isAdmin===true||userRole==='admin')));const yes=Boolean(currentUser);if(!yes)authToken='';
     authArea.style.display=yes?'none':'block';signedIn.style.display=yes?'block':'none';chatWindow.hidden=!yes;chatLocked.hidden=yes;roomPanel.hidden=!yes;fileLoginGate.hidden=yes;fileLoggedContent.hidden=!yes;
     accountName.textContent=currentUser;document.getElementById('accountId').textContent=currentAccount;myAvatarUrl=(user&&(user.avatar_url||user.avatarUrl))||'';refreshAvatarPreview();chatUser.textContent=yes?'@'+currentUser:'';adminBadge.textContent=isSuperAdmin?'超级管理员':'管理员';adminBadge.hidden=!isAdmin;manageToggle.hidden=!isAdmin;accountAdminBtn.hidden=!isAdmin;if(!yes){newUsernameInput.value='';usernameStatus.textContent='';usernameStatus.classList.remove('error','success')}
-    clearInterval(pollTimer);clearInterval(roomPollTimer);document.removeEventListener('visibilitychange',handleVisibilityChange);pollTimer=null;rooms=[];directoryUsers=[];activeRoom=null;management.hidden=true;if(!yes){if(adminDialog.classList.contains('active'))closeAdmin();closeRoomDeleteDialog()}
-    if(yes){loadRooms().then(()=>{if(activeRoom)loadMessages(true)});pollTimer=setInterval(()=>loadMessages(false),3000);roomPollTimer=setInterval(pollRooms,5000);setupVisibilityPolling()}else{revokeMessageObjectUrls();messages.replaceChildren();roomList.replaceChildren();input.value='';clearPendingFile();clearPageFile();setUploadState(false,0)}
+    stopAdaptivePoll();document.removeEventListener('visibilitychange',handleVisibilityChange);pollTimer=null;rooms=[];directoryUsers=[];activeRoom=null;management.hidden=true;if(!yes){if(adminDialog.classList.contains('active'))closeAdmin();closeRoomDeleteDialog()}
+    if(yes){loadRooms().then(()=>{if(activeRoom)loadMessages(true)});startAdaptivePoll();setupVisibilityPolling()}else{revokeMessageObjectUrls();messages.replaceChildren();roomList.replaceChildren();input.value='';clearPendingFile();clearPageFile();setUploadState(false,0)}
     loadFileLibrary();
   }
   async function checkSession(){
@@ -258,10 +258,16 @@
       const symbol=document.createElement('span');symbol.className='room-symbol';symbol.textContent=room.isDm?'@':'#';const label=document.createElement('span');label.className='room-label';label.textContent=room.name;button.append(symbol,label);button.addEventListener('click',()=>switchRoom(room));row.appendChild(button);
       if(!room.isLobby&&!room.isDm&&(isAdmin||room.isOwner)){const remove=document.createElement('button');remove.type='button';remove.className='room-delete';remove.textContent='解散';remove.setAttribute('aria-label','解散群聊 '+room.name);remove.addEventListener('click',()=>openRoomDeleteDialog(room));row.appendChild(remove)}roomList.appendChild(row)});
   }
-  let roomPollTimer=null,lastRoomIds='';
+  let pollTimer=null,roomPollTimer=null,lastRoomIds='',lastActivityAt=Date.now(),pollTimeout=null;let lastSeenMsgId=0;
+function markActivity(){lastActivityAt=Date.now()}
+function adaptiveInterval(){const idle=Date.now()-lastActivityAt;return idle<60000?3000:(idle<300000?15000:60000)}
+function startAdaptivePoll(){stopAdaptivePoll();markActivity();schedulePoll()}
+function stopAdaptivePoll(){if(pollTimeout){clearTimeout(pollTimeout);pollTimeout=null}}
+async function schedulePoll(){stopAdaptivePoll();if(!currentUser||document.hidden)return;try{await loadMessages(false);await pollRooms()}catch(_){}pollTimeout=setTimeout(schedulePoll,adaptiveInterval())}
+
 async function pollRooms(){try{const data=await api('/api/rooms');const list=Array.isArray(data)?data:(Array.isArray(data.rooms)?data.rooms:[]);const ids=list.map(r=>String(r.id||r.room_id||'')).sort().join(',');if(ids&&ids!==lastRoomIds){const oldIds=new Set(lastRoomIds?lastRoomIds.split(','):[]);const newOnes=list.filter(r=>!oldIds.has(String(r.id||r.room_id||'')));lastRoomIds=ids;await loadRooms();newOnes.forEach(r=>{const nm=r.name||r.room_name||'新群聊';toast('你被拉入了「'+nm+'」')})}}catch(_){}}
 function setupVisibilityPolling(){document.removeEventListener('visibilitychange',handleVisibilityChange);document.addEventListener('visibilitychange',handleVisibilityChange)}
-function handleVisibilityChange(){if(document.hidden){clearInterval(pollTimer);clearInterval(roomPollTimer);pollTimer=null;roomPollTimer=null}else{if(currentUser){pollTimer=pollTimer||setInterval(()=>loadMessages(false),3000);roomPollTimer=roomPollTimer||setInterval(pollRooms,5000);loadMessages(true);pollRooms()}}}
+function handleVisibilityChange(){if(document.hidden){stopAdaptivePoll()}else if(currentUser){markActivity();startAdaptivePoll();loadMessages(true);pollRooms()}}
 async function loadRooms(preferredId){
     try{
       const data=await api('/api/rooms');const list=Array.isArray(data)?data:(Array.isArray(data.rooms)?data.rooms:[]);rooms=list.map(normalizeRoom);lastRoomIds=rooms.map(r=>String(r.id)).sort().join(',');
@@ -273,7 +279,7 @@ async function loadRooms(preferredId){
     if(!activeRoom)return;roomTitle.textContent=roomLabel(activeRoom);roomBadge.textContent=activeRoom.isDm?'单聊':(activeRoom.isPrivate?'私密':'公开');
     manageToggle.hidden=!isAdmin;document.getElementById('deleteRoomBtn').hidden=activeRoom.isLobby;membersToggle.hidden=!(activeRoom&&!activeRoom.isDm);inviteForm.hidden=!(isAdmin&&activeRoom.isPrivate&&!activeRoom.isDm);input.placeholder='发消息到'+roomLabel(activeRoom)+'…';
   }
-  function switchRoom(room){activeRoom=room;management.hidden=true;document.getElementById('readonlyBanner').hidden=true;chatStatus.textContent='';clearPendingFile();renderRooms();updateRoomHeader();revokeMessageObjectUrls();messages.replaceChildren(Object.assign(document.createElement('p'),{className:'message-state',textContent:'正在加载消息…'}));loadMessages(true)}
+  function switchRoom(room){activeRoom=room;markActivity();lastSeenMsgId=0;management.hidden=true;document.getElementById('readonlyBanner').hidden=true;chatStatus.textContent='';clearPendingFile();renderRooms();updateRoomHeader();revokeMessageObjectUrls();messages.replaceChildren(Object.assign(document.createElement('p'),{className:'message-state',textContent:'正在加载消息…'}));loadMessages(true)}
   function messageTime(value){
     if(!value)return '';let date;if(typeof value==='number')date=new Date(value<1e12?value*1000:value);else date=new Date(value);
     return Number.isNaN(date.getTime())?'':date.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -328,7 +334,7 @@ async function loadRooms(preferredId){
     if(!currentUser||!activeRoom||loadingMessages)return;loadingMessages=true;const requestedRoom=activeRoom.id;const nearBottom=messages.scrollHeight-messages.scrollTop-messages.clientHeight<90;
     try{
       const data=await api('/api/messages?room='+encodeURIComponent(requestedRoom)+'&limit=50');if(!activeRoom||activeRoom.id!==requestedRoom)return;
-      const list=Array.isArray(data)?data:(Array.isArray(data.messages)?data.messages:[]);revokeMessageObjectUrls();messages.replaceChildren();if(!list.length){const empty=document.createElement('p');empty.className='message-state';empty.textContent='这个房间还没有消息，来发第一条吧。';messages.appendChild(empty)}else list.forEach(addMessage);if(forceBottom||nearBottom)messages.scrollTop=messages.scrollHeight;
+      const list=Array.isArray(data)?data:(Array.isArray(data.messages)?data.messages:[]);const maxId=list.reduce((m,it)=>Math.max(m,Number(it.id)||0),0);if(maxId>lastSeenMsgId){lastSeenMsgId=maxId;markActivity()};revokeMessageObjectUrls();messages.replaceChildren();if(!list.length){const empty=document.createElement('p');empty.className='message-state';empty.textContent='这个房间还没有消息，来发第一条吧。';messages.appendChild(empty)}else list.forEach(addMessage);if(forceBottom||nearBottom)messages.scrollTop=messages.scrollHeight;
     }catch(error){if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}else if(!messages.querySelector('.msg')){const state=document.createElement('p');state.className='message-state';state.textContent=error.message;messages.replaceChildren(state)}}finally{loadingMessages=false}
   }
   function closeRoomForms(){createRoomForm.hidden=true;dmForm.hidden=true;document.getElementById('createRoomToggle').classList.remove('active');document.getElementById('startDmToggle').classList.remove('active');createRoomError.textContent='';dmError.textContent=''}
@@ -514,7 +520,7 @@ authForm.addEventListener('submit',async e=>{
   cancelFileBtn.addEventListener('click',clearPendingFile);
   uploadFileBtn.addEventListener('click',async()=>{const file=selectedChatFile;if(!file||!currentUser||!activeRoom)return;const canUpload=await preflightChatFile(file);if(!canUpload||file!==selectedChatFile)return;try{const result=await uploadChatFile(file,input.value.trim());input.value='';clearPendingFile();await loadMessages(true);if(result&&Object.prototype.hasOwnProperty.call(result,'auto_cleaned'))toast('已自动清理 '+(Number(result.auto_cleaned)||0)+' 个最早文件','warning',6000);else if(result&&result.warning)toast(String(result.warning),'warning',6000);else toast('文件已发送')}catch(error){if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}else toast(error.message)}finally{setUploadState(false,0)}});
   form.addEventListener('submit',async e=>{
-    e.preventDefault();const text=input.value.trim();if(!text||!currentUser||!activeRoom)return;sendBtn.disabled=true;try{const room=activeRoom.id;await api('/api/messages?room='+encodeURIComponent(room),{method:'POST',body:JSON.stringify({text,room})});input.value='';await loadMessages(true);input.focus()}catch(error){if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}else if(error.message&&error.message.includes('仅可查看')){document.getElementById('readonlyBanner').hidden=false;toast(error.message)}else toast(error.message)}finally{sendBtn.disabled=false}
+    e.preventDefault();const text=input.value.trim();if(!text||!currentUser||!activeRoom)return;sendBtn.disabled=true;try{const room=activeRoom.id;await api('/api/messages?room='+encodeURIComponent(room),{method:'POST',body:JSON.stringify({text,room})});input.value='';markActivity();await loadMessages(true);input.focus()}catch(error){if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}else if(error.message&&error.message.includes('仅可查看')){document.getElementById('readonlyBanner').hidden=false;toast(error.message)}else toast(error.message)}finally{sendBtn.disabled=false}
   });
   function fileExt(name){const x=name.split('.').pop();return x&&x!==name?x.slice(0,4).toUpperCase():'FILE'}
   function syncFileFolders(){const previous=fileRoomSelect.value,available=rooms.length?rooms:[normalizeRoom({id:'lobby',name:'大厅',is_lobby:true})];fileRoomSelect.replaceChildren();available.forEach(room=>fileRoomSelect.appendChild(new Option((room.isDm?'单聊 · ':'')+room.name,room.id)));if(available.some(room=>room.id===previous))fileRoomSelect.value=previous;else if(activeRoom&&available.some(room=>room.id===activeRoom.id))fileRoomSelect.value=activeRoom.id;else fileRoomSelect.value=available[0].id;syncFolderChoices()}
