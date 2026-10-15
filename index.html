@@ -242,8 +242,8 @@
     currentUser=user?String(user.username||user.name||''):'';currentUserId=user?String(user.id||user.user_id||''):'';currentAccount=user?String(user.account||''):'';const userRole=String(user&&(user.role||user.user_role)||'').toLowerCase();isSuperAdmin=Boolean(user&&(user.is_super_admin===true||user.isSuperAdmin===true||userRole==='super_admin'||userRole==='superadmin'||userRole==='super'));isAdmin=Boolean(isSuperAdmin||(user&&(user.is_admin===true||user.isAdmin===true||userRole==='admin')));const yes=Boolean(currentUser);if(!yes)authToken='';
     authArea.style.display=yes?'none':'block';signedIn.style.display=yes?'block':'none';chatWindow.hidden=!yes;chatLocked.hidden=yes;roomPanel.hidden=!yes;fileLoginGate.hidden=yes;fileLoggedContent.hidden=!yes;
     accountName.textContent=currentUser;document.getElementById('accountId').textContent=currentAccount;myAvatarUrl=(user&&(user.avatar_url||user.avatarUrl))||'';refreshAvatarPreview();chatUser.textContent=yes?'@'+currentUser:'';adminBadge.textContent=isSuperAdmin?'超级管理员':'管理员';adminBadge.hidden=!isAdmin;manageToggle.hidden=!isAdmin;accountAdminBtn.hidden=!isAdmin;if(!yes){newUsernameInput.value='';usernameStatus.textContent='';usernameStatus.classList.remove('error','success')}
-    stopAdaptivePoll();document.removeEventListener('visibilitychange',handleVisibilityChange);pollTimer=null;rooms=[];directoryUsers=[];activeRoom=null;management.hidden=true;if(!yes){if(adminDialog.classList.contains('active'))closeAdmin();closeRoomDeleteDialog()}
-    if(yes){loadRooms().then(()=>{if(activeRoom)loadMessages(true)});startAdaptivePoll();setupVisibilityPolling()}else{revokeMessageObjectUrls();messages.replaceChildren();roomList.replaceChildren();input.value='';clearPendingFile();clearPageFile();setUploadState(false,0)}
+    stopAdaptivePoll();disconnectWS();document.removeEventListener('visibilitychange',handleVisibilityChange);pollTimer=null;rooms=[];directoryUsers=[];activeRoom=null;management.hidden=true;if(!yes){if(adminDialog.classList.contains('active'))closeAdmin();closeRoomDeleteDialog()}
+    if(yes){loadRooms().then(()=>{if(activeRoom)loadMessages(true)});startAdaptivePoll();setupVisibilityPolling();connectWS()}else{revokeMessageObjectUrls();messages.replaceChildren();roomList.replaceChildren();input.value='';clearPendingFile();clearPageFile();setUploadState(false,0)}
     loadFileLibrary();
   }
   async function checkSession(){
@@ -268,6 +268,66 @@ async function schedulePoll(){stopAdaptivePoll();if(!currentUser||document.hidde
 async function pollRooms(){try{const data=await api('/api/rooms');const list=Array.isArray(data)?data:(Array.isArray(data.rooms)?data.rooms:[]);const ids=list.map(r=>String(r.id||r.room_id||'')).sort().join(',');if(ids&&ids!==lastRoomIds){const oldIds=new Set(lastRoomIds?lastRoomIds.split(','):[]);const newOnes=list.filter(r=>!oldIds.has(String(r.id||r.room_id||'')));lastRoomIds=ids;await loadRooms();newOnes.forEach(r=>{const nm=r.name||r.room_name||'新群聊';toast('你被拉入了「'+nm+'」')})}}catch(_){}}
 function setupVisibilityPolling(){document.removeEventListener('visibilitychange',handleVisibilityChange);document.addEventListener('visibilitychange',handleVisibilityChange)}
 function handleVisibilityChange(){if(document.hidden){stopAdaptivePoll()}else if(currentUser){markActivity();startAdaptivePoll();loadMessages(true);pollRooms()}}
+
+// ============ WebSocket 实时推送 ============
+// 连上后停掉轮询（零消耗）；断开则回退到自适应轮询并自动重连
+let wsClient=null, wsOk=false, wsRetryMs=1000, wsPingTimer=null;const seenMsgIds=new Set();
+function wsUrl(){
+  try{
+    const u=new URL(API);
+    u.protocol=u.protocol==="https:"?"wss:":"ws:";
+    return u.origin+"/api/ws";
+  }catch(e){ return "wss://api.shmily.work/api/ws"; }
+}
+function connectWS(){
+  if(!currentUser) return;
+  try{ if(wsClient) wsClient.close(); }catch(e){}
+  wsClient=null; wsOk=false;
+  let ws;
+  try{ ws=new WebSocket(wsUrl()); }catch(e){ scheduleWsRetry(); return; }
+  wsClient=ws;
+  ws.onopen=()=>{
+    wsOk=true; wsRetryMs=1000;
+    stopAdaptivePoll(); // WS 接管，轮询全停
+    clearInterval(wsPingTimer);
+    wsPingTimer=setInterval(()=>{ try{ ws.send(JSON.stringify({type:"ping"})); }catch(e){} },30000);
+  };
+  ws.onmessage=(ev)=>{
+    let d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
+    if(!d||!d.type) return;
+    markActivity();
+    if(d.type==="pong") return;
+    if(d.type==="message"&&d.message){
+      const m=d.message;
+      if(m.id && seenMsgIds.has(String(m.id))) return; // 已显示过
+      if(m.id) seenMsgIds.add(String(m.id));
+      // 只处理我看得到的房间
+      if(String(m.room_id)!==String(activeRoom&&activeRoom.id)) { pollRooms(); return; }
+      addMessage(m); lastSeenMsgId=Math.max(lastSeenMsgId, Number(m.id)||0);
+      const nearBottom=messages.scrollHeight-messages.scrollTop-messages.clientHeight<90;
+      if(nearBottom) messages.scrollTop=messages.scrollHeight;
+    }else if(d.type==="rooms_changed"){
+      pollRooms();
+    }else if(d.type==="message_recalled"&&d.messageId){
+      // 撤回：刷新当前房间
+      if(String(d.roomId)===String(activeRoom&&activeRoom.id)) loadMessages(false);
+    }
+  };
+  ws.onclose=()=>{
+    wsOk=false; clearInterval(wsPingTimer);
+    if(currentUser){ startAdaptivePoll(); scheduleWsRetry(); }
+  };
+  ws.onerror=()=>{ try{ ws.close(); }catch(e){} };
+}
+function scheduleWsRetry(){
+  setTimeout(()=>{ if(currentUser&&!wsOk) connectWS(); }, wsRetryMs);
+  wsRetryMs=Math.min(wsRetryMs*2,30000);
+}
+function disconnectWS(){
+  wsOk=false; clearInterval(wsPingTimer);
+  try{ if(wsClient) wsClient.close(); }catch(e){}
+  wsClient=null;
+}
 async function loadRooms(preferredId){
     try{
       const data=await api('/api/rooms');const list=Array.isArray(data)?data:(Array.isArray(data.rooms)?data.rooms:[]);rooms=list.map(normalizeRoom);lastRoomIds=rooms.map(r=>String(r.id)).sort().join(',');
@@ -279,7 +339,7 @@ async function loadRooms(preferredId){
     if(!activeRoom)return;roomTitle.textContent=roomLabel(activeRoom);roomBadge.textContent=activeRoom.isDm?'单聊':(activeRoom.isPrivate?'私密':'公开');
     manageToggle.hidden=!isAdmin;document.getElementById('deleteRoomBtn').hidden=activeRoom.isLobby;membersToggle.hidden=!(activeRoom&&!activeRoom.isDm);inviteForm.hidden=!(isAdmin&&activeRoom.isPrivate&&!activeRoom.isDm);input.placeholder='发消息到'+roomLabel(activeRoom)+'…';
   }
-  function switchRoom(room){activeRoom=room;markActivity();lastSeenMsgId=0;management.hidden=true;document.getElementById('readonlyBanner').hidden=true;chatStatus.textContent='';clearPendingFile();renderRooms();updateRoomHeader();revokeMessageObjectUrls();messages.replaceChildren(Object.assign(document.createElement('p'),{className:'message-state',textContent:'正在加载消息…'}));loadMessages(true)}
+  function switchRoom(room){activeRoom=room;markActivity();lastSeenMsgId=0;if(seenMsgIds.size>2000)seenMsgIds.clear();management.hidden=true;document.getElementById('readonlyBanner').hidden=true;chatStatus.textContent='';clearPendingFile();renderRooms();updateRoomHeader();revokeMessageObjectUrls();messages.replaceChildren(Object.assign(document.createElement('p'),{className:'message-state',textContent:'正在加载消息…'}));loadMessages(true)}
   function messageTime(value){
     if(!value)return '';let date;if(typeof value==='number')date=new Date(value<1e12?value*1000:value);else date=new Date(value);
     return Number.isNaN(date.getTime())?'':date.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -334,7 +394,7 @@ async function loadRooms(preferredId){
     if(!currentUser||!activeRoom||loadingMessages)return;loadingMessages=true;const requestedRoom=activeRoom.id;const nearBottom=messages.scrollHeight-messages.scrollTop-messages.clientHeight<90;
     try{
       const data=await api('/api/messages?room='+encodeURIComponent(requestedRoom)+'&limit=50');if(!activeRoom||activeRoom.id!==requestedRoom)return;
-      const list=Array.isArray(data)?data:(Array.isArray(data.messages)?data.messages:[]);const maxId=list.reduce((m,it)=>Math.max(m,Number(it.id)||0),0);if(maxId>lastSeenMsgId){lastSeenMsgId=maxId;markActivity()};revokeMessageObjectUrls();messages.replaceChildren();if(!list.length){const empty=document.createElement('p');empty.className='message-state';empty.textContent='这个房间还没有消息，来发第一条吧。';messages.appendChild(empty)}else list.forEach(addMessage);if(forceBottom||nearBottom)messages.scrollTop=messages.scrollHeight;
+      const list=Array.isArray(data)?data:(Array.isArray(data.messages)?data.messages:[]);const maxId=list.reduce((m,it)=>Math.max(m,Number(it.id)||0),0);list.forEach(it=>{ if(it.id) seenMsgIds.add(String(it.id)); });if(maxId>lastSeenMsgId){lastSeenMsgId=maxId;markActivity()};revokeMessageObjectUrls();messages.replaceChildren();if(!list.length){const empty=document.createElement('p');empty.className='message-state';empty.textContent='这个房间还没有消息，来发第一条吧。';messages.appendChild(empty)}else list.forEach(addMessage);if(forceBottom||nearBottom)messages.scrollTop=messages.scrollHeight;
     }catch(error){if(error.status===401){setLoggedIn(null);authError.textContent='登录已失效，请重新登录。'}else if(!messages.querySelector('.msg')){const state=document.createElement('p');state.className='message-state';state.textContent=error.message;messages.replaceChildren(state)}}finally{loadingMessages=false}
   }
   function closeRoomForms(){createRoomForm.hidden=true;dmForm.hidden=true;document.getElementById('createRoomToggle').classList.remove('active');document.getElementById('startDmToggle').classList.remove('active');createRoomError.textContent='';dmError.textContent=''}
