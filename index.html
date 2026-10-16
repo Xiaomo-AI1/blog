@@ -67,6 +67,18 @@
 .tool-cat-head::before{content:'▼';font-size:.75rem;color:var(--accent-2);transition:transform .18s}
 .tool-cat-head.collapsed::before{transform:rotate(-90deg)}
 .tool-cat-head.collapsed{border-bottom-color:var(--line)}
+.gb-form{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:10px;margin-bottom:16px}
+.gb-form input{border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:10px 12px;border-radius:10px;font-size:.85rem}
+.gb-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.gb-input-row button{border:0;background:var(--accent-2);color:#fff;padding:10px 18px;border-radius:10px;font-weight:700;cursor:pointer}
+.gb-input-row button:disabled{opacity:.5;cursor:wait}
+.gb-list{display:grid;gap:10px}
+.gb-item{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.gb-item-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.gb-item-name{font-weight:700;font-size:.85rem;color:var(--accent-2)}
+.gb-item-time{font-size:.72rem;color:var(--muted)}
+.gb-item-text{font-size:.88rem;line-height:1.6;overflow-wrap:anywhere}
+.gb-empty{color:var(--muted);text-align:center;padding:30px}
 </style>
 </head>
 <body>
@@ -74,7 +86,7 @@
     <nav class="topbar" aria-label="主导航">
       <button class="nav-btn active" data-view="blog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5z"/><path d="M4 6.5v13A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>博客</button>
       <button class="nav-btn" data-view="tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14.7 6.3a4 4 0 0 0-5-5l2.1 2.1-8.4 8.4-2.1-2.1a4 4 0 0 0 5 5l8.4-8.4z"/><path d="m13 11 8 8-2 2-8-8"/></svg>工具</button>
-      <button class="nav-btn" data-view="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>群聊</button>
+      <button class="nav-btn" data-view="guestbook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>留言</button>       <button class="nav-btn" data-view="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>群聊</button>
       <button class="nav-btn" data-view="files"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7h6l2 2h10v11H3z"/><path d="M3 7V4h6l2 3"/></svg>文件</button>
     </nav>
 
@@ -134,6 +146,17 @@
       <p class="source-note">可用卡片直接打开公开页面；“待核验”表示暂未找到可信的独立网页入口。</p>
     </section>
 
+    <section id="guestbook" class="view">
+      <div class="tools-intro"><span class="eyebrow">留言板</span><h1>留下你的足迹</h1><p>填个名字就能发言，不用注册登录。</p></div>
+      <div class="gb-form">
+        <input id="gbName" maxlength="16" placeholder="你的名字（留空随机）" autocomplete="off">
+        <div class="gb-input-row">
+          <input id="gbText" maxlength="500" placeholder="说点什么…" autocomplete="off">
+          <button id="gbSend" type="button">发送</button>
+        </div>
+      </div>
+      <div class="gb-list" id="gbList"><p class="gb-empty">正在加载…</p></div>
+    </section>
     <section id="chat" class="view">
       <div class="panel-intro"><span class="eyebrow">真人聊天</span><h1>群聊与单聊，各自在自己的房间里</h1><p>登录后可进入大厅、已加入的群聊和单聊；每个房间的消息互不混在一起。</p></div>
       <div class="chat-shell">
@@ -282,6 +305,19 @@ document.querySelectorAll('.filter').forEach(f=>f.addEventListener('click',()=>{
   }
 }));toolSearch.addEventListener('input',filterTools);toolSearchClear.addEventListener('click',()=>{toolSearch.value='';toolSearch.focus();filterTools()});filterTools();
   const API='https://api.shmily.work';
+  // ---- 留言板 ----
+  const gbList=document.getElementById('gbList'),gbName=document.getElementById('gbName'),gbText=document.getElementById('gbText'),gbSend=document.getElementById('gbSend');
+  const randomNames=['拾光','微风','星辰','山丘','溪流','白云','夜空','晨曦','落叶','海浪'];
+  function gbGetName(){let n=(gbName.value||'').trim();if(!n){n=localStorage.getItem('gb_name')||randomNames[Math.floor(Math.random()*randomNames.length)];gbName.value=n;}return n;}
+  function gbTime(ts){const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+  function gbEscape(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  async function gbLoad(){try{const r=await fetch(API+'/api/guestbook');const d=await r.json();if(!d.ok)throw new Error(d.msg||'加载失败');if(!d.messages.length){gbList.innerHTML='<p class="gb-empty">还没有留言，来抢沙发吧</p>';return;}gbList.replaceChildren(...d.messages.map(m=>{const el=document.createElement('div');el.className='gb-item';const head=document.createElement('div');head.className='gb-item-head';const nm=document.createElement('span');nm.className='gb-item-name';nm.textContent=m.name;const tm=document.createElement('span');tm.className='gb-item-time';tm.textContent=gbTime(m.created_at);head.append(nm,tm);const tx=document.createElement('div');tx.className='gb-item-text';tx.textContent=m.text;el.append(head,tx);return el;}));}catch(e){gbList.innerHTML='<p class="gb-empty">加载失败：'+gbEscape(e.message)+'</p>';}}
+  async function gbPost(){const text=gbText.value.trim();if(!text){toast('写点什么再发吧');return;}const name=gbGetName();localStorage.setItem('gb_name',name);gbSend.disabled=true;try{const r=await fetch(API+'/api/guestbook',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,text})});const d=await r.json();if(!d.ok)throw new Error(d.msg||'发送失败');gbText.value='';toast('留言成功');gbLoad();}catch(e){toast(e.message);}gbSend.disabled=false;}
+  gbSend.addEventListener('click',gbPost);
+  gbText.addEventListener('keydown',e=>{if(e.key==='Enter')gbPost();});
+  // 切换到留言页时加载
+  new MutationObserver(()=>{if(document.getElementById('guestbook').classList.contains('active'))gbLoad();}).observe(document.getElementById('guestbook'),{attributes:true,attributeFilter:['class']});
+
   const form=document.getElementById('chatForm'),input=document.getElementById('chatInput'),messages=document.getElementById('messages'),sendBtn=document.getElementById('sendBtn');
   const rememberMe=document.getElementById('rememberMe');
   try{const saved=JSON.parse(localStorage.getItem('chat_remember')||'null');if(saved&&saved.account){document.getElementById('username').value=saved.account;document.getElementById('password').value=saved.password||'';rememberMe.checked=true}}catch(_){}
