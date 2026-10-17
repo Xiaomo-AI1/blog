@@ -481,6 +481,53 @@ units:function(tool){
 }
 };
 
+/* ===== 数据驱动工具引擎（批量工具用：工具只需提供 inputs + run，渲染器自动生成表单） ===== */
+function renderDataTool(tool){
+  const f=shell(tool);
+  let html='';
+  (tool.inputs||[]).forEach(function(inp){
+    let inner;
+    if(inp.type==='select'){
+      inner='<select id="d_'+inp.id+'">'+inp.options.map(function(o){
+        return '<option value="'+o.v+'"'+(String(o.v)===String(inp.def||'')?' selected':'')+'>'+o.t+'</option>';
+      }).join('')+'</select>';
+    }else{
+      inner='<input id="d_'+inp.id+'" inputmode="decimal" placeholder="'+(inp.ph||'')+'"'+(inp.def!==undefined?' value="'+inp.def+'"':'')+'>';
+    }
+    html+=field(inp.label+(inp.unit?'（'+inp.unit+'）':''), inner, inp.hint);
+  });
+  f.innerHTML=html;
+  $("#calcBtn").onclick=function(){
+    const vals={}, order=[];
+    for(const inp of (tool.inputs||[])){
+      const e=document.getElementById('d_'+inp.id);
+      const raw=e?e.value.trim():'';
+      if(inp.type==='select'){ vals[inp.id]=raw; order.push(inp.id); continue; }
+      if(raw===''&&!inp.optional) return showErr('请填写「'+inp.label+'」');
+      if(raw!==''){
+        const n=Number(raw);
+        if(!isFinite(n)) return showErr('「'+inp.label+'」请输入有效数字');
+        if(inp.min!==undefined&&n<inp.min) return showErr('「'+inp.label+'」不能小于 '+inp.min);
+        if(inp.max!==undefined&&n>inp.max) return showErr('「'+inp.label+'」不能大于 '+inp.max);
+        vals[inp.id]=n;
+      }else vals[inp.id]=null;
+      order.push(inp.id);
+    }
+    let out;
+    try{
+      const fn=new Function(order.join(','), '"use strict";'+tool.run);
+      out=fn.apply(null, order.map(function(k){return vals[k];}));
+    }catch(err){ return showErr('计算出错，请检查输入'); }
+    if(!out||!out.ok) return showErr((out&&out.msg)||'输入有误，请检查');
+    showRes(out.html);
+  };
+}
+
+/* ===== 批量工具注入点（BATCH_SNIPPETS） ===== */
+
+/* 数据驱动工具自动注册渲染器（必须在所有 TOOLS.push 之后、初始化之前执行） */
+TOOLS.forEach(function(t){ if(t.run&&!RENDER[t.id]){ RENDER[t.id]=function(tool){ renderDataTool(tool); }; } });
+
 /* ---- 首页：分类 + 卡片 ---- */
 let activeCat="all", query="";
 function buildSidebar(){
