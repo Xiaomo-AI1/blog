@@ -533,6 +533,291 @@ function renderDataTool(tool){
 }
 
 /* ===== 批量工具注入点（BATCH_SNIPPETS） ===== */
+/* ===== WAVE-3D 运动健身 ===== */
+CATS.push({id:"yd", name:"运动健身"});
+TOOLS.push(
+ {id:"ydpace", cat:"yd", icon:"🏃", name:"完赛时间预测", desc:"按配速预测5K/10K/半马/全马完赛时间",
+  formula:"完赛时间 = 距离 × 配速",
+  inputs:[
+   {id:"dist", label:"距离", type:"select", options:[{v:"5",t:"5公里"},{v:"10",t:"10公里"},{v:"21.0975",t:"半程马拉松"},{v:"42.195",t:"全程马拉松"}], def:"10"},
+   {id:"pace", label:"配速", unit:"分/公里", def:"6", min:2, max:15}
+  ],
+  run:"var d=Number(dist), mins=d*pace, h=Math.floor(mins/60), m=Math.round(mins%60); return {ok:true,html:'<div class=\"big\">预计 '+h+'小时'+m+'分</div>'};",
+  test:{inputs:{dist:"10",pace:6}, expect:"预计 1小时0分"}},
+ {id:"ydpace2", cat:"yd", icon:"⏱", name:"配速反推", desc:"定目标完赛时间，反推每公里要跑多快",
+  formula:"所需配速 = 目标总时间 ÷ 距离",
+  inputs:[
+   {id:"dist", label:"距离", type:"select", options:[{v:"5",t:"5公里"},{v:"10",t:"10公里"},{v:"21.0975",t:"半程马拉松"},{v:"42.195",t:"全程马拉松"}], def:"10"},
+   {id:"th", label:"目标小时", unit:"h", def:"0", min:0, max:10},
+   {id:"tm", label:"目标分钟", unit:"min", def:"50", min:0, max:59}
+  ],
+  run:"var d=Number(dist), tot=th*60+tm; if(tot<=0) return {ok:false,msg:'目标时间必须大于0'}; var p=tot/d, pm=Math.floor(p), ps=Math.round((p-pm)*60); return {ok:true,html:'<div class=\"big\">'+p.toFixed(2)+' 分/公里</div><div class=\"row\">即每公里 '+pm+'分'+ps+'秒</div>'};",
+  test:{inputs:{dist:"10",th:0,tm:50}, expect:"5.00 分/公里"}},
+ {id:"ydvo2max", cat:"yd", icon:"🫁", name:"最大摄氧量估算", desc:"Cooper 12分钟跑估算VO2max",
+  formula:"VO2max = (12分钟跑距离 − 504.9) ÷ 44.73",
+  inputs:[{id:"d12", label:"12分钟跑距离", unit:"米", def:"2400", min:500, max:5000}],
+  run:"var vo2=(d12-504.9)/44.73; return {ok:true,html:'<div class=\"big\">VO2max ≈ '+vo2.toFixed(1)+' ml/kg/min</div><div class=\"row\">Cooper公式，仅供参考</div>'};",
+  test:{inputs:{d12:2400}, expect:"42.4"}},
+ {id:"ydinterval", cat:"yd", icon:"🔁", name:"间歇跑配速", desc:"按5K成绩推算400/800/1000米间歇配速",
+  formula:"间歇配速 = 5K配速 × 系数（400m取0.92，800m取0.95，1000m取0.98）",
+  inputs:[
+   {id:"t5", label:"5K完赛时间", unit:"分钟", def:"25", min:12, max:60},
+   {id:"sel", label:"间歇距离", type:"select", options:[{v:"0.4",t:"400米"},{v:"0.8",t:"800米"},{v:"1.0",t:"1000米"}], def:"0.4"}
+  ],
+  run:"var p5=t5/5, ratio={\"0.4\":0.92,\"0.8\":0.95,\"1.0\":0.98}[sel], ip=p5*ratio, lap=ip*Number(sel), sec=Math.round(lap*60), mm=Math.floor(sec/60), ss=sec%60; return {ok:true,html:'<div class=\"big\">每圈 '+mm+'分'+ss+'秒</div><div class=\"row\">间歇配速 '+ip.toFixed(2)+' 分/公里</div>'};",
+  test:{inputs:{t5:25,sel:"0.4"}, expect:"每圈 1分50秒"}},
+ {id:"ydmarathon", cat:"yd", icon:"🏁", name:"马拉松配速表", desc:"定全马目标成绩，生成每公里配速",
+  formula:"配速 = 目标总时间 ÷ 42.195",
+  inputs:[
+   {id:"th", label:"目标小时", unit:"h", def:"4", min:2, max:8},
+   {id:"tm", label:"目标分钟", unit:"min", def:"0", min:0, max:59}
+  ],
+  run:"var tot=th*60+tm; if(tot<=0) return {ok:false,msg:'目标时间必须大于0'}; var p=tot/42.195, pm=Math.floor(p), ps=Math.round((p-pm)*60), m5=Math.round(p*5); return {ok:true,html:'<div class=\"big\">'+pm+'分'+ps+'秒/公里</div><div class=\"row\">每5公里约 '+m5+' 分钟</div>'};",
+  test:{inputs:{th:4,tm:0}, expect:"5分41秒/公里"}},
+ {id:"ydonerm", cat:"yd", icon:"💪", name:"1RM最大重量", desc:"Epley公式估算单次最大重量",
+  formula:"1RM = 重量 × (1 + 次数 ÷ 30)",
+  inputs:[
+   {id:"w", label:"重量", unit:"kg", def:"100", min:1, max:500},
+   {id:"reps", label:"次数", unit:"次", def:"8", min:1, max:30}
+  ],
+  run:"var rm=w*(1+reps/30); return {ok:true,html:'<div class=\"big\">1RM ≈ '+rm.toFixed(1)+' kg</div><div class=\"row\">Epley公式，仅供参考</div>'};",
+  test:{inputs:{w:100,reps:8}, expect:"126.7"}},
+ {id:"ydvolume", cat:"yd", icon:"📊", name:"训练容量", desc:"组数×次数×重量算训练量",
+  formula:"训练容量 = 组数 × 次数 × 重量",
+  inputs:[
+   {id:"sets", label:"组数", unit:"组", def:"5", min:1, max:20},
+   {id:"reps", label:"每组次数", unit:"次", def:"8", min:1, max:100},
+   {id:"w", label:"重量", unit:"kg", def:"100", min:1, max:500}
+  ],
+  run:"var v=sets*reps*w; return {ok:true,html:'<div class=\"big\">'+v+' kg</div><div class=\"row\">训练容量 = 组数×次数×重量</div>'};",
+  test:{inputs:{sets:5,reps:8,w:100}, expect:"4000 kg"}},
+ {id:"ydlift", cat:"yd", icon:"🏋", name:"各动作1RM换算", desc:"深蹲卧推硬拉等动作估算1RM",
+  formula:"1RM = 重量 × (1 + 次数 ÷ 30)",
+  inputs:[
+   {id:"act", label:"动作", type:"select", options:[{v:"深蹲",t:"深蹲"},{v:"卧推",t:"卧推"},{v:"硬拉",t:"硬拉"},{v:"站姿推举",t:"站姿推举"},{v:"杠铃划船",t:"杠铃划船"}], def:"深蹲"},
+   {id:"w", label:"重量", unit:"kg", def:"100", min:1, max:500},
+   {id:"reps", label:"次数", unit:"次", def:"5", min:1, max:30}
+  ],
+  run:"var rm=w*(1+reps/30); return {ok:true,html:'<div class=\"big\">'+act+' 1RM ≈ '+rm.toFixed(1)+' kg</div>'};",
+  test:{inputs:{act:"深蹲",w:100,reps:5}, expect:"116.7"}},
+ {id:"ydplate", cat:"yd", icon:"🔩", name:"杠铃片配重", desc:"目标重量算每边怎么配片",
+  formula:"每边 = (目标 − 杠铃杆20kg) ÷ 2，按大片优先组合",
+  inputs:[{id:"target", label:"目标总重", unit:"kg", def:"100", min:20, max:300}],
+  run:"var bar=20, side=(target-bar)/2; if(side<0) return {ok:false,msg:'目标重量不能小于杠铃杆20kg'}; var plates=[25,20,15,10,5,2.5,1.25], res=[], rem=side; for(var i=0;i<plates.length;i++){ while(rem>=plates[i]-1e-9){ res.push(plates[i]); rem=Math.round((rem-plates[i])*100)/100; } } return {ok:true,html:'<div class=\"big\">每边 '+side+' kg</div><div class=\"row\">配片：'+res.join('+')+'</div>'};",
+  test:{inputs:{target:100}, expect:"25+15"}},
+ {id:"ydstrength", cat:"yd", icon:"🦍", name:"力量水平评估", desc:"深蹲1RM/体重比值评级",
+  formula:"比值 = 深蹲1RM ÷ 体重；<1新手，<1.5进阶，<2中级，<2.5高级，否则精英",
+  inputs:[
+   {id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200},
+   {id:"sq", label:"深蹲1RM", unit:"kg", def:"140", min:20, max:400}
+  ],
+  run:"var r=sq/bw, lv=r<1?'新手':r<1.5?'进阶':r<2?'中级':r<2.5?'高级':'精英'; return {ok:true,html:'<div class=\"big\">'+r.toFixed(2)+' 倍体重 · '+lv+'</div><div class=\"row\">深蹲1RM/体重比值，仅供参考</div>'};",
+  test:{inputs:{bw:70,sq:140}, expect:"2.00 倍体重"}},
+ {id:"ydrun800", cat:"yd", icon:"🎽", name:"800/1000米评分", desc:"学生体测中长跑简化评分",
+  formula:"线性评分：满分线100分，及格线60分之间线性换算（简化版）",
+  inputs:[
+   {id:"item", label:"项目", type:"select", options:[{v:"w800",t:"女子800米"},{v:"m1000",t:"男子1000米"}], def:"w800"},
+   {id:"m", label:"分", unit:"min", def:"4", min:2, max:10},
+   {id:"s", label:"秒", unit:"s", def:"10", min:0, max:59}
+  ],
+  run:"var std={\"w800\":[210,360],\"m1000\":[200,390]}[item], tot=m*60+s, sc=100-(tot-std[0])/(std[1]-std[0])*40; sc=Math.max(0,Math.min(100,sc)); return {ok:true,html:'<div class=\"big\">'+sc.toFixed(1)+' 分</div><div class=\"row\">简化评分标准，仅供参考</div>'};",
+  test:{inputs:{item:"w800",m:4,s:10}, expect:"89.3 分"}},
+ {id:"ydsitup", cat:"yd", icon:"🤸", name:"仰卧起坐评分", desc:"1分钟仰卧起坐简化评分",
+  formula:"50个满分100，20个及格60分，之间线性换算（简化版）",
+  inputs:[{id:"n", label:"1分钟个数", unit:"个", def:"40", min:0, max:80}],
+  run:"var sc=n>=50?100:n<=20?60:60+(n-20)/30*40; return {ok:true,html:'<div class=\"big\">'+sc.toFixed(1)+' 分</div><div class=\"row\">简化评分，仅供参考</div>'};",
+  test:{inputs:{n:40}, expect:"86.7 分"}},
+ {id:"ydpullup", cat:"yd", icon:"🧗", name:"引体向上评分", desc:"引体向上个数简化评分",
+  formula:"15个满分100，5个及格60分，之间线性换算（简化版）",
+  inputs:[{id:"n", label:"个数", unit:"个", def:"10", min:0, max:30}],
+  run:"var sc=n>=15?100:n<=5?60:60+(n-5)/10*40; return {ok:true,html:'<div class=\"big\">'+sc.toFixed(1)+' 分</div><div class=\"row\">简化评分，仅供参考</div>'};",
+  test:{inputs:{n:10}, expect:"80.0 分"}},
+ {id:"ydjump", cat:"yd", icon:"🦘", name:"立定跳远评分", desc:"立定跳远距离简化评分",
+  formula:"260cm满分100，180cm及格60分，之间线性换算（简化版）",
+  inputs:[{id:"d", label:"距离", unit:"cm", def:"220", min:100, max:320}],
+  run:"var sc=d>=260?100:d<=180?60:60+(d-180)/80*40; return {ok:true,html:'<div class=\"big\">'+sc.toFixed(1)+' 分</div><div class=\"row\">简化评分，仅供参考</div>'};",
+  test:{inputs:{d:220}, expect:"80.0 分"}},
+ {id:"ydplank", cat:"yd", icon:"🧘", name:"平板支撑等级", desc:"按坚持秒数评等级",
+  formula:"<60秒新手，<120秒进阶，<180秒优秀，否则大神",
+  inputs:[{id:"sec", label:"坚持时间", unit:"秒", def:"90", min:1, max:600}],
+  run:"var lv=sec<60?'新手':sec<120?'进阶':sec<180?'优秀':'大神'; return {ok:true,html:'<div class=\"big\">'+lv+'</div><div class=\"row\">坚持 '+sec+' 秒</div>'};",
+  test:{inputs:{sec:90}, expect:"进阶"}},
+ {id:"ydpushup", cat:"yd", icon:"👊", name:"俯卧撑等级", desc:"按连续个数评等级",
+  formula:"<10个新手，<25个进阶，<50个优秀，否则大神",
+  inputs:[{id:"n", label:"连续个数", unit:"个", def:"30", min:1, max:200}],
+  run:"var lv=n<10?'新手':n<25?'进阶':n<50?'优秀':'大神'; return {ok:true,html:'<div class=\"big\">'+lv+'</div><div class=\"row\">连续 '+n+' 个</div>'};",
+  test:{inputs:{n:30}, expect:"优秀"}},
+ {id:"ydprotein", cat:"yd", icon:"🍗", name:"蛋白质需求", desc:"按体重和目标算每日蛋白质",
+  formula:"蛋白质 = 体重 × 系数（减脂1.8，增肌2.0，维持1.6 g/kg）",
+  inputs:[
+   {id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200},
+   {id:"goal", label:"目标", type:"select", options:[{v:"1.8",t:"减脂"},{v:"2.0",t:"增肌"},{v:"1.6",t:"维持"}], def:"2.0"}
+  ],
+  run:"var p=bw*Number(goal); return {ok:true,html:'<div class=\"big\">'+p.toFixed(0)+' g/天</div><div class=\"row\">仅供参考</div>'};",
+  test:{inputs:{bw:70,goal:"2.0"}, expect:"140 g/天"}},
+ {id:"ydfatloss", cat:"yd", icon:"⚖", name:"减脂热量缺口", desc:"定减重目标，算每日热量缺口",
+  formula:"每日缺口 = (当前−目标)kg × 7700 ÷ 天数",
+  inputs:[
+   {id:"w0", label:"当前体重", unit:"kg", def:"80", min:40, max:200},
+   {id:"w1", label:"目标体重", unit:"kg", def:"75", min:30, max:200},
+   {id:"days", label:"天数", unit:"天", def:"90", min:7, max:730}
+  ],
+  run:"var diff=w0-w1; if(diff<=0) return {ok:false,msg:'目标体重应小于当前体重'}; var gap=diff*7700/days; return {ok:true,html:'<div class=\"big\">'+gap.toFixed(0)+' kcal/天</div><div class=\"row\">7700kcal ≈ 1kg脂肪</div>'};",
+  test:{inputs:{w0:80,w1:75,days:90}, expect:"428 kcal/天"}},
+ {id:"ydsurplus", cat:"yd", icon:"📈", name:"增肌热量盈余", desc:"按体重算增肌期每日盈余",
+  formula:"建议盈余 ≈ 体重 × 5 kcal/天（约300~500）",
+  inputs:[{id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200}],
+  run:"var s=bw*5; return {ok:true,html:'<div class=\"big\">+'+s.toFixed(0)+' kcal/天</div><div class=\"row\">建议盈余300~500kcal/天</div>'};",
+  test:{inputs:{bw:70}, expect:"+350 kcal/天"}},
+ {id:"ydwater", cat:"yd", icon:"💧", name:"运动补水量", desc:"按时长和强度算运动中补水",
+  formula:"补水 = 时长÷15 × 每15分钟补水量（低150/中200/高250ml）",
+  inputs:[
+   {id:"mins", label:"运动时长", unit:"分钟", def:"60", min:10, max:600},
+   {id:"inten", label:"强度", type:"select", options:[{v:"150",t:"低强度"},{v:"200",t:"中强度"},{v:"250",t:"高强度"}], def:"200"}
+  ],
+  run:"var w=Math.round(mins/15*Number(inten)); return {ok:true,html:'<div class=\"big\">约 '+w+' ml</div><div class=\"row\">运动中补水建议，少量多次</div>'};",
+  test:{inputs:{mins:60,inten:"200"}, expect:"800 ml"}}
+);
+TOOLS.push(
+ {id:"ydcarbs", cat:"yd", icon:"🍌", name:"运动碳水补充", desc:"长时间运动算碳水补充量",
+  formula:"60分钟内无需补充；之后按每小时约45g",
+  inputs:[{id:"mins", label:"运动时长", unit:"分钟", def:"120", min:30, max:600}],
+  run:"if(mins<60) return {ok:true,html:'<div class=\"big\">无需额外补充</div><div class=\"row\">60分钟内运动一般无需补碳水</div>'}; var c=mins/60*45; return {ok:true,html:'<div class=\"big\">约 '+c.toFixed(0)+' g</div><div class=\"row\">每小时30~60g碳水</div>'};",
+  test:{inputs:{mins:120}, expect:"90 g"}},
+ {id:"ydswim", cat:"yd", icon:"🏊", name:"游泳卡路里", desc:"按泳姿和时长算消耗",
+  formula:"kcal = MET × 体重 × 小时（自由泳8/蛙泳6/蝶泳11/仰泳7）",
+  inputs:[
+   {id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200},
+   {id:"style", label:"泳姿", type:"select", options:[{v:"8",t:"自由泳"},{v:"6",t:"蛙泳"},{v:"11",t:"蝶泳"},{v:"7",t:"仰泳"}], def:"8"},
+   {id:"mins", label:"时长", unit:"分钟", def:"30", min:5, max:300}
+  ],
+  run:"var kcal=Number(style)*bw*mins/60; return {ok:true,html:'<div class=\"big\">'+kcal.toFixed(0)+' kcal</div><div class=\"row\">MET法估算，仅供参考</div>'};",
+  test:{inputs:{bw:70,style:"8",mins:30}, expect:"280 kcal"}},
+ {id:"ydcycle", cat:"yd", icon:"🚴", name:"骑行卡路里", desc:"按骑行速度算消耗",
+  formula:"kcal = MET × 体重 × 小时（轻松4/中等6/快速8/竞技10）",
+  inputs:[
+   {id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200},
+   {id:"speed", label:"强度", type:"select", options:[{v:"4",t:"轻松12km/h"},{v:"6",t:"中等16km/h"},{v:"8",t:"快速20km/h"},{v:"10",t:"竞技25km/h"}], def:"6"},
+   {id:"mins", label:"时长", unit:"分钟", def:"40", min:5, max:600}
+  ],
+  run:"var kcal=Number(speed)*bw*mins/60; return {ok:true,html:'<div class=\"big\">'+kcal.toFixed(0)+' kcal</div><div class=\"row\">MET法估算，仅供参考</div>'};",
+  test:{inputs:{bw:70,speed:"6",mins:40}, expect:"280 kcal"}},
+ {id:"ydrope", cat:"yd", icon:"🪢", name:"跳绳卡路里", desc:"跳绳时长算消耗",
+  formula:"kcal = 10 × 体重 × 小时",
+  inputs:[
+   {id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200},
+   {id:"mins", label:"时长", unit:"分钟", def:"20", min:1, max:180}
+  ],
+  run:"var kcal=10*bw*mins/60; return {ok:true,html:'<div class=\"big\">'+kcal.toFixed(0)+' kcal</div><div class=\"row\">MET=10估算，仅供参考</div>'};",
+  test:{inputs:{bw:70,mins:20}, expect:"233 kcal"}},
+ {id:"ydhiit", cat:"yd", icon:"🔥", name:"HIIT卡路里", desc:"高强度间歇训练消耗估算",
+  formula:"kcal = 8 × 体重 × 小时",
+  inputs:[
+   {id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200},
+   {id:"mins", label:"时长", unit:"分钟", def:"30", min:5, max:120}
+  ],
+  run:"var kcal=8*bw*mins/60; return {ok:true,html:'<div class=\"big\">'+kcal.toFixed(0)+' kcal</div><div class=\"row\">MET=8估算，仅供参考</div>'};",
+  test:{inputs:{bw:70,mins:30}, expect:"280 kcal"}},
+ {id:"ydball", cat:"yd", icon:"⚽", name:"球类运动卡路里", desc:"篮球足球网球等消耗估算",
+  formula:"kcal = MET × 体重 × 小时（篮球8/足球10/网球7/羽毛球5.5/乒乓球4/排球4）",
+  inputs:[
+   {id:"sport", label:"运动", type:"select", options:[{v:"8",t:"篮球"},{v:"10",t:"足球"},{v:"7",t:"网球"},{v:"5.5",t:"羽毛球"},{v:"4",t:"乒乓球"},{v:"4",t:"排球"}], def:"8"},
+   {id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200},
+   {id:"mins", label:"时长", unit:"分钟", def:"60", min:10, max:300}
+  ],
+  run:"var kcal=Number(sport)*bw*mins/60; return {ok:true,html:'<div class=\"big\">'+kcal.toFixed(0)+' kcal</div><div class=\"row\">MET法估算，仅供参考</div>'};",
+  test:{inputs:{sport:"8",bw:70,mins:60}, expect:"560 kcal"}},
+ {id:"ydclimb", cat:"yd", icon:"⛰", name:"登山爬楼卡路里", desc:"按爬升高度算消耗",
+  formula:"kcal ≈ 体重 × 爬升米数 × 0.01",
+  inputs:[
+   {id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200},
+   {id:"h", label:"爬升高度", unit:"米", def:"300", min:10, max:8000}
+  ],
+  run:"var kcal=bw*h*0.01; return {ok:true,html:'<div class=\"big\">'+kcal.toFixed(0)+' kcal</div><div class=\"row\">仅爬升部分估算，不含平路</div>'};",
+  test:{inputs:{bw:70,h:300}, expect:"210 kcal"}},
+ {id:"ydsteps", cat:"yd", icon:"👣", name:"步数换算距离", desc:"步数按身高估算步行距离",
+  formula:"步幅 ≈ 身高×0.0045米；距离 = 步数 × 步幅",
+  inputs:[
+   {id:"steps", label:"步数", unit:"步", def:"10000", min:100, max:100000},
+   {id:"height", label:"身高", unit:"cm", def:"170", min:120, max:220}
+  ],
+  run:"var stride=height*0.0045, km=steps*stride/1000; return {ok:true,html:'<div class=\"big\">约 '+km.toFixed(2)+' km</div><div class=\"row\">步幅约 '+stride.toFixed(2)+' m</div>'};",
+  test:{inputs:{steps:10000,height:170}, expect:"7.65 km"}},
+ {id:"ydlactate", cat:"yd", icon:"❤", name:"乳酸阈值心率", desc:"估算乳酸阈值心率",
+  formula:"LTHR ≈ (220 − 年龄) × 88%",
+  inputs:[{id:"age", label:"年龄", unit:"岁", def:"30", min:10, max:80}],
+  run:"var lthr=Math.round((220-age)*0.88); return {ok:true,html:'<div class=\"big\">'+lthr+' bpm</div><div class=\"row\">乳酸阈值心率≈最大心率×88%，仅供参考</div>'};",
+  test:{inputs:{age:30}, expect:"167 bpm"}},
+ {id:"ydhrmax", cat:"yd", icon:"💓", name:"最大心率估算", desc:"Tanaka公式估算最大心率",
+  formula:"最大心率 = 208 − 0.7 × 年龄",
+  inputs:[{id:"age", label:"年龄", unit:"岁", def:"30", min:10, max:80}],
+  run:"var m=208-0.7*age; return {ok:true,html:'<div class=\"big\">'+m.toFixed(0)+' bpm</div><div class=\"row\">Tanaka公式，仅供参考</div>'};",
+  test:{inputs:{age:30}, expect:"187 bpm"}},
+ {id:"ydrecovery", cat:"yd", icon:"🩺", name:"恢复心率评估", desc:"运动后1分钟心率下降评估恢复能力",
+  formula:"下降≥30优秀，≥20良好，≥12一般，否则偏弱",
+  inputs:[
+   {id:"peak", label:"运动峰值心率", unit:"bpm", def:"170", min:100, max:220},
+   {id:"after", label:"1分钟后心率", unit:"bpm", def:"140", min:50, max:200}
+  ],
+  run:"var drop=peak-after, lv=drop>=30?'优秀':drop>=20?'良好':drop>=12?'一般':'偏弱'; return {ok:true,html:'<div class=\"big\">下降 '+drop+' bpm · '+lv+'</div><div class=\"row\">心肺恢复能力参考</div>'};",
+  test:{inputs:{peak:170,after:140}, expect:"优秀"}},
+ {id:"ydrest", cat:"yd", icon:"⏸", name:"组间休息建议", desc:"按训练目标给组间休息时间",
+  formula:"增肌90~120秒，力量3~5分钟，减脂30~60秒，耐力30秒以内",
+  inputs:[{id:"goal", label:"训练目标", type:"select", options:[{v:"90~120秒",t:"增肌"},{v:"3~5分钟",t:"最大力量"},{v:"30~60秒",t:"减脂"},{v:"30秒以内",t:"耐力"}], def:"90~120秒"}],
+  run:"return {ok:true,html:'<div class=\"big\">'+goal+'</div><div class=\"row\">组间休息建议</div>'};",
+  test:{inputs:{goal:"90~120秒"}, expect:"90~120秒"}},
+ {id:"ydfreq", cat:"yd", icon:"📅", name:"增肌训练频率", desc:"按水平给每周训练频率建议",
+  formula:"新手全身每周2~3次，进阶上下肢分化，高级推/拉/腿分化",
+  inputs:[{id:"level", label:"训练水平", type:"select", options:[{v:"新手",t:"新手"},{v:"进阶",t:"进阶"},{v:"高级",t:"高级"}], def:"进阶"}],
+  run:"var m={\"新手\":\"每个肌群每周2次（全身训练）\",\"进阶\":\"每个肌群每周2次（上下肢分化）\",\"高级\":\"每个肌群每周2~3次（推/拉/腿分化）\"}; return {ok:true,html:'<div class=\"big\">'+m[level]+'</div><div class=\"row\">训练频率建议</div>'};",
+  test:{inputs:{level:"进阶"}, expect:"上下肢分化"}},
+ {id:"ydaltitude", cat:"yd", icon:"🏔", name:"高原反应风险", desc:"按海拔评估高原反应风险",
+  formula:"<2500米低风险，<3500米中风险，否则高风险",
+  inputs:[{id:"h", label:"海拔", unit:"米", def:"3500", min:0, max:8000}],
+  run:"var lv=h<2500?'低风险':h<3500?'中风险':'高风险', days=h<2500?0:h<3500?2:4; return {ok:true,html:'<div class=\"big\">'+lv+'</div><div class=\"row\">'+(days?('建议适应 '+days+' 天再剧烈运动'):'一般无需特殊适应')+'</div>'};",
+  test:{inputs:{h:3500}, expect:"高风险"}},
+ {id:"ydwarmup", cat:"yd", icon:"🤾", name:"热身时间建议", desc:"按运动类型和时长给热身建议",
+  formula:"基础热身 + 时长×系数",
+  inputs:[
+   {id:"sport", label:"运动类型", type:"select", options:[{v:"跑步",t:"跑步"},{v:"力量训练",t:"力量训练"},{v:"球类",t:"球类"},{v:"游泳",t:"游泳"}], def:"跑步"},
+   {id:"mins", label:"运动时长", unit:"分钟", def:"60", min:10, max:600}
+  ],
+  run:"var base={\"跑步\":5,\"力量训练\":10,\"球类\":8,\"游泳\":5}[sport], warm=base+Math.round(mins/60*3); return {ok:true,html:'<div class=\"big\">热身约 '+warm+' 分钟</div><div class=\"row\">正式训练前动态热身</div>'};",
+  test:{inputs:{sport:"跑步",mins:60}, expect:"热身约 8 分钟"}},
+ {id:"ydshoe", cat:"yd", icon:"👟", name:"跑鞋更换周期", desc:"按月跑量算跑鞋多久该换",
+  formula:"更换月数 = 800 ÷ 月跑量（跑鞋寿命约800km）",
+  inputs:[{id:"monthly", label:"月跑量", unit:"km", def:"100", min:10, max:1000}],
+  run:"var m=800/monthly; return {ok:true,html:'<div class=\"big\">约 '+m.toFixed(1)+' 个月</div><div class=\"row\">跑鞋寿命约800km</div>'};",
+  test:{inputs:{monthly:100}, expect:"8.0 个月"}},
+ {id:"ydcadence", cat:"yd", icon:"🦶", name:"跑步步频评估", desc:"按步频评估跑步效率",
+  formula:"<160偏低，<180良好，否则优秀",
+  inputs:[{id:"cad", label:"步频", unit:"步/分钟", def:"175", min:120, max:220}],
+  run:"var lv=cad<160?'偏低':cad<180?'良好':'优秀'; return {ok:true,html:'<div class=\"big\">'+cad+' spm · '+lv+'</div><div class=\"row\">180左右被认为较经济</div>'};",
+  test:{inputs:{cad:175}, expect:"良好"}},
+ {id:"ydgoal", cat:"yd", icon:"🎯", name:"减重目标周期", desc:"定减重目标，算需要多少周",
+  formula:"周数 = (当前−目标) ÷ 每周减重",
+  inputs:[
+   {id:"w0", label:"当前体重", unit:"kg", def:"80", min:40, max:200},
+   {id:"w1", label:"目标体重", unit:"kg", def:"75", min:30, max:200},
+   {id:"per", label:"每周减重", unit:"kg", def:"0.5", min:0.1, max:2}
+  ],
+  run:"var diff=w0-w1; if(diff<=0) return {ok:false,msg:'目标体重应小于当前体重'}; if(per<=0) return {ok:false,msg:'每周减重须大于0'}; var wks=diff/per; return {ok:true,html:'<div class=\"big\">约 '+wks.toFixed(1)+' 周</div><div class=\"row\">每周减重0.5~1kg较健康</div>'};",
+  test:{inputs:{w0:80,w1:75,per:0.5}, expect:"10.0 周"}},
+ {id:"ydmuscle", cat:"yd", icon:"🥩", name:"增肌增重评估", desc:"判断每月增重速度是否合理",
+  formula:"新手0.5~1.5，进阶0.25~0.75，高级0.1~0.25 kg/月",
+  inputs:[
+   {id:"gain", label:"月增重", unit:"kg", def:"0.8", min:0, max:5},
+   {id:"level", label:"训练水平", type:"select", options:[{v:"新手",t:"新手"},{v:"进阶",t:"进阶"},{v:"高级",t:"高级"}], def:"新手"}
+  ],
+  run:"var r=level===\"新手\"?[0.5,1.5]:level===\"进阶\"?[0.25,0.75]:[0.1,0.25], s=gain<r[0]?'偏慢':gain>r[1]?'偏快':'合理'; return {ok:true,html:'<div class=\"big\">'+s+'</div><div class=\"row\">'+level+'每月增重建议 '+r[0]+'~'+r[1]+'kg</div>'};",
+  test:{inputs:{gain:0.8,level:"新手"}, expect:"合理"}},
+ {id:"ydspeed", cat:"yd", icon:"💨", name:"短跑速度换算", desc:"100米成绩换算平均速度",
+  formula:"速度 = 100 ÷ 秒数；km/h = m/s × 3.6",
+  inputs:[{id:"t", label:"100米成绩", unit:"秒", def:"13", min:9, max:30}],
+  run:"var v=100/t, kmh=v*3.6; return {ok:true,html:'<div class=\"big\">'+kmh.toFixed(1)+' km/h</div><div class=\"row\">平均速度 '+v.toFixed(2)+' m/s</div>'};",
+  test:{inputs:{t:13}, expect:"27.7 km/h"}}
+);
+
 /* ===== WAVE-2C 颜色工具（40个） ===== */
 CATS.push({id:"ys", name:"颜色工具"});
 TOOLS.push(
