@@ -313,8 +313,8 @@ var TOOLS=[
 ];
 
 function $(sel, root){ return (root||document).querySelector(sel); }
-function field(label, inner, hint){
-  return '<div class="frow"><label>'+label+'</label>'+inner+
+function field(label, inner, hint, fid, when){
+  return '<div class="frow"'+(fid?' id="fw_'+fid+'"':"")+(when?" data-when='"+when+"'":"")+'><label>'+label+'</label>'+inner+
     (hint?'<div class="hint">'+hint+'</div>':"")+'</div>';
 }
 function showRes(html){
@@ -530,14 +530,34 @@ function renderDataTool(tool){
     }else{
       inner='<input id="d_'+inp.id+'" inputmode="decimal" placeholder="'+(inp.ph||'')+'"'+(inp.def!==undefined?' value="'+inp.def+'"':'')+'>';
     }
-    html+=field(inp.label+(inp.unit?'（'+inp.unit+'）':''), inner, inp.hint);
+    html+=field(inp.label+(inp.unit?'（'+inp.unit+'）':''), inner, inp.hint, inp.id, inp.when);
   });
   f.innerHTML=html;
+  function applyWhen(){
+    (tool.inputs||[]).forEach(function(inp){
+      if(!inp.when) return;
+      const ps=inp.when.split('='), ctrl=document.getElementById('d_'+ps[0]);
+      const show=ctrl&&ps[1].split(',').indexOf(ctrl.value)>=0;
+      const w=document.getElementById('fw_'+inp.id);
+      if(w) w.style.display=show?'':'none';
+    });
+  }
+  (tool.inputs||[]).forEach(function(inp){
+    if(!inp.when) return;
+    const c=document.getElementById('d_'+inp.when.split('=')[0]);
+    if(c&&!c._wb){c._wb=true;c.addEventListener('change',applyWhen);}
+  });
+  applyWhen();
   $("#calcBtn").onclick=function(){
     const vals={}, order=[];
     for(const inp of (tool.inputs||[])){
       const e=document.getElementById('d_'+inp.id);
       const raw=e?e.value.trim():'';
+      const w=document.getElementById('fw_'+inp.id);
+      if(w&&w.style.display==='none'){
+        vals[inp.id]=(inp.type==='select'||inp.type==='text'||inp.type==='textarea')?raw:(raw===''?null:Number(raw));
+        order.push(inp.id); continue;
+      }
       if(inp.type==='select'){ vals[inp.id]=raw; order.push(inp.id); continue; }
       if(inp.type==='text'||inp.type==='textarea'){
         if(raw===''&&!inp.optional) return showErr('请填写「'+inp.label+'」');
@@ -2985,15 +3005,15 @@ TOOLS.push(
   formula:"运动kcal=MET×体重×时间；跑步≈体重×公里×1.036；BMR男=10×体重+6.25×身高−5×年龄+5，女−161；TDEE=BMR×活动系数",
   inputs:[
    {id:"mode", label:"计算类型", type:"select", def:"sport", options:[{v:"sport",t:"运动热量消耗"},{v:"run",t:"跑步热量"},{v:"bmr",t:"基础代谢BMR"},{v:"tdee",t:"每日总消耗TDEE"}]},
-   {id:"sport", label:"运动项目", type:"select", def:"8", options:[{v:"8",t:"慢跑"},{v:"3.5",t:"快走"},{v:"7",t:"骑自行车"},{v:"8",t:"游泳"},{v:"10",t:"跳绳"},{v:"5.5",t:"羽毛球"},{v:"8",t:"爬楼梯"}]},
-   {id:"cmet", label:"自定义MET", def:"0", min:0, max:30, hint:"填0则用上方项目；没有的运动自己填MET"},
+   {id:"sport", label:"运动项目", when:"mode=sport", type:"select", def:"8", options:[{v:"8",t:"慢跑"},{v:"3.5",t:"快走"},{v:"7",t:"骑自行车"},{v:"8",t:"游泳"},{v:"10",t:"跳绳"},{v:"5.5",t:"羽毛球"},{v:"8",t:"爬楼梯"}]},
+   {id:"cmet", label:"自定义MET", when:"mode=sport", def:"0", min:0, max:30, hint:"填0则用上方项目；没有的运动自己填MET"},
    {id:"w", label:"体重", unit:"kg", def:"65", min:20, max:300},
-   {id:"min", label:"运动时长", unit:"分钟", def:"60", min:1, max:600},
-   {id:"km", label:"跑步距离", unit:"km", def:"5", min:0.5, max:100},
-   {id:"h", label:"身高", unit:"cm", def:"170", min:50, max:250},
-   {id:"age", label:"年龄", unit:"岁", def:"30", min:10, max:100},
-   {id:"sex", label:"性别", type:"select", def:"1", options:[{v:"1",t:"男"},{v:"0",t:"女"}]},
-   {id:"act", label:"活动强度", type:"select", def:"1.55", options:[{v:"1.2",t:"久坐不动"},{v:"1.375",t:"轻度活动"},{v:"1.55",t:"中度活动"},{v:"1.725",t:"高强度"},{v:"1.9",t:"极高强度"}]}
+   {id:"min", label:"运动时长", when:"mode=sport", unit:"分钟", def:"60", min:1, max:600},
+   {id:"km", label:"跑步距离", when:"mode=run", unit:"km", def:"5", min:0.5, max:100},
+   {id:"h", label:"身高", when:"mode=bmr,tdee", unit:"cm", def:"170", min:50, max:250},
+   {id:"age", label:"年龄", when:"mode=bmr,tdee", unit:"岁", def:"30", min:10, max:100},
+   {id:"sex", label:"性别", when:"mode=bmr,tdee", type:"select", def:"1", options:[{v:"1",t:"男"},{v:"0",t:"女"}]},
+   {id:"act", label:"活动强度", when:"mode=tdee", type:"select", def:"1.55", options:[{v:"1.2",t:"久坐不动"},{v:"1.375",t:"轻度活动"},{v:"1.55",t:"中度活动"},{v:"1.725",t:"高强度"},{v:"1.9",t:"极高强度"}]}
   ],
   run:"var m=String(mode),html='';if(m==='sport'){var met=Number(cmet)>0?Number(cmet):Number(sport);var kcal=met*w*min/60;var ref=[[\"慢跑\",8],[\"快走\",3.5],[\"骑自行车\",7],[\"游泳\",8],[\"跳绳\",10],[\"羽毛球\",5.5],[\"爬楼梯\",8],[\"散步\",2.5],[\"瑜伽\",3],[\"篮球\",6.5],[\"足球\",7],[\"乒乓球\",4],[\"力量训练\",6]];var rows=\"\";for(var i=0;i<ref.length;i++){rows+=\"<tr><td>\"+ref[i][0]+\"</td><td>\"+ref[i][1]+\"</td><td>\"+Math.round(ref[i][1]*w)+\"</td></tr>\";}html='<div class=\"big\">≈ '+Math.round(kcal)+' kcal</div><div class=\"row\">约等于 '+(kcal/7700).toFixed(2)+' kg脂肪（7700kcal≈1kg脂肪，仅供参考）</div><table class=\"ref\"><caption>各类运动每小时消耗参考（体重'+w+'kg）</caption><tr><th>运动</th><th>MET</th><th>kcal/小时</th></tr>'+rows+'</table>';}else if(m==='run'){var rk=w*km*1.036;html='<div class=\"big\">≈ '+rk.toFixed(1)+' kcal</div><div class=\"row\">跑步 '+km+' km 热量消耗估算</div>';}else{var bmr=10*w+6.25*h-5*age+(Number(sex)===1?5:-161);if(m==='bmr'){html='<div class=\"big\">BMR ≈ '+Math.round(bmr)+' kcal/天</div><div class=\"row\">完全静息一天的消耗（Mifflin-St Jeor公式估算）</div>';}else{var tdee=bmr*Number(act);html='<div class=\"big\">TDEE ≈ '+Math.round(tdee)+' kcal/天</div><div class=\"row\">减脂每天少吃300–500kcal，增肌多吃200–300kcal（仅供参考）</div>';}}return {ok:true,html:html};",
   test:{inputs:{mode:"sport",sport:"8",cmet:"0",w:65,min:60,km:5,h:170,age:30,sex:"1",act:"1.55"}, expect:"520"}},
