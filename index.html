@@ -3866,21 +3866,15 @@ TOOLS.push(
   ],
   run:"var std={\"w800\":[210,360],\"m1000\":[200,390]}[item], tot=m*60+s, sc=100-(tot-std[0])/(std[1]-std[0])*40; sc=Math.max(0,Math.min(100,sc)); return {ok:true,html:'<div class=\"big\">'+sc.toFixed(1)+' 分</div><div class=\"row\">简化评分标准，仅供参考</div>'};",
   test:{inputs:{item:"w800",m:4,s:10}, expect:"89.3 分"}},
- {id:"ydsitup", cat:"yd", icon:"🤸", name:"仰卧起坐评分", desc:"1分钟仰卧起坐简化评分",
-  formula:"50个满分100，20个及格60分，之间线性换算（简化版）",
-  inputs:[{id:"n", label:"1分钟个数", unit:"个", def:"40", min:0, max:80}],
-  run:"var sc=n>=50?100:n<=20?60:60+(n-20)/30*40; return {ok:true,html:'<div class=\"big\">'+sc.toFixed(1)+' 分</div><div class=\"row\">简化评分，仅供参考</div>'};",
-  test:{inputs:{n:40}, expect:"86.7 分"}},
- {id:"ydpullup", cat:"yd", icon:"🧗", name:"引体向上评分", desc:"引体向上个数简化评分",
-  formula:"15个满分100，5个及格60分，之间线性换算（简化版）",
-  inputs:[{id:"n", label:"个数", unit:"个", def:"10", min:0, max:30}],
-  run:"var sc=n>=15?100:n<=5?60:60+(n-5)/10*40; return {ok:true,html:'<div class=\"big\">'+sc.toFixed(1)+' 分</div><div class=\"row\">简化评分，仅供参考</div>'};",
-  test:{inputs:{n:10}, expect:"80.0 分"}},
- {id:"ydjump", cat:"yd", icon:"🦘", name:"立定跳远评分", desc:"立定跳远距离简化评分",
-  formula:"260cm满分100，180cm及格60分，之间线性换算（简化版）",
-  inputs:[{id:"d", label:"距离", unit:"cm", def:"220", min:100, max:320}],
-  run:"var sc=d>=260?100:d<=180?60:60+(d-180)/80*40; return {ok:true,html:'<div class=\"big\">'+sc.toFixed(1)+' 分</div><div class=\"row\">简化评分，仅供参考</div>'};",
-  test:{inputs:{d:220}, expect:"80.0 分"}},
+ 
+ {id:"ydscore", cat:"yd", icon:"📊", name:"体测评分", desc:"仰卧起坐/引体向上/立定跳远简化评分",
+  formula:"满分100分，及格60分，之间线性换算（简化版体测标准）",
+  inputs:[
+   {id:"item", label:"测试项目", type:"select", def:"50,20", options:[{v:"50,20",t:"仰卧起坐（1分钟/个）"},{v:"15,5",t:"引体向上（个）"},{v:"260,180",t:"立定跳远（cm）"}]},
+   {id:"n", label:"成绩", def:"40", min:0, max:320, hint:"个数或厘米，按所选项目填"}
+  ],
+  run:"var p=String(item).split(','),full=Number(p[0]),pass=Number(p[1]);var sc=n>=full?100:n<=pass?60:60+(n-pass)/(full-pass)*40;return {ok:true,html:'<div class=\"big\">'+sc.toFixed(1)+' 分</div><div class=\"row\">简化评分，仅供参考</div>'};",
+  test:{inputs:{item:"50,20",n:40}, expect:"86.7 分"}},
  {id:"ydplank", cat:"yd", icon:"🧘", name:"平板支撑等级", desc:"按坚持秒数评等级",
   formula:"<60秒新手，<120秒进阶，<180秒优秀，否则大神",
   inputs:[{id:"sec", label:"坚持时间", unit:"秒", def:"90", min:1, max:600}],
@@ -3928,24 +3922,6 @@ TOOLS.push(
   inputs:[{id:"mins", label:"运动时长", unit:"分钟", def:"120", min:30, max:600}],
   run:"if(mins<60) return {ok:true,html:'<div class=\"big\">无需额外补充</div><div class=\"row\">60分钟内运动一般无需补碳水</div>'}; var c=mins/60*45; return {ok:true,html:'<div class=\"big\">约 '+c.toFixed(0)+' g</div><div class=\"row\">每小时30~60g碳水</div>'};",
   test:{inputs:{mins:120}, expect:"90 g"}},
- {id:"ydswim", cat:"yd", icon:"🏊", name:"游泳卡路里", desc:"按泳姿和时长算消耗",
-  formula:"kcal = MET × 体重 × 小时（自由泳8/蛙泳6/蝶泳11/仰泳7）",
-  inputs:[
-   {id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200},
-   {id:"style", label:"泳姿", type:"select", options:[{v:"8",t:"自由泳"},{v:"6",t:"蛙泳"},{v:"11",t:"蝶泳"},{v:"7",t:"仰泳"}], def:"8"},
-   {id:"mins", label:"时长", unit:"分钟", def:"30", min:5, max:300}
-  ],
-  run:"var kcal=Number(style)*bw*mins/60; return {ok:true,html:'<div class=\"big\">'+kcal.toFixed(0)+' kcal</div><div class=\"row\">MET法估算，仅供参考</div>'};",
-  test:{inputs:{bw:70,style:"8",mins:30}, expect:"280 kcal"}},
- {id:"ydcycle", cat:"yd", icon:"🚴", name:"骑行卡路里", desc:"按骑行速度算消耗",
-  formula:"kcal = MET × 体重 × 小时（轻松4/中等6/快速8/竞技10）",
-  inputs:[
-   {id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200},
-   {id:"speed", label:"强度", type:"select", options:[{v:"4",t:"轻松12km/h"},{v:"6",t:"中等16km/h"},{v:"8",t:"快速20km/h"},{v:"10",t:"竞技25km/h"}], def:"6"},
-   {id:"mins", label:"时长", unit:"分钟", def:"40", min:5, max:600}
-  ],
-  run:"var kcal=Number(speed)*bw*mins/60; return {ok:true,html:'<div class=\"big\">'+kcal.toFixed(0)+' kcal</div><div class=\"row\">MET法估算，仅供参考</div>'};",
-  test:{inputs:{bw:70,speed:"6",mins:40}, expect:"280 kcal"}},
  {id:"ydrope", cat:"yd", icon:"🪢", name:"跳绳卡路里", desc:"跳绳时长算消耗",
   formula:"kcal = 10 × 体重 × 小时",
   inputs:[
@@ -3962,15 +3938,6 @@ TOOLS.push(
   ],
   run:"var kcal=8*bw*mins/60; return {ok:true,html:'<div class=\"big\">'+kcal.toFixed(0)+' kcal</div><div class=\"row\">MET=8估算，仅供参考</div>'};",
   test:{inputs:{bw:70,mins:30}, expect:"280 kcal"}},
- {id:"ydball", cat:"yd", icon:"⚽", name:"球类运动卡路里", desc:"篮球足球网球等消耗估算",
-  formula:"kcal = MET × 体重 × 小时（篮球8/足球10/网球7/羽毛球5.5/乒乓球4/排球4）",
-  inputs:[
-   {id:"sport", label:"运动", type:"select", options:[{v:"8",t:"篮球"},{v:"10",t:"足球"},{v:"7",t:"网球"},{v:"5.5",t:"羽毛球"},{v:"4",t:"乒乓球"},{v:"4",t:"排球"}], def:"8"},
-   {id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200},
-   {id:"mins", label:"时长", unit:"分钟", def:"60", min:10, max:300}
-  ],
-  run:"var kcal=Number(sport)*bw*mins/60; return {ok:true,html:'<div class=\"big\">'+kcal.toFixed(0)+' kcal</div><div class=\"row\">MET法估算，仅供参考</div>'};",
-  test:{inputs:{sport:"8",bw:70,mins:60}, expect:"560 kcal"}},
  {id:"ydclimb", cat:"yd", icon:"⛰", name:"登山爬楼卡路里", desc:"按爬升高度算消耗",
   formula:"kcal ≈ 体重 × 爬升米数 × 0.01",
   inputs:[
