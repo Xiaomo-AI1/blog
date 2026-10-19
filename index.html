@@ -106,7 +106,7 @@ footer .disc{background:var(--card);border:1px dashed var(--line);border-radius:
   .toolview th,.toolview td{word-break:break-word}
   button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 }
-</style>
+.cat-tag{display:inline-block;margin-top:8px;font-size:12px;color:#41617a;background:#eaf1f6;border-radius:20px;padding:2px 10px;line-height:1.6}</style>
 </head>
 <body>
 <header class="topbar">
@@ -5487,14 +5487,14 @@ TOOLS.push(
   ],
   run:"var c=hr<60?'偏慢':hr<=100?'正常':'偏快'; return {ok:true,html:'<div class=\"big\">'+c+'</div><div class=\"row\">'+hr+'次/分；晨起静卧时测量最准（仅供参考）</div>'};",
   test:{inputs:{hr:72}, expect:"正常"}},
- {id:"shhrzone", cat:"sh", icon:"🏃", name:"运动心率区间", desc:"按年龄算5个运动心率区间",
+ {id:"shhrzone", cat:"yd", icon:"🏃", name:"运动心率区间", desc:"按年龄算5个运动心率区间",
   formula:"最大心率≈220−年龄；热身50–60%，燃脂60–70%，有氧70–80%，无氧80–90%，极限90–100%",
   inputs:[
    {id:"age", label:"年龄", unit:"岁", def:"30", min:10, max:100}
   ],
   run:"var mx=220-age; function z(a,b){return Math.round(mx*a/100)+'–'+Math.round(mx*b/100);} return {ok:true,html:'<div class=\"big\">最大心率 ≈ '+mx+'</div><div class=\"row\">热身 '+z(50,60)+'｜燃脂 '+z(60,70)+'｜有氧 '+z(70,80)+'｜无氧 '+z(80,90)+'｜极限 '+z(90,100)+'（次/分，仅供参考）</div>'};",
   test:{inputs:{age:30}, expect:"190"}},
- {id:"shcal", cat:"sh", icon:"🏊", name:"运动卡路里消耗", desc:"按MET值算运动消耗热量",
+ {id:"shcal", cat:"yd", icon:"🏊", name:"运动卡路里消耗", desc:"按MET值算运动消耗热量",
   formula:"消耗(kcal) = MET × 体重(kg) × 时间(小时)；慢跑8，快走3.5，骑行7，游泳8，跳绳10，羽毛球5.5",
   inputs:[
    {id:"sport", label:"运动项目", type:"select", def:"8", options:[{v:"8",t:"慢跑"},{v:"3.5",t:"快走"},{v:"7",t:"骑自行车"},{v:"8",t:"游泳"},{v:"10",t:"跳绳"},{v:"5.5",t:"羽毛球"},{v:"8",t:"爬楼梯"}]},
@@ -5669,7 +5669,7 @@ TOOLS.push(
   ],
   run:"var need=area*200; var ps=need/2500; var std=[1,1.5,2,2.5,3,5]; var rec=std[std.length-1]; for(var i=0;i<std.length;i++){if(std[i]>=ps){rec=std[i];break;}} return {ok:true,html:'<div class=\"big\">推荐 '+rec+' 匹</div><div class=\"row\">需制冷量约 '+Math.round(need)+'W（估算值，顶楼/西晒选大一档）</div>'};",
   test:{inputs:{area:20}, expect:"2 匹"}},
- {id:"shpace", cat:"sh", icon:"⏱", name:"跑步配速计算", desc:"算每公里配速和时速",
+ {id:"shpace", cat:"yd", icon:"⏱", name:"跑步配速计算", desc:"算每公里配速和时速",
   formula:"配速 = 总秒数 ÷ 公里数；时速 = 3600 ÷ 每公里秒数",
   inputs:[
    {id:"dist", label:"距离", unit:"km", def:"10", min:0.1, max:500},
@@ -7205,7 +7205,7 @@ function buildGrid(){
     const t=x.t;
     const d=document.createElement("div");
     d.className="tool-card";
-    d.innerHTML='<div class="ic">'+t.icon+'</div><h3>'+t.name+'</h3><p>'+t.desc+'</p>';
+    d.innerHTML='<div class="ic">'+t.icon+'</div><h3>'+t.name+'</h3><p>'+t.desc+'</p><span class="cat-tag">'+catName(t.cat)+'</span>';
     d.onclick=function(){openTool(t.id);};
     g.appendChild(d); n++;
   });
