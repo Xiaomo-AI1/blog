@@ -106,7 +106,7 @@ footer .disc{background:var(--card);border:1px dashed var(--line);border-radius:
   .toolview th,.toolview td{word-break:break-word}
   button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 }
-.cat-tag{display:inline-block;margin-top:8px;font-size:12px;color:#41617a;background:#eaf1f6;border-radius:20px;padding:2px 10px;line-height:1.6}</style>
+.cat-tag{display:inline-block;margin-top:8px;font-size:12px;color:#41617a;background:#eaf1f6;border-radius:20px;padding:2px 10px;line-height:1.6}.catchip{grid-column:1/-1;background:#eef4fa;border:1px solid #cfe0ee;border-radius:10px;padding:10px 14px;font-size:14px;color:#33506b}.catchip button{margin-left:8px;background:#1a3f5c;color:#fff;border:0;border-radius:8px;padding:6px 12px;font-size:14px;cursor:pointer}</style>
 </head>
 <body>
 <header class="topbar">
@@ -7143,6 +7143,19 @@ function buildGrid(){
     arr.push({t:t,s:s});
   });
   arr.sort(function(a,b){return b.s-a.s;});
+  if(q&&arr.length>0){
+    const cc={};
+    arr.forEach(function(x){cc[x.t.cat]=(cc[x.t.cat]||0)+1;});
+    let top=null,topn=0;
+    for(const k in cc){if(cc[k]>topn){topn=cc[k];top=k;}}
+    if(top){
+      const total=TOOLS.filter(function(t){return t.cat===top;}).length;
+      const tip=document.createElement("div");
+      tip.className="catchip";
+      tip.innerHTML='相关类目：<b>'+catName(top)+'</b>（命中'+topn+'个） <button onclick="gotoCat(\''+top+'\')">浏览该类目全部'+total+'个工具</button>';
+      g.appendChild(tip);
+    }
+  }
   let n=0;
   arr.forEach(function(x){
     const t=x.t;
@@ -7162,6 +7175,12 @@ function openTool(id){
   $("#home").hidden=true;
   const v=$("#toolview"); v.hidden=false;
   RENDER[t.id](t);
+  window.scrollTo(0,0);
+}
+function gotoCat(id){
+  query=""; $("#q").value="";
+  activeCat=id;
+  buildSidebar(); buildGrid();
   window.scrollTo(0,0);
 }
 function showHome(){
