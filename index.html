@@ -7188,7 +7188,29 @@ function showHome(){
   $("#home").hidden=false;
   window.scrollTo(0,lastScrollY);
 }
-function doSearch(){ query=$("#q").value.trim(); buildGrid(); }
+function doSearch(){
+  query=$("#q").value.trim();
+  const q=query.toLowerCase();
+  if(q){
+    const arr=[];
+    TOOLS.forEach(function(t){
+      const ni=t.name.toLowerCase().indexOf(q), di=t.desc.toLowerCase().indexOf(q);
+      let s=0;
+      if(ni===0) s=3; else if(ni>0) s=2; else if(di>=0) s=1; else return;
+      arr.push({t:t,s:s});
+    });
+    arr.sort(function(a,b){return b.s-a.s;});
+    if(arr.length>=4){
+      const c0=arr[0].t.cat;
+      if(c0!==activeCat&&arr[1].t.cat===c0&&arr[2].t.cat===c0){
+        activeCat=c0; query=""; $("#q").value="";
+        buildSidebar(); buildGrid(); window.scrollTo(0,0);
+        return;
+      }
+    }
+  }
+  buildGrid();
+}
 $("#qbtn").onclick=doSearch;
 $("#q").addEventListener("input",doSearch);
 buildSidebar(); buildGrid();
