@@ -7180,9 +7180,11 @@ function buildGrid(){
   });
   $("#empty").hidden=n>0;
 }
+let lastScrollY=0;
 function openTool(id){
   const t=TOOLS.find(function(x){return x.id===id;});
   if(!t) return;
+  lastScrollY=window.scrollY||document.documentElement.scrollTop||0;
   $("#home").hidden=true;
   const v=$("#toolview"); v.hidden=false;
   RENDER[t.id](t);
@@ -7191,7 +7193,7 @@ function openTool(id){
 function showHome(){
   $("#toolview").hidden=true;
   $("#home").hidden=false;
-  window.scrollTo(0,0);
+  window.scrollTo(0,lastScrollY);
 }
 function doSearch(){ query=$("#q").value.trim(); buildGrid(); }
 $("#qbtn").onclick=doSearch;
