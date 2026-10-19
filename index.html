@@ -7158,10 +7158,20 @@ function buildSidebar(){
 function buildGrid(){
   const g=$("#grid"); g.innerHTML="";
   const q=query.toLowerCase();
-  let n=0;
+  const arr=[];
   TOOLS.forEach(function(t){
     if(activeCat!=="all"&&t.cat!==activeCat) return;
-    if(q&&(t.name+t.desc).toLowerCase().indexOf(q)<0) return;
+    let s=0;
+    if(q){
+      const ni=t.name.toLowerCase().indexOf(q), di=t.desc.toLowerCase().indexOf(q);
+      if(ni===0) s=3; else if(ni>0) s=2; else if(di>=0) s=1; else return;
+    }
+    arr.push({t:t,s:s});
+  });
+  arr.sort(function(a,b){return b.s-a.s;});
+  let n=0;
+  arr.forEach(function(x){
+    const t=x.t;
     const d=document.createElement("div");
     d.className="tool-card";
     d.innerHTML='<div class="ic">'+t.icon+'</div><h3>'+t.name+'</h3><p>'+t.desc+'</p>';
