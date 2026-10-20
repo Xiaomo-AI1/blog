@@ -3141,7 +3141,192 @@ TOOLS.push(
    {id:"t2", label:"温度 T₂", when:"solve=p2,v2", unit:"K", def:"546"}
   ],
   run:"var P1=Number(p1),V1=Number(v1),T1=Number(t1);if(!(P1>0&&V1>0&&T1>0))return {ok:false,msg:'状态一参数须大于 0'};var K=P1*V1/T1;if(solve==='p2'){if(!(Number(v2)>0&&Number(t2)>0))return {ok:false,msg:'V₂ 与 T₂ 须大于 0'};return {ok:true,html:'<div class=\"big\">P₂ = '+(K*Number(t2)/Number(v2)).toFixed(2)+' kPa</div>'};}if(solve==='v2'){if(!(Number(p2)>0&&Number(t2)>0))return {ok:false,msg:'P₂ 与 T₂ 须大于 0'};return {ok:true,html:'<div class=\"big\">V₂ = '+(K*Number(t2)/Number(p2)).toFixed(2)+' L</div>'};}if(!(Number(p2)>0&&Number(v2)>0))return {ok:false,msg:'P₂ 与 V₂ 须大于 0'};return {ok:true,html:'<div class=\"big\">T₂ = '+(Number(p2)*Number(v2)/K).toFixed(1)+' K</div>'};",
-  test:{inputs:{"solve": "p2", "p1": 101.3, "v1": 10, "t1": 273, "v2": 5, "t2": 546}, expect:"405.20"}}
+  test:{inputs:{"solve": "p2", "p1": 101.3, "v1": 10, "t1": 273, "v2": 5, "t2": 546}, expect:"405.20"}},
+ {id:"dgcomp", cat:"dgjs", icon:"⚡", name:"无功补偿容量", desc:"算把功率因数补到目标值需要的电容补偿容量",
+  formula:"Q_c = P × (tanφ₁ − tanφ₂)，φ₁ 为补偿前、φ₂ 为目标功率因数角",
+  inputs:[
+   {id:"p", label:"有功功率", unit:"kW", def:"100"},
+   {id:"cos1", label:"当前功率因数", def:"0.8"},
+   {id:"cos2", label:"目标功率因数", def:"0.95"}
+  ],
+  run:"function tn(c){return Math.sqrt(1-c*c)/c;}var P=Number(p),c1=Number(cos1),c2=Number(cos2);if(!(P>0&&c1>0&&c1<1&&c2>0&&c2<=1))return {ok:false,msg:'功率须大于 0，功率因数须在 0~1'};if(c2<=c1)return {ok:false,msg:'目标功率因数应高于当前值，无需补偿'};var qc=P*(tn(c1)-tn(c2));return {ok:true,html:'<div class=\"big\">需补偿 ≈ '+qc.toFixed(2)+' kvar</div><div class=\"row\">补偿前无功 '+(P*tn(c1)).toFixed(2)+' kvar，补偿后 '+(P*tn(c2)).toFixed(2)+' kvar；电容器组按标准档位向上取整选配</div>'};",
+  test:{inputs:{"p": 100, "cos1": 0.8, "cos2": 0.95}, expect:"42.13"}},
+ {id:"dzbatpack", cat:"dz", icon:"🔋", name:"电池组参数", desc:"电芯串并联后的电池组总电压、容量与能量",
+  formula:"总电压 = 单节电压 × 串数；总容量 = 单节容量 × 并数；能量 Wh = 总电压 × 总容量(Ah)",
+  inputs:[
+   {id:"v", label:"单节电压", unit:"V", def:"3.7"},
+   {id:"mah", label:"单节容量", unit:"mAh", def:"3000"},
+   {id:"ns", label:"串联数 S", def:"4", min:1},
+   {id:"np", label:"并联数 P", def:"2", min:1}
+  ],
+  run:"var V=Number(v)*Number(ns),AH=Number(mah)*Number(np)/1000;if(!(V>0&&AH>0))return {ok:false,msg:'参数须大于 0'};return {ok:true,html:'<div class=\"big\">'+Number(ns)+'S'+Number(np)+'P：'+V.toFixed(1)+' V · '+(AH*1000).toFixed(0)+' mAh</div><div class=\"row\">总能量 ≈ '+(V*AH).toFixed(1)+' Wh（串联升压不升容，并联升容不升压）</div>'};",
+  test:{inputs:{"v": 3.7, "mah": 3000, "ns": 4, "np": 2}, expect:"88.8"}},
+ {id:"hxfaraday", cat:"hx", icon:"⚗️", name:"法拉第电解定律", desc:"电解时电极上析出物质的质量",
+  formula:"m = M × I × t ÷ (n × F)，F = 96485 C/mol，n 为离子得失电子数",
+  inputs:[
+   {id:"mm", label:"摩尔质量 M", unit:"g/mol", def:"63.55", hint:"如 Cu 63.55、Ag 107.87、Al 26.98"},
+   {id:"i", label:"电流 I", unit:"A", def:"1"},
+   {id:"t", label:"通电时间", unit:"min", def:"60"},
+   {id:"n", label:"电子数 n", def:"2", min:1, max:6}
+  ],
+  run:"if(!(Number(mm)>0&&Number(i)>0&&Number(t)>0&&Number(n)>=1))return {ok:false,msg:'参数须大于 0（电子数至少 1）'};var m=Number(mm)*Number(i)*Number(t)*60/(Number(n)*96485);if(!(m>0))return {ok:false,msg:'参数须大于 0'};return {ok:true,html:'<div class=\"big\">析出 ≈ '+m.toFixed(3)+' g</div><div class=\"row\">通过电量 '+(Number(i)*Number(t)*60).toFixed(0)+' C；如镀铜（Cu²⁺，n=2）约 1.186 g/(A·h)</div>'};",
+  test:{inputs:{"mm": 63.55, "i": 1, "t": 60, "n": 2}, expect:"1.186"}},
+ {id:"sxlottery", cat:"sx", icon:"🎲", name:"中奖概率（超几何）", desc:"从 N 个号选 K 个，中 k 个的概率",
+  formula:"P(X=k) = C(K,k) × C(N−K, K−k) ÷ C(N, K)（不放回抽样，超几何分布）；双色球红球即 N=33、K=6",
+  inputs:[
+   {id:"n", label:"号码总数 N", def:"33", min:1},
+   {id:"k", label:"选号个数 K", def:"6", min:0},
+   {id:"hit", label:"命中个数", def:"6", min:0}
+  ],
+  run:"function C(nn,kk){if(kk<0||kk>nn)return 0;kk=Math.min(kk,nn-kk);var r=1;for(var i=0;i<kk;i++)r=r*(nn-i)/(i+1);return r;}var N=Math.trunc(Number(n)),K=Math.trunc(Number(k)),H=Math.trunc(Number(hit));if(!(N>=1&&K>=0&&K<=N&&H>=0&&H<=K))return {ok:false,msg:'参数不合理（须 0 ≤ 命中 ≤ K ≤ N）'};var pr=C(K,H)*C(N-K,K-H)/C(N,K);if(!(pr>0))return {ok:false,msg:'该命中组合不可能发生'};return {ok:true,html:'<div class=\"big\">概率 ≈ '+(pr*100).toExponential(3)+'%</div><div class=\"row\">约 1 / '+Math.round(1/pr).toLocaleString('en-US')+'；双色球红球 6 全中（不含蓝球）为 1/1,107,568</div>'};",
+  test:{inputs:{"n": 33, "k": 6, "hit": 6}, expect:"1,107,568"}},
+ {id:"kfppi", cat:"kf", icon:"🖥️", name:"像素密度PPI", desc:"屏幕分辨率与尺寸对应的像素密度",
+  formula:"PPI = √(宽² + 高²) ÷ 对角线英寸；点距 = 25.4 ÷ PPI (mm)",
+  inputs:[
+   {id:"w", label:"水平像素", def:"1920"},
+   {id:"h", label:"垂直像素", def:"1080"},
+   {id:"inch", label:"屏幕尺寸", unit:"英寸", def:"15.6"}
+  ],
+  run:"if(!(Number(w)>0&&Number(h)>0&&Number(inch)>0))return {ok:false,msg:'参数须大于 0'};var diag=Math.sqrt(Number(w)*Number(w)+Number(h)*Number(h)),ppi=diag/Number(inch);if(!(ppi>0))return {ok:false,msg:'参数须大于 0'};return {ok:true,html:'<div class=\"big\">≈ '+ppi.toFixed(1)+' PPI</div><div class=\"row\">像素点距 '+(25.4/ppi).toFixed(3)+' mm；15.6 寸 1080p 约 141 PPI，27 寸 4K 约 163 PPI</div>'};",
+  test:{inputs:{"w": 1920, "h": 1080, "inch": 15.6}, expect:"141.2"}},
+ {id:"djbolt", cat:"dj", icon:"🔧", name:"螺栓预紧扭矩", desc:"由目标预紧力算螺栓拧紧扭矩",
+  formula:"T = K × F × d ÷ 1000（N·m）；扭矩系数 K：干燥钢面约 0.20，润滑约 0.15，表面处理约 0.18",
+  inputs:[
+   {id:"kf", label:"扭矩系数 K", type:"select", options:[{v:"0.2",t:"干燥钢面 0.20"},{v:"0.18",t:"表面处理 0.18"},{v:"0.15",t:"润滑 0.15"},{v:"0.12",t:"二硫化钼润滑 0.12"}]},
+   {id:"f", label:"目标预紧力 F", unit:"N", def:"10000"},
+   {id:"d", label:"螺栓公称直径 d", unit:"mm", def:"10"}
+  ],
+  run:"var Tm=Number(kf)*Number(f)*Number(d)/1000;if(!(Tm>0))return {ok:false,msg:'参数须大于 0'};return {ok:true,html:'<div class=\"big\">拧紧扭矩 ≈ '+Tm.toFixed(1)+' N·m</div><div class=\"row\">扭矩法散差约 ±25%，重要连接建议用扭矩+转角法或直拉指示</div>'};",
+  test:{inputs:{"kf": "0.2", "f": 10000, "d": 10}, expect:"20.0"}},
+ {id:"wlsoundp", cat:"wl", icon:"🎚️", name:"声压级", desc:"声压与声压级（分贝）互算",
+  formula:"声压级 L_p = 20×lg(p/p₀)，基准声压 p₀ = 20 μPa（空气中听阈）",
+  inputs:[
+   {id:"dmm", label:"计算方向", type:"select", options:[{v:"p2",t:"声压 → 声压级"},{v:"l2",t:"声压级 → 声压"}]},
+   {id:"pp", label:"声压 p", when:"dmm=p2", unit:"Pa", def:"1"},
+   {id:"ll", label:"声压级", when:"dmm=l2", unit:"dB", def:"94"}
+  ],
+  run:"if(dmm==='p2'){var p=Number(pp);if(!(p>0))return {ok:false,msg:'声压须大于 0'};var L=20*Math.log10(p/2e-5);return {ok:true,html:'<div class=\"big\">声压级 ≈ '+L.toFixed(2)+' dB</div><div class=\"row\">1 Pa ≈ 94 dB；正常谈话约 60 dB（0.02 Pa）</div>'};}var pr=2e-5*Math.pow(10,Number(ll)/20);return {ok:true,html:'<div class=\"big\">声压 ≈ '+pr.toExponential(3)+' Pa</div>'};",
+  test:{inputs:{"dmm": "p2", "pp": 1}, expect:"93.98"}},
+ {id:"sxclock", cat:"sx", icon:"🕐", name:"时分针夹角", desc:"某时刻时钟时针与分针的夹角",
+  formula:"分针每分钟 6°，时针每分钟 0.5°；夹角取两针角度差的较小值（≤180°）",
+  inputs:[
+   {id:"hh", label:"时", def:"3", min:0, max:23},
+   {id:"mm_", label:"分", def:"0", min:0, max:59}
+  ],
+  run:"var H=Number(hh)%12,M=Number(mm_);var ha=H*30+M*0.5,ma=M*6;var diff=Math.abs(ha-ma)%360;if(diff>180)diff=360-diff;return {ok:true,html:'<div class=\"big\">夹角 '+diff.toFixed(1)+'°</div><div class=\"row\">时针 '+ha.toFixed(1)+'°，分针 '+ma.toFixed(1)+'°（自 12 点顺时针）；两针每约 65.45 分钟重合一次</div>'};",
+  test:{inputs:{"hh": 3, "mm_": 0}, expect:"90.0"}},
+ {id:"kfscr", cat:"kf", icon:"📐", name:"屏幕尺寸计算", desc:"由对角线与宽高比算屏幕长宽",
+  formula:"宽 = 对角线 × 比例宽 ÷ √(比例宽² + 比例高²)，英寸换算 1 in = 2.54 cm",
+  inputs:[
+   {id:"inch", label:"对角线尺寸", unit:"英寸", def:"27"},
+   {id:"rw", label:"比例宽", def:"16"},
+   {id:"rh", label:"比例高", def:"9"}
+  ],
+  run:"var D=Number(inch)*2.54,rw=Number(rw),rh=Number(rh),k=Math.sqrt(rw*rw+rh*rh);if(!(D>0&&k>0))return {ok:false,msg:'参数须大于 0'};var W=D*rw/k,H=D*rh/k;return {ok:true,html:'<div class=\"big\">宽 '+W.toFixed(1)+' cm × 高 '+H.toFixed(1)+' cm</div><div class=\"row\">27 寸 16:9 约 59.8 × 33.6 cm（不含边框）</div>'};",
+  test:{inputs:{"inch": 27, "rw": 16, "rh": 9}, expect:"59.8"}},
+ {id:"djchain", cat:"dj", icon:"⛓️", name:"链传动设计", desc:"链传动速比与链长节数估算",
+  formula:"速比 i = z₂/z₁；链长节数 L_p ≈ (z₁+z₂)/2 + 2C/p + [(z₂−z₁)/(2π)]² × (p/C)，C 为中心距、p 为节距",
+  inputs:[
+   {id:"z1", label:"小链轮齿数 z₁", def:"19", min:1},
+   {id:"z2", label:"大链轮齿数 z₂", def:"38", min:1},
+   {id:"p", label:"链条节距 p", unit:"mm", def:"12.7"},
+   {id:"cc", label:"中心距 C", unit:"mm", def:"500"}
+  ],
+  run:"var Z1=Number(z1),Z2=Number(z2),P=Number(p),Cc=Number(cc);if(!(Z1>0&&Z2>0&&P>0&&Cc>0))return {ok:false,msg:'齿数、节距与中心距须大于 0'};var t=(Z2-Z1)/(2*Math.PI);var lp=(Z1+Z2)/2+2*Cc/P+t*t*(P/Cc);var even=Math.round(lp/2)*2;return {ok:true,html:'<div class=\"big\">速比 '+(Z2/Z1).toFixed(2)+' · 链长 ≈ '+lp.toFixed(1)+' 节</div><div class=\"row\">取偶数节 '+even+' 节（避免过渡链节），链条总长 ≈ '+(even*P/1000).toFixed(2)+' m；中心距一般取 30~50 倍节距</div>'};",
+  test:{inputs:{"z1": 19, "z2": 38, "p": 12.7, "cc": 500}, expect:"107.5"}},
+ {id:"shfloor", cat:"sh", icon:"🧱", name:"地板瓷砖用量", desc:"房间铺地板或瓷砖需要多少块",
+  formula:"块数 = 房间面积 ÷ 单块面积 ×（1 + 损耗率），向上取整；对缝铺贴损耗约 5%，斜铺约 10%",
+  inputs:[
+   {id:"rl", label:"房间长", unit:"m", def:"5"},
+   {id:"rw", label:"房间宽", unit:"m", def:"4"},
+   {id:"tl", label:"砖/板长", unit:"m", def:"0.8"},
+   {id:"tw", label:"砖/板宽", unit:"m", def:"0.8"},
+   {id:"loss", label:"损耗率", unit:"%", def:"5"}
+  ],
+  run:"var room=Number(rl)*Number(rw),one=Number(tl)*Number(tw);if(!(room>0&&one>0))return {ok:false,msg:'参数须大于 0'};var exact=room/one,need=Math.ceil(exact*(1+Number(loss)/100));return {ok:true,html:'<div class=\"big\">约需 '+need+' 块</div><div class=\"row\">房间 '+room.toFixed(1)+' m²，理论 '+exact.toFixed(1)+' 块，加 '+Number(loss)+'% 损耗向上取整；建议再多备 2~3 块修补</div>'};",
+  test:{inputs:{"rl": 5, "rw": 4, "tl": 0.8, "tw": 0.8, "loss": 5}, expect:"33"}},
+ {id:"yqopto", cat:"yqj", icon:"💡", name:"光耦电路设计", desc:"光耦输入限流电阻与输出电流估算",
+  formula:"输入电阻 R = (V_in − V_F) ÷ I_F；输出最大集电极电流 I_C ≈ I_F × CTR",
+  inputs:[
+   {id:"vin", label:"输入电压", unit:"V", def:"5"},
+   {id:"vf", label:"LED 正向压降", unit:"V", def:"1.2"},
+   {id:"iff", label:"目标正向电流", unit:"mA", def:"10"},
+   {id:"ctr", label:"电流传输比 CTR", unit:"%", def:"100"}
+  ],
+  run:"if(!(Number(iff)>0))return {ok:false,msg:'正向电流须大于 0'};var R=(Number(vin)-Number(vf))/(Number(iff)/1000);if(!(R>0))return {ok:false,msg:'输入电压须高于 LED 压降'};var ic=Number(iff)*Number(ctr)/100;return {ok:true,html:'<div class=\"big\">限流电阻 ≈ '+R.toFixed(0)+' Ω</div><div class=\"row\">输出可驱动电流上限 ≈ '+ic.toFixed(1)+' mA；电阻取标称值并留功率余量（本例功耗约 '+((Number(vin)-Number(vf))*Number(iff)/1000).toFixed(3)+' W）</div>'};",
+  test:{inputs:{"vin": 5, "vf": 1.2, "iff": 10, "ctr": 100}, expect:"380"}},
+ {id:"kfdl", cat:"kf", icon:"⬇️", name:"文件传输时间", desc:"按带宽估算文件下载/传输耗时",
+  formula:"时间 = 文件大小 × 8 ÷ 带宽（十进制单位，另计约 10% 协议开销的实际值）",
+  inputs:[
+   {id:"size", label:"文件大小", def:"100"},
+   {id:"su", label:"大小单位", type:"select", options:[{v:"MB",t:"MB"},{v:"GB",t:"GB"}]},
+   {id:"bw", label:"带宽", def:"100"},
+   {id:"bu", label:"带宽单位", type:"select", options:[{v:"Mbps",t:"Mbps"},{v:"Gbps",t:"Gbps"}]}
+  ],
+  run:"var bits=Number(size)*(su==='GB'?8e9:8e6),rate=Number(bw)*(bu==='Gbps'?1e9:1e6);if(!(bits>0&&rate>0))return {ok:false,msg:'参数须大于 0'};var sec=bits/rate,real=sec*1.1;function fmt(s){if(s<60)return s.toFixed(1)+' 秒';if(s<3600)return (s/60).toFixed(1)+' 分钟';return (s/3600).toFixed(2)+' 小时';}return {ok:true,html:'<div class=\"big\">理论 '+fmt(sec)+'</div><div class=\"row\">计入约 10% 协议与线路开销约 '+fmt(real)+'；注意 MB/s（字节）与 Mbps（比特）差 8 倍</div>'};",
+  test:{inputs:{"size": 100, "su": "MB", "bw": 100, "bu": "Mbps"}, expect:"8.0"}},
+ {id:"jrconv", cat:"jr", icon:"🔄", name:"可转债转股价值", desc:"可转债转股价值与转股溢价率",
+  formula:"转股价值 = 100 ÷ 转股价 × 正股价格；转股溢价率 =（转债价格 − 转股价值）÷ 转股价值",
+  inputs:[
+   {id:"cp", label:"转股价", unit:"元", def:"10"},
+   {id:"sp", label:"正股价格", unit:"元", def:"12"},
+   {id:"bp", label:"转债价格", unit:"元", def:"130"}
+  ],
+  run:"if(!(Number(cp)>0&&Number(sp)>0&&Number(bp)>0))return {ok:false,msg:'价格须大于 0'};var val=100/Number(cp)*Number(sp);if(!(val>0))return {ok:false,msg:'价格须大于 0'};var prem=(Number(bp)-val)/val*100;return {ok:true,html:'<div class=\"big\">转股价值 '+val.toFixed(2)+' 元</div><div class=\"row\">转股溢价率 '+prem.toFixed(2)+'%（每张面值 100 元；溢价率越低越跟涨，负值即折价套利空间）</div>'};",
+  test:{inputs:{"cp": 10, "sp": 12, "bp": 130}, expect:"120.00"}},
+ {id:"ydbsa", cat:"yd", icon:"🧍", name:"体表面积", desc:"Mosteller 公式算人体体表面积",
+  formula:"BSA = √(身高(cm) × 体重(kg) ÷ 3600)（Mosteller 公式，临床常用）",
+  inputs:[
+   {id:"h", label:"身高", unit:"cm", def:"170"},
+   {id:"w", label:"体重", unit:"kg", def:"73"}
+  ],
+  run:"var bsa=Math.sqrt(Number(h)*Number(w)/3600);if(!(bsa>0))return {ok:false,msg:'参数须大于 0'};return {ok:true,html:'<div class=\"big\">体表面积 ≈ '+bsa.toFixed(2)+' m²</div><div class=\"row\">用于基础代谢、烧伤面积与化疗剂量估算；成人常见 1.6~2.0 m²</div>'};",
+  test:{inputs:{"h": 170, "w": 73}, expect:"1.86"}},
+ {id:"dz555", cat:"dz", icon:"⏱️", name:"NE555定时器参数", desc:"555 无稳态（多谐）模式频率与占空比",
+  formula:"f = 1.44 ÷ [(R₁ + 2R₂) × C]；占空比 = (R₁ + R₂) ÷ (R₁ + 2R₂)（标准无稳态接法）",
+  inputs:[
+   {id:"r1", label:"电阻 R₁", unit:"kΩ", def:"1"},
+   {id:"r2", label:"电阻 R₂", unit:"kΩ", def:"10"},
+   {id:"c", label:"电容 C", unit:"μF", def:"10"}
+  ],
+  run:"var R1=Number(r1)*1000,R2=Number(r2)*1000,C=Number(c)*1e-6;if(!(R1>0&&R2>0&&C>0))return {ok:false,msg:'参数须大于 0'};var f=1.44/((R1+2*R2)*C),duty=(R1+R2)/(R1+2*R2)*100,th=0.693*(R1+R2)*C*1000,tl=0.693*R2*C*1000;return {ok:true,html:'<div class=\"big\">频率 ≈ '+f.toFixed(2)+' Hz · 占空比 '+duty.toFixed(1)+'%</div><div class=\"row\">高电平 '+th.toFixed(1)+' ms，低电平 '+tl.toFixed(1)+' ms；此接法占空比恒大于 50%</div>'};",
+  test:{inputs:{"r1": 1, "r2": 10, "c": 10}, expect:"6.86"}},
+ {id:"dzvswr", cat:"dz", icon:"📡", name:"驻波比与反射系数", desc:"电压驻波比、反射系数与回波损耗互算",
+  formula:"VSWR = (1 + |Γ|) ÷ (1 − |Γ|)；回波损耗 RL = −20×lg|Γ|",
+  inputs:[
+   {id:"dmm", label:"已知量", type:"select", options:[{v:"g",t:"反射系数 Γ"},{v:"v",t:"驻波比 VSWR"}]},
+   {id:"val", label:"数值", def:"0.333"}
+  ],
+  run:"var g,v;if(dmm==='g'){g=Math.abs(Number(val));if(!(g>=0&&g<1))return {ok:false,msg:'反射系数须在 0~1 之间'};v=(1+g)/(1-g);}else{v=Number(val);if(!(v>=1))return {ok:false,msg:'驻波比须 ≥ 1'};g=(v-1)/(v+1);}var rl=g>0?-20*Math.log10(g):Infinity;var refl=g*g*100;return {ok:true,html:'<div class=\"big\">VSWR '+v.toFixed(2)+' · Γ '+g.toFixed(3)+'</div><div class=\"row\">回波损耗 '+(isFinite(rl)?rl.toFixed(2)+' dB':'∞')+'，反射功率占比 '+refl.toFixed(1)+'%；VSWR 1.5 约反射 4% 功率</div>'};",
+  test:{inputs:{"dmm": "g", "val": 0.333}, expect:"2.00"}},
+ {id:"wlfringe", cat:"wl", icon:"🌈", name:"双缝干涉条纹间距", desc:"杨氏双缝干涉相邻亮纹间距",
+  formula:"Δx = L × λ ÷ d（L 为缝屏距，d 为双缝间距）",
+  inputs:[
+   {id:"l", label:"缝屏距 L", unit:"m", def:"1"},
+   {id:"d", label:"双缝间距 d", unit:"mm", def:"0.5"},
+   {id:"lam", label:"波长 λ", unit:"nm", def:"500"}
+  ],
+  run:"if(!(Number(l)>0&&Number(d)>0&&Number(lam)>0))return {ok:false,msg:'参数须大于 0'};var dx=Number(l)*(Number(lam)*1e-9)/(Number(d)*1e-3);if(!(dx>0))return {ok:false,msg:'参数须大于 0'};return {ok:true,html:'<div class=\"big\">条纹间距 ≈ '+(dx*1000).toFixed(2)+' mm</div><div class=\"row\">波长越长、缝距越小、屏距越远，条纹越疏——测波长经典实验</div>'};",
+  test:{inputs:{"l": 1, "d": 0.5, "lam": 500}, expect:"1.00"}},
+ {id:"kfprint", cat:"kf", icon:"🖨️", name:"打印尺寸换算", desc:"像素与打印尺寸按 DPI 互算",
+  formula:"打印尺寸(in) = 像素 ÷ DPI；1 in = 25.4 mm",
+  inputs:[
+   {id:"dmm", label:"计算方向", type:"select", options:[{v:"p2",t:"像素 → 打印尺寸"},{v:"s2",t:"打印尺寸 → 所需像素"}]},
+   {id:"px", label:"像素", when:"dmm=p2", def:"3000"},
+   {id:"cm", label:"打印宽度", when:"dmm=s2", unit:"cm", def:"25.4"},
+   {id:"dpi", label:"分辨率 DPI", def:"300"}
+  ],
+  run:"var D=Number(dpi);if(!(D>0))return {ok:false,msg:'DPI 须大于 0'};if(dmm==='p2'){var cmv=Number(px)/D*2.54;if(!(cmv>0))return {ok:false,msg:'像素须大于 0'};return {ok:true,html:'<div class=\"big\">打印宽 ≈ '+cmv.toFixed(2)+' cm</div><div class=\"row\">照片冲印常用 300 DPI，喷绘大图 72~150 DPI 即可</div>'};}var need=Math.ceil(Number(cm)/2.54*D);if(!(need>0))return {ok:false,msg:'尺寸须大于 0'};return {ok:true,html:'<div class=\"big\">至少需要 '+need+' 像素</div>'};",
+  test:{inputs:{"dmm": "p2", "px": 3000, "dpi": 300}, expect:"25.40"}},
+ {id:"jrfee", cat:"jr", icon:"🧾", name:"基金申购费用", desc:"价外法算基金申购的手续费与确认份额",
+  formula:"价外法：净申购金额 = 申购金额 ÷（1 + 费率），手续费 = 申购金额 − 净申购金额，确认份额 = 净申购金额 ÷ 当日净值",
+  inputs:[
+   {id:"amt", label:"申购金额", unit:"元", def:"10000"},
+   {id:"rate", label:"申购费率", unit:"%", def:"1.5"},
+   {id:"nav", label:"基金净值", def:"1.2500"}
+  ],
+  run:"var net=Number(amt)/(1+Number(rate)/100);if(!(net>0&&Number(nav)>0))return {ok:false,msg:'参数须大于 0'};var fee=Number(amt)-net,shares=net/Number(nav);return {ok:true,html:'<div class=\"big\">确认份额 ≈ '+shares.toFixed(2)+' 份</div><div class=\"row\">净申购 '+net.toFixed(2)+' 元，手续费 '+fee.toFixed(2)+' 元；费率打折后（如 1 折 0.15%）费用显著降低</div>'};",
+  test:{inputs:{"amt": 10000, "rate": 1.5, "nav": 1.25}, expect:"7881.77"}}
 );
 /* ===== WAVE-3C 开发工具 ===== */
 CATS.push({id:"kf", name:"开发工具"});
