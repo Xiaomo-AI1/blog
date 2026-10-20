@@ -2957,7 +2957,191 @@ TOOLS.push(
    {id:"i", label:"van 't Hoff 因子 i", def:"1"}
   ],
   run:"var pi=Number(i)*Number(c)*0.082057*Number(tk);if(!(pi>0))return {ok:false,msg:'参数须大于 0'};return {ok:true,html:'<div class=\"big\">π = '+pi.toFixed(3)+' atm</div><div class=\"row\">约 '+(pi*101.325).toFixed(1)+' kPa；生理盐水（0.154 mol/L NaCl，i≈2，37℃）约 7.8 atm</div>'};",
-  test:{inputs:{"c": 0.1, "tk": 298, "i": 1}, expect:"2.445"}}
+  test:{inputs:{"c": 0.1, "tk": 298, "i": 1}, expect:"2.445"}},
+ {id:"wbsimilar", cat:"wb", icon:"🔍", name:"文本相似度", desc:"比较两段文本的字符重合度与编辑距离",
+  formula:"Jaccard 相似度 = 交集字符数÷并集字符数；编辑距离为 Levenshtein 距离；综合相似度 = 1 − 编辑距离÷较长长度",
+  inputs:[
+   {id:"t1", label:"文本一", type:"text", def:"kitten"},
+   {id:"t2", label:"文本二", type:"text", def:"sitting"}
+  ],
+  run:"var a=String(t1),b=String(t2);if(a.length>500||b.length>500)return {ok:false,msg:'单段文本限 500 字以内'};var sa=new Set(a.split('')),sb=new Set(b.split(''));var inter=0;sa.forEach(function(ch){if(sb.has(ch))inter++;});var uni=sa.size+sb.size-inter;var jac=uni?inter/uni:1;var m=a.length,n=b.length;var dp=[];for(var i=0;i<=m;i++){dp.push([i]);}for(var j=1;j<=n;j++)dp[0][j]=j;for(var i2=1;i2<=m;i2++)for(var j2=1;j2<=n;j2++){dp[i2][j2]=Math.min(dp[i2-1][j2]+1,dp[i2][j2-1]+1,dp[i2-1][j2-1]+(a[i2-1]===b[j2-1]?0:1));}var lev=dp[m][n];var sim=Math.max(m,n)?1-lev/Math.max(m,n):1;return {ok:true,html:'<div class=\"big\">综合相似度 '+(sim*100).toFixed(1)+'%</div><div class=\"row\">编辑距离 '+lev+'（改动 '+lev+' 个字符可互变）；字符 Jaccard 相似度 '+(jac*100).toFixed(1)+'%</div>'};",
+  test:{inputs:{"t1": "kitten", "t2": "sitting"}, expect:"3"}},
+ {id:"kfsnow", cat:"kf", icon:"❄️", name:"雪花ID解析", desc:"解析 Twitter 雪花算法 ID 的时间与机器位",
+  formula:"雪花 ID：1 位符号 + 41 位毫秒时间戳（纪元 1288834974657）+ 5 位数据中心 + 5 位机器 + 12 位序列",
+  inputs:[
+   {id:"sid", label:"雪花 ID", type:"text", def:"0"}
+  ],
+  run:"var s=String(sid).trim();if(!/^\\d{1,19}$/.test(s))return {ok:false,msg:'请输入十进制整数 ID'};var v=BigInt(s);var ts=Number((v>>22n)+1288834974657n);var dc=Number((v>>17n)&31n),wk=Number((v>>12n)&31n),sq=Number(v&4095n);var d=new Date(ts);function f2(x){return String(x).padStart(2,'0');}var str=d.getUTCFullYear()+'-'+f2(d.getUTCMonth()+1)+'-'+f2(d.getUTCDate())+' '+f2(d.getUTCHours())+':'+f2(d.getUTCMinutes())+':'+f2(d.getUTCSeconds())+'.'+String(ts%1000).padStart(3,'0');return {ok:true,html:'<div class=\"big\">'+str+' UTC</div><div class=\"row\">数据中心 '+dc+'，机器 '+wk+'，毫秒内序列 '+sq+'</div>'};",
+  test:{inputs:{"sid": "0"}, expect:"2010-11-04"}},
+ {id:"sxchick", cat:"sx", icon:"🐔", name:"鸡兔同笼", desc:"由总头数与总脚数算鸡兔各几只",
+  formula:"兔 =（总脚数 − 2×总头数）÷ 2，鸡 = 总头数 − 兔",
+  inputs:[
+   {id:"heads", label:"总头数", def:"35", min:1},
+   {id:"feet", label:"总脚数", def:"94", min:0}
+  ],
+  run:"var H=Math.trunc(Number(heads)),F=Math.trunc(Number(feet));if(!(H>0))return {ok:false,msg:'头数须大于 0'};if(F<2*H||F>4*H||F%2!==0)return {ok:false,msg:'脚数不合理：应在 2~4 倍头数之间且为偶数'};var rab=(F-2*H)/2,chi=H-rab;return {ok:true,html:'<div class=\"big\">鸡 '+chi+' 只 · 兔 '+rab+' 只</div><div class=\"row\">验算：'+chi+'×2 + '+rab+'×4 = '+(chi*2+rab*4)+' 只脚</div>'};",
+  test:{inputs:{"heads": 35, "feet": 94}, expect:"兔 12"}},
+ {id:"sxinteg", cat:"sx", icon:"∫", name:"数值积分计算", desc:"梯形法与辛普森法近似定积分",
+  formula:"梯形法与辛普森法（复合）数值求积；辛普森法对三次多项式精确",
+  inputs:[
+   {id:"fn", label:"被积函数", type:"select", options:[{v:"x2",t:"x²"},{v:"x3",t:"x³"},{v:"sin",t:"sin x"},{v:"cos",t:"cos x"},{v:"exp",t:"eˣ"},{v:"ln",t:"ln x"},{v:"inv",t:"1/x"},{v:"sqrt",t:"√x"}]},
+   {id:"a", label:"下限 a", def:"0"},
+   {id:"b", label:"上限 b", def:"1"},
+   {id:"n", label:"分段数 n", def:"100", min:2, max:10000}
+  ],
+  run:"var FS={x2:function(x){return x*x;},x3:function(x){return x*x*x;},sin:Math.sin,cos:Math.cos,exp:Math.exp,ln:Math.log,inv:function(x){return 1/x;},sqrt:Math.sqrt};var f=FS[fn],A=Number(a),B=Number(b),N=Math.trunc(Number(n));if(!(N>=2))return {ok:false,msg:'分段数至少 2'};if(N>20000)N=20000;function trap(nn){var h=(B-A)/nn,s=(f(A)+f(B))/2;for(var i=1;i<nn;i++)s+=f(A+i*h);return s*h;}function simp(nn){if(nn%2)nn++;var h=(B-A)/nn,s=f(A)+f(B);for(var i=1;i<nn;i++)s+=f(A+i*h)*(i%2?4:2);return s*h/3;}var tv=trap(N),sv=simp(N);if(!isFinite(tv)||!isFinite(sv))return {ok:false,msg:'区间内函数有奇点，无法计算'};return {ok:true,html:'<div class=\"big\">辛普森法 ≈ '+sv.toFixed(6)+'</div><div class=\"row\">梯形法 ≈ '+tv.toFixed(6)+'（n='+N+'）</div>'};",
+  test:{inputs:{"fn": "x2", "a": 0, "b": 1, "n": 100}, expect:"0.333333"}},
+ {id:"dglightning", cat:"dgjs", icon:"🌩️", name:"避雷针保护范围", desc:"滚球法算避雷针在某高度的保护半径",
+  formula:"滚球法：r_x = √(h(2h_r−h)) − √(h_x(2h_r−h_x))，滚球半径 h_r 按建筑物防雷类别取 30/45/60 m",
+  inputs:[
+   {id:"hr", label:"防雷类别", type:"select", options:[{v:"30",t:"第一类（h_r=30 m）"},{v:"45",t:"第二类（h_r=45 m）"},{v:"60",t:"第三类（h_r=60 m）"}]},
+   {id:"h", label:"避雷针高度", unit:"m", def:"20"},
+   {id:"hx", label:"被保护物高度", unit:"m", def:"0"}
+  ],
+  run:"var HR=Number(hr),H=Number(h),HX=Number(hx);if(!(H>0&&HX>=0))return {ok:false,msg:'高度参数不对'};if(H>HR)return {ok:false,msg:'针高超过滚球半径时滚球法不适用'};if(HX>H)return {ok:false,msg:'被保护物高度不能超过针高'};var rx=Math.sqrt(H*(2*HR-H))-Math.sqrt(HX*(2*HR-HX));return {ok:true,html:'<div class=\"big\">保护半径 ≈ '+rx.toFixed(2)+' m</div><div class=\"row\">在高度 '+HX+' m 的平面上，针尖正下方周围 '+rx.toFixed(2)+' m 内受保护（GB 50057 滚球法）</div>'};",
+  test:{inputs:{"hr": "30", "h": 20, "hx": 0}, expect:"28.28"}},
+ {id:"djhyd", cat:"dj", icon:"🔩", name:"液压缸推力计算", desc:"由系统压力与缸径算液压缸推拉力",
+  formula:"推力 F = P·A = P·πD²/4；拉力按环形面积 π(D²−d²)/4（P 用 MPa 时 1 MPa = 1 N/mm²）",
+  inputs:[
+   {id:"p", label:"系统压力", unit:"MPa", def:"16"},
+   {id:"dd", label:"缸筒内径", unit:"mm", def:"100"},
+   {id:"rod", label:"活塞杆直径", unit:"mm", def:"0", hint:"填 0 只算推力"}
+  ],
+  run:"var P=Number(p),D=Number(dd),d=Number(rod);if(!(P>0&&D>0&&d>=0&&d<D))return {ok:false,msg:'参数不对（杆径须小于缸径）'};var fpush=P*Math.PI*D*D/4/1000;var html='<div class=\"big\">推力 '+fpush.toFixed(2)+' kN</div>';if(d>0){var fpull=P*Math.PI*(D*D-d*d)/4/1000;html+='<div class=\"row\">拉力 '+fpull.toFixed(2)+' kN（杆侧环形面积）</div>';}html+='<div class=\"row\">未计摩擦与效率，实际输出约再打 85%~95%</div>';return {ok:true,html:html};",
+  test:{inputs:{"p": 16, "dd": 100, "rod": 0}, expect:"125.66"}},
+ {id:"wlsound", cat:"wl", icon:"🔊", name:"声速计算（空气）", desc:"按气温算空气中的声速",
+  formula:"v = 331.3×√(1 + T/273.15)（干燥空气，T 为摄氏温度）",
+  inputs:[
+   {id:"t", label:"气温", unit:"℃", def:"20"}
+  ],
+  run:"var T=Number(t);if(!(T>-273.15))return {ok:false,msg:'温度不能低于绝对零度'};var v=331.3*Math.sqrt(1+T/273.15);return {ok:true,html:'<div class=\"big\">声速 ≈ '+v.toFixed(1)+' m/s</div><div class=\"row\">0℃ 约 331 m/s，20℃ 约 343 m/s；湿度会使声速略增</div>'};",
+  test:{inputs:{"t": 20}, expect:"343.2"}},
+ {id:"jrvol", cat:"jr", icon:"📈", name:"历史波动率", desc:"由一列收益率算波动率并年化",
+  formula:"波动率 = 收益率样本标准差（n−1）；年化：日收益×√252，周×√52，月×√12",
+  inputs:[
+   {id:"series", label:"收益率序列（%，逗号或空格分隔）", type:"text", def:"1, -1, 1, -1, 1"},
+   {id:"per", label:"收益周期", type:"select", options:[{v:"252",t:"日收益"},{v:"52",t:"周收益"},{v:"12",t:"月收益"}]}
+  ],
+  run:"var nums=String(series).split(/[\\s,，、;；]+/).map(Number).filter(function(x){return isFinite(x);});if(nums.length<2)return {ok:false,msg:'至少输入 2 个收益率'};var mean=nums.reduce(function(a2,b2){return a2+b2;},0)/nums.length;var ss=0;for(var i=0;i<nums.length;i++)ss+=(nums[i]-mean)*(nums[i]-mean);var sd=Math.sqrt(ss/(nums.length-1));var ann=sd*Math.sqrt(Number(per));return {ok:true,html:'<div class=\"big\">波动率 '+sd.toFixed(4)+'% · 年化 '+ann.toFixed(2)+'%</div><div class=\"row\">平均收益 '+mean.toFixed(4)+'%（共 '+nums.length+' 期，样本标准差）</div>'};",
+  test:{inputs:{"series": "1, -1, 1, -1, 1", "per": "252"}, expect:"17.39"}},
+ {id:"kfhaversine", cat:"kf", icon:"🌍", name:"经纬度球面距离", desc:"两经纬度坐标之间的地表大圆距离",
+  formula:"Haversine 公式：a=sin²(Δφ/2)+cosφ₁cosφ₂sin²(Δλ/2)，d=2R·atan2(√a,√(1−a))，R=6371 km",
+  inputs:[
+   {id:"lat1", label:"纬度 1", def:"0"},
+   {id:"lon1", label:"经度 1", def:"0"},
+   {id:"lat2", label:"纬度 2", def:"0"},
+   {id:"lon2", label:"经度 2", def:"1"}
+  ],
+  run:"function rad(x){return x*Math.PI/180;}var p1=rad(Number(lat1)),p2=rad(Number(lat2)),dp=rad(Number(lat2)-Number(lat1)),dl=rad(Number(lon2)-Number(lon1));if(Math.abs(Number(lat1))>90||Math.abs(Number(lat2))>90)return {ok:false,msg:'纬度须在 −90~90 之间'};var a=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);var d=2*6371*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));return {ok:true,html:'<div class=\"big\">地表距离 ≈ '+d.toFixed(2)+' km</div><div class=\"row\">按地球半径 6371 km 的球面估算，平地两点更适合用平面距离</div>'};",
+  test:{inputs:{"lat1": 0, "lon1": 0, "lat2": 0, "lon2": 1}, expect:"111.19"}},
+ {id:"sxcatalan", cat:"sx", icon:"🌳", name:"卡特兰数", desc:"第 n 个卡特兰数（括号匹配/二叉树计数）",
+  formula:"C_n = C(2n, n) ÷ (n+1)，递推 C_{n+1} = C_n × 2(2n+1)/(n+2)",
+  inputs:[
+   {id:"n", label:"n", def:"5", min:0, max:25}
+  ],
+  run:"var N=Math.trunc(Number(n));if(!(N>=0&&N<=25))return {ok:false,msg:'n 须在 0~25'};var c=1;for(var i=0;i<N;i++)c=c*2*(2*i+1)/(i+2);return {ok:true,html:'<div class=\"big\">C'+N+' = '+Math.round(c)+'</div><div class=\"row\">应用：n 对括号的合法匹配数、n+1 个叶子的二叉树数、出栈序列数</div>'};",
+  test:{inputs:{"n": 5}, expect:"42"}},
+ {id:"sxyanghui", cat:"sx", icon:"🔺", name:"杨辉三角", desc:"生成前 n 行杨辉三角（帕斯卡三角）",
+  formula:"每行首尾为 1，中间数 = 上一行相邻两数之和；第 n 行即二项式系数 C(n, k)",
+  inputs:[
+   {id:"n", label:"行数", def:"5", min:1, max:20}
+  ],
+  run:"var N=Math.trunc(Number(n));if(!(N>=1&&N<=20))return {ok:false,msg:'行数须在 1~20'};var rows=[[1]];for(var i=1;i<N;i++){var prev=rows[i-1],row=[1];for(var j=1;j<i;j++)row.push(prev[j-1]+prev[j]);row.push(1);rows.push(row);}var html='<div class=\"big\">杨辉三角 '+N+' 行</div>';for(var k=0;k<N;k++)html+='<div class=\"row\">'+rows[k].join(' ')+'</div>';return {ok:true,html:html};",
+  test:{inputs:{"n": 5}, expect:"1 4 6 4 1"}},
+ {id:"sxderange", cat:"sx", icon:"✉️", name:"错排数（装错信封）", desc:"n 个元素全部错位的排列数",
+  formula:"递推 D_n = (n−1)(D_{n−1} + D_{n−2})，D_0=1，D_1=0；约等于 n!/e",
+  inputs:[
+   {id:"n", label:"n", def:"4", min:0, max:18}
+  ],
+  run:"var N=Math.trunc(Number(n));if(!(N>=0&&N<=18))return {ok:false,msg:'n 须在 0~18'};var d0=1,d1=0;if(N===0)return {ok:true,html:'<div class=\"big\">D0 = 1</div>'};var cur=d1;for(var i=2;i<=N;i++){cur=(i-1)*(d1+d0);d0=d1;d1=cur;}return {ok:true,html:'<div class=\"big\">D'+N+' = '+cur+'</div><div class=\"row\">'+N+' 封信全部装错信封的方法数；n 较大时约等于 '+N+'! ÷ e</div>'};",
+  test:{inputs:{"n": 4}, expect:"9"}},
+ {id:"wbset", cat:"wb", icon:"🧺", name:"集合运算", desc:"两个集合的并集、交集、差集与对称差",
+  formula:"元素按逗号、空格或换行分隔，自动去重",
+  inputs:[
+   {id:"sa", label:"集合 A", type:"text", def:"1, 2, 3, 4"},
+   {id:"sb", label:"集合 B", type:"text", def:"3, 4, 5"}
+  ],
+  run:"function ps(s){return new Set(String(s).split(/[\\s,，、;；]+/).filter(function(x){return x!=='';}));}var A=ps(sa),B=ps(sb);var uni=new Set([...A,...B]);var inter=new Set([...A].filter(function(x){return B.has(x);}));var dab=new Set([...A].filter(function(x){return !B.has(x);}));var dba=new Set([...B].filter(function(x){return !A.has(x);}));var sym=new Set([...dab,...dba]);function L(st){return [...st].join('、')||'（空）';}return {ok:true,html:'<div class=\"big\">|A∪B| = '+uni.size+'，|A∩B| = '+inter.size+'</div><div class=\"row\">A∪B：'+L(uni)+'</div><div class=\"row\">A∩B：'+L(inter)+'</div><div class=\"row\">A−B：'+L(dab)+'</div><div class=\"row\">B−A：'+L(dba)+'</div><div class=\"row\">对称差：'+L(sym)+'</div>'};",
+  test:{inputs:{"sa": "1, 2, 3, 4", "sb": "3, 4, 5"}, expect:"|A∪B| = 5"}},
+ {id:"yqbjt", cat:"yqj", icon:"📻", name:"三极管分压偏置工作点", desc:"分压式偏置电路的静态工作点估算",
+  formula:"V_B = V_CC·R₂/(R₁+R₂)，V_E = V_B − 0.7 V（硅管），I_E = V_E/R_E，I_C ≈ I_E·β/(β+1)，V_CE = V_CC − I_C·R_C − V_E（电阻用 kΩ 时电流为 mA）",
+  inputs:[
+   {id:"vcc", label:"电源电压 V_CC", unit:"V", def:"12"},
+   {id:"r1", label:"上偏置电阻 R₁", unit:"kΩ", def:"47"},
+   {id:"r2", label:"下偏置电阻 R₂", unit:"kΩ", def:"10"},
+   {id:"rc", label:"集电极电阻 R_C", unit:"kΩ", def:"2"},
+   {id:"re_", label:"发射极电阻 R_E", unit:"kΩ", def:"1"},
+   {id:"beta", label:"电流放大倍数 β", def:"100"}
+  ],
+  run:"if(!(Number(vcc)>0&&Number(re_)>0&&Number(r1)+Number(r2)>0&&Number(rc)>=0&&Number(beta)>0))return {ok:false,msg:'参数不对：电源、R_E、β 须大于 0'};var VB=Number(vcc)*Number(r2)/(Number(r1)+Number(r2)),VE=VB-0.7;if(!(VE>0))return {ok:false,msg:'偏置不足：基极电压低于 0.7 V，管子未导通'};var IE=VE/Number(re_),IC=IE*Number(beta)/(Number(beta)+1),IB=IE/(Number(beta)+1),VC=Number(vcc)-IC*Number(rc),VCE=VC-VE;return {ok:true,html:'<div class=\"big\">I_C ≈ '+IC.toFixed(2)+' mA · V_CE ≈ '+VCE.toFixed(2)+' V</div><div class=\"row\">V_B = '+VB.toFixed(2)+' V，V_E = '+VE.toFixed(2)+' V，I_B ≈ '+(IB*1000).toFixed(1)+' μA'+(VCE<0.3?'；V_CE 过低，已进入饱和区':'')+'</div>'};",
+  test:{inputs:{"vcc": 12, "r1": 47, "r2": 10, "rc": 2, "re_": 1, "beta": 100}, expect:"mA"}},
+ {id:"hxhenry", cat:"hx", icon:"🫧", name:"亨利定律溶解度", desc:"气体在液体中的溶解度（亨利定律）",
+  formula:"c = k_H · p（25℃，k_H 为亨利溶解度常数，p 为气体分压 atm）",
+  inputs:[
+   {id:"gas", label:"气体", type:"select", options:[{v:"0.034",t:"二氧化碳 CO₂（3.4×10⁻²）"},{v:"0.0013",t:"氧气 O₂（1.3×10⁻³）"},{v:"0.00065",t:"氮气 N₂（6.5×10⁻⁴）"},{v:"0.00078",t:"氢气 H₂（7.8×10⁻⁴）"},{v:"57",t:"氨气 NH₃（约 57）"}]},
+   {id:"p", label:"气体分压", unit:"atm", def:"1"}
+  ],
+  run:"var c=Number(gas)*Number(p);if(!(Number(p)>0))return {ok:false,msg:'分压须大于 0'};return {ok:true,html:'<div class=\"big\">溶解度 ≈ '+c.toExponential(3)+' mol/L</div><div class=\"row\">分压越大、温度越低，溶解越多（碳酸饮料开瓶冒泡即分压骤降）</div>'};",
+  test:{inputs:{"gas": "0.034", "p": 1}, expect:"3.400e-2"}},
+ {id:"shgold", cat:"sh", icon:"🏅", name:"黄金首饰计价", desc:"按克重、今日金价与工费估算首饰价格",
+  formula:"总价 = 克重 × 金价 + 工费（工费按件或按克另计）",
+  inputs:[
+   {id:"w", label:"克重", unit:"克", def:"10"},
+   {id:"price", label:"金价", unit:"元/克", def:"580"},
+   {id:"fee", label:"工费（总计）", unit:"元", def:"300"}
+  ],
+  run:"var tot=Number(w)*Number(price)+Number(fee);if(!(tot>0))return {ok:false,msg:'参数须大于 0'};return {ok:true,html:'<div class=\"big\">总价 ≈ '+tot.toFixed(0)+' 元</div><div class=\"row\">其中金料 '+(Number(w)*Number(price)).toFixed(0)+' 元 + 工费 '+Number(fee).toFixed(0)+' 元；一口价首饰可反推每克单价对比</div>'};",
+  test:{inputs:{"w": 10, "price": 580, "fee": 300}, expect:"6100"}},
+ {id:"kfip", cat:"kf", icon:"🔢", name:"IP地址整数互转", desc:"IPv4 地址与 32 位整数之间互转",
+  formula:"整数 = a×2²⁴ + b×2¹⁶ + c×2⁸ + d",
+  inputs:[
+   {id:"dmm", label:"转换方向", type:"select", options:[{v:"i2",t:"IP → 整数"},{v:"n2",t:"整数 → IP"}]},
+   {id:"ip", label:"IPv4 地址", when:"dmm=i2", type:"text", def:"192.168.1.1"},
+   {id:"num", label:"整数", when:"dmm=n2", def:"3232235777"}
+  ],
+  run:"if(dmm==='i2'){var parts=String(ip).trim().split('.');if(parts.length!==4||parts.some(function(x){return !/^\\d+$/.test(x)||Number(x)>255;}))return {ok:false,msg:'IPv4 格式不对'};var v=parts.reduce(function(acc,x){return acc*256+Number(x);},0);return {ok:true,html:'<div class=\"big\">'+v+'</div><div class=\"row\">十六进制 0x'+v.toString(16).toUpperCase().padStart(8,'0')+'</div>'};}var nv=Number(num);if(!(nv>=0&&nv<=4294967295&&Math.floor(nv)===nv))return {ok:false,msg:'整数须在 0~4294967295'};var o=[(nv>>>24)&255,(nv>>>16)&255,(nv>>>8)&255,nv&255];return {ok:true,html:'<div class=\"big\">'+o.join('.')+'</div>'};",
+  test:{inputs:{"dmm": "i2", "ip": "192.168.1.1"}, expect:"3232235777"}},
+ {id:"jrbs", cat:"jr", icon:"📊", name:"期权定价（Black-Scholes）", desc:"欧式期权理论价格",
+  formula:"C = S·N(d₁) − K·e^(−rT)·N(d₂)，P = K·e^(−rT)·N(−d₂) − S·N(−d₁)；d₁ = [ln(S/K) + (r+σ²/2)T] ÷ (σ√T)，d₂ = d₁ − σ√T（无股息）",
+  inputs:[
+   {id:"s", label:"标的价格 S", def:"100"},
+   {id:"k", label:"行权价 K", def:"100"},
+   {id:"tt", label:"到期时间 T（年）", def:"1"},
+   {id:"r", label:"无风险利率（%）", def:"5"},
+   {id:"sigma", label:"波动率（%）", def:"20"}
+  ],
+  run:"var S=Number(s),K=Number(k),Tm=Number(tt),r=Number(r)/100,sg=Number(sigma)/100;if(!(S>0&&K>0&&Tm>0&&sg>0))return {ok:false,msg:'价格、时间与波动率须大于 0'};function Phi(zz){var t=1/(1+0.2316419*Math.abs(zz));var d=0.3989422804014327*Math.exp(-zz*zz/2);var pr=d*t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));return zz>0?1-pr:pr;}var d1=(Math.log(S/K)+(r+sg*sg/2)*Tm)/(sg*Math.sqrt(Tm)),d2=d1-sg*Math.sqrt(Tm);var call=S*Phi(d1)-K*Math.exp(-r*Tm)*Phi(d2),put=K*Math.exp(-r*Tm)*Phi(-d2)-S*Phi(-d1);return {ok:true,html:'<div class=\"big\">认购（Call）'+call.toFixed(2)+' · 认沽（Put）'+put.toFixed(2)+'</div><div class=\"row\">d₁ = '+d1.toFixed(3)+'，d₂ = '+d2.toFixed(3)+'；未计股息，价格为每份标的的理论值</div>'};",
+  test:{inputs:{"s": 100, "k": 100, "tt": 1, "r": 5, "sigma": 20}, expect:"10.45"}},
+ {id:"wlblack", cat:"wl", icon:"☀️", name:"黑体辐射计算", desc:"维恩位移与斯特藩-玻尔兹曼定律",
+  formula:"峰值波长 λ_max = b/T（b=2.898×10⁻³ m·K）；辐射出射度 j = σT⁴（σ=5.670×10⁻⁸）",
+  inputs:[
+   {id:"t", label:"温度", unit:"K", def:"5780"},
+   {id:"area", label:"表面积", unit:"m²", def:"1"}
+  ],
+  run:"var Tm=Number(t),A=Number(area);if(!(Tm>0&&A>0))return {ok:false,msg:'温度与面积须大于 0'};var lam=2.898e-3/Tm,j=5.670374419e-8*Math.pow(Tm,4);var lamS=lam>=1e-6?(lam*1e6).toFixed(2)+' μm':(lam*1e9).toFixed(0)+' nm';return {ok:true,html:'<div class=\"big\">峰值波长 '+lamS+'</div><div class=\"row\">辐射出射度 '+j.toExponential(3)+' W/m²，总辐射功率 '+(j*A).toExponential(3)+' W</div>'};",
+  test:{inputs:{"t": 5780, "area": 1}, expect:"501"}},
+ {id:"sxroman", cat:"sx", icon:"🏛️", name:"罗马数字互转", desc:"整数与罗马数字之间互转（1~3999）",
+  formula:"罗马数字：I=1，V=5，X=10，L=50，C=100，D=500，M=1000，左减右加",
+  inputs:[
+   {id:"dmm", label:"转换方向", type:"select", options:[{v:"i2",t:"整数 → 罗马数字"},{v:"r2",t:"罗马数字 → 整数"}]},
+   {id:"num", label:"整数", when:"dmm=i2", def:"2024"},
+   {id:"rom", label:"罗马数字", when:"dmm=r2", type:"text", def:"MMXXIV"}
+  ],
+  run:"if(dmm==='i2'){var v=Math.trunc(Number(num));if(!(v>=1&&v<=3999))return {ok:false,msg:'范围 1~3999'};var TAB=[[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']],out='';for(var i=0;i<TAB.length;i++){while(v>=TAB[i][0]){out+=TAB[i][1];v-=TAB[i][0];}}return {ok:true,html:'<div class=\"big\">'+out+'</div>'};}var s=String(rom).trim().toUpperCase();if(!/^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/.test(s)||!s)return {ok:false,msg:'罗马数字格式不对'};var VAL={I:1,V:5,X:10,L:50,C:100,D:500,M:1000},tot=0;for(var j=0;j<s.length;j++){var cur=VAL[s[j]],nxt=j+1<s.length?VAL[s[j+1]]:0;tot+=cur<nxt?-cur:cur;}return {ok:true,html:'<div class=\"big\">'+tot+'</div>'};",
+  test:{inputs:{"dmm": "i2", "num": 2024}, expect:"MMXXIV"}},
+ {id:"hxgaslaw", cat:"hx", icon:"🎈", name:"理想气体状态换算", desc:"联合气体定律在两个状态间换算",
+  formula:"联合气体定律：P₁V₁/T₁ = P₂V₂/T₂（温度须用开尔文）",
+  inputs:[
+   {id:"solve", label:"求解", type:"select", options:[{v:"p2",t:"求 P₂"},{v:"v2",t:"求 V₂"},{v:"t2",t:"求 T₂"}]},
+   {id:"p1", label:"压强 P₁", unit:"kPa", def:"101.3"},
+   {id:"v1", label:"体积 V₁", unit:"L", def:"10"},
+   {id:"t1", label:"温度 T₁", unit:"K", def:"273"},
+   {id:"p2", label:"压强 P₂", when:"solve=v2,t2", unit:"kPa", def:"202.6"},
+   {id:"v2", label:"体积 V₂", when:"solve=p2,t2", unit:"L", def:"5"},
+   {id:"t2", label:"温度 T₂", when:"solve=p2,v2", unit:"K", def:"546"}
+  ],
+  run:"var P1=Number(p1),V1=Number(v1),T1=Number(t1);if(!(P1>0&&V1>0&&T1>0))return {ok:false,msg:'状态一参数须大于 0'};var K=P1*V1/T1;if(solve==='p2'){if(!(Number(v2)>0&&Number(t2)>0))return {ok:false,msg:'V₂ 与 T₂ 须大于 0'};return {ok:true,html:'<div class=\"big\">P₂ = '+(K*Number(t2)/Number(v2)).toFixed(2)+' kPa</div>'};}if(solve==='v2'){if(!(Number(p2)>0&&Number(t2)>0))return {ok:false,msg:'P₂ 与 T₂ 须大于 0'};return {ok:true,html:'<div class=\"big\">V₂ = '+(K*Number(t2)/Number(p2)).toFixed(2)+' L</div>'};}if(!(Number(p2)>0&&Number(v2)>0))return {ok:false,msg:'P₂ 与 V₂ 须大于 0'};return {ok:true,html:'<div class=\"big\">T₂ = '+(Number(p2)*Number(v2)/K).toFixed(1)+' K</div>'};",
+  test:{inputs:{"solve": "p2", "p1": 101.3, "v1": 10, "t1": 273, "v2": 5, "t2": 546}, expect:"405.20"}}
 );
 /* ===== WAVE-3C 开发工具 ===== */
 CATS.push({id:"kf", name:"开发工具"});
