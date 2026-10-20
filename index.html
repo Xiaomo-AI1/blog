@@ -2762,7 +2762,202 @@ TOOLS.push(
    {id:"km", label:"年行驶里程", unit:"km", def:"15000", min:0}
   ],
   run:"var cons=Number(cons),price=Number(price),batt=Number(batt),km=Number(km); if(!(cons>0)) return {ok:false,msg:'百公里电耗须大于0'}; if(!(price>=0)) return {ok:false,msg:'电价不能为负'}; if(!(batt>=0)) return {ok:false,msg:'电池容量不能为负'}; if(!(km>=0)) return {ok:false,msg:'年里程不能为负'}; var per=cons/100*price; var full=batt*price; var yk=km/100*cons; var yc=yk*price; return {ok:true,html:'<div class=\"big\">年充电花费约 '+yc.toFixed(0)+' 元</div><div class=\"row\">每公里成本 '+per.toFixed(3)+' 元，充满一次 '+full.toFixed(1)+' 元，年充电量 '+yk.toFixed(0)+' kWh（按电表电量计，未含充电损耗）</div>'};",
-  test:{inputs:{cons:15,price:0.6,batt:60,km:15000}, expect:"1350"}}
+  test:{inputs:{cons:15,price:0.6,batt:60,km:15000}, expect:"1350"}},
+ {id:"dgneutral", cat:"dgjs", icon:"⚡", name:"三相四线零线电流", desc:"三相负载不对称时零线（中性线）电流估算",
+  formula:"三相电流相量相差120°合成：I_N=√(I_a²+I_b²+I_c²−I_a·I_b−I_b·I_c−I_c·I_a)；三相完全对称时为 0",
+  inputs:[
+   {id:"ia", label:"A 相电流", unit:"A", def:"100"},
+   {id:"ib", label:"B 相电流", unit:"A", def:"100"},
+   {id:"ic", label:"C 相电流", unit:"A", def:"100"}
+  ],
+  run:"var a=Number(ia),b=Number(ib),c=Number(ic);if(!(a>=0&&b>=0&&c>=0))return {ok:false,msg:'电流不能为负'};var s=a*a+b*b+c*c-a*b-b*c-c*a;var n=Math.sqrt(Math.max(0,s));return {ok:true,html:'<div class=\"big\">零线电流 ≈ '+n.toFixed(2)+' A</div><div class=\"row\">三相完全对称时零线电流为 0；不对称越严重零线电流越大，零线不得小于相线截面要求（谐波严重时还需加大）</div>'};",
+  test:{inputs:{"ia": 100, "ib": 100, "ic": 100}, expect:"0.00"}},
+ {id:"dgtransloss", cat:"dgjs", icon:"🏭", name:"变压器损耗与效率", desc:"按铁损、额定铜损和负载率算总损耗与运行效率",
+  formula:"总损耗 ΔP = P₀ + β²·P_k（P₀铁损，P_k额定铜损，β负载率）；效率 η = β·S·cosφ ÷ (β·S·cosφ + ΔP)",
+  inputs:[
+   {id:"s", label:"变压器容量", unit:"kVA", def:"1000"},
+   {id:"cos", label:"功率因数", def:"0.9", min:0, max:1},
+   {id:"beta", label:"负载率", unit:"%", def:"100", min:0, max:150},
+   {id:"p0", label:"铁损（空载损耗）", unit:"kW", def:"2"},
+   {id:"pk", label:"铜损（额定负载损耗）", unit:"kW", def:"10"}
+  ],
+  run:"var b=Number(beta)/100,loss=Number(p0)+b*b*Number(pk),out=Number(s)*b*Number(cos);if(!(Number(s)>0))return {ok:false,msg:'容量须大于 0'};var eta=out>0?out/(out+loss)*100:0;return {ok:true,html:'<div class=\"big\">总损耗 '+loss.toFixed(2)+' kW · 效率 '+eta.toFixed(2)+'%</div><div class=\"row\">输出功率 '+out.toFixed(1)+' kW（负载率 '+beta+'%）；铜损随负载率平方变化，轻载时铁损占比高、效率低</div>'};",
+  test:{inputs:{"s": 1000, "cos": 0.9, "beta": 100, "p0": 2, "pk": 10}, expect:"98.68"}},
+ {id:"yqntc", cat:"yqj", icon:"🌡️", name:"NTC热敏电阻测温", desc:"按 Beta 方程由当前阻值反推温度",
+  formula:"Beta 方程：1/T = 1/T₀ + ln(R/R₀)/B，T₀=298.15K（25℃），R₀ 为 25℃ 标称阻值",
+  inputs:[
+   {id:"r", label:"当前阻值", unit:"Ω", def:"5000"},
+   {id:"r0", label:"标称阻值 R₀（25℃）", unit:"Ω", def:"10000"},
+   {id:"bb", label:"B 常数", unit:"K", def:"3950"}
+  ],
+  run:"var R=Number(r),R0=Number(r0),B=Number(bb);if(!(R>0&&R0>0&&B>0))return {ok:false,msg:'阻值与 B 常数须大于 0'};var tk=1/(1/298.15+Math.log(R/R0)/B);var tc=tk-273.15;return {ok:true,html:'<div class=\"big\">'+tc.toFixed(2)+' ℃</div><div class=\"row\">热力学温度 '+tk.toFixed(2)+' K；NTC 阻值随温度升高而减小</div>'};",
+  test:{inputs:{"r": 10000, "r0": 10000, "bb": 3950}, expect:"25.00"}},
+ {id:"djfanlaw", cat:"dj", icon:"🌀", name:"风机水泵变频节能", desc:"按相似定律估算降速运行的功率与节电收益",
+  formula:"相似定律：流量∝转速，扬程∝转速²，轴功率∝转速³；P₂=P₁×(n₂/n₁)³",
+  inputs:[
+   {id:"p1", label:"原运行功率", unit:"kW", def:"100"},
+   {id:"n1", label:"原转速/频率", def:"50"},
+   {id:"n2", label:"降后转速/频率", def:"25"},
+   {id:"hrs", label:"年运行时间", unit:"小时", def:"4000"},
+   {id:"price", label:"电价", unit:"元/kWh", def:"0.8"}
+  ],
+  run:"var r=Number(n2)/Number(n1);if(!(Number(n1)>0&&Number(n2)>=0))return {ok:false,msg:'原转速须大于 0'};var p2=Number(p1)*Math.pow(r,3),save=(Number(p1)-p2)*Number(hrs);return {ok:true,html:'<div class=\"big\">降后功率 '+p2.toFixed(2)+' kW · 节电率 '+(100*(1-Math.pow(r,3))).toFixed(1)+'%</div><div class=\"row\">年节电 '+save.toFixed(0)+' kWh，约省 '+(save*Number(price)).toFixed(0)+' 元（转速比 '+r.toFixed(2)+'，功率与转速三次方成正比）</div>'};",
+  test:{inputs:{"p1": 100, "n1": 50, "n2": 25, "hrs": 4000, "price": 0.8}, expect:"12.50"}},
+ {id:"djworm", cat:"dj", icon:"🐌", name:"蜗轮蜗杆传动", desc:"蜗杆头数与蜗轮齿数算传动比和输出转速",
+  formula:"传动比 i = z₂/z₁（z₂蜗轮齿数，z₁蜗杆头数）；输出转速 n₂ = n₁/i",
+  inputs:[
+   {id:"z1", label:"蜗杆头数", type:"select", options:[{v:"1",t:"单头"},{v:"2",t:"双头"},{v:"4",t:"四头"},{v:"6",t:"六头"}]},
+   {id:"z2", label:"蜗轮齿数", unit:"齿", def:"40"},
+   {id:"n1", label:"蜗杆转速", unit:"r/min", def:"1440"}
+  ],
+  run:"var i=Number(z2)/Number(z1);if(!(Number(z2)>0&&Number(n1)>0))return {ok:false,msg:'齿数与转速须大于 0'};return {ok:true,html:'<div class=\"big\">传动比 '+i.toFixed(2)+' : 1 · 输出转速 '+(Number(n1)/i).toFixed(1)+' r/min</div><div class=\"row\">蜗杆传动效率较低且常自锁，连续运行注意散热</div>'};",
+  test:{inputs:{"z1": "1", "z2": 40, "n1": 1440}, expect:"36.0"}},
+ {id:"jrkelly", cat:"jr", icon:"🎲", name:"凯利公式仓位", desc:"按胜率与盈亏比算最优下注/仓位比例",
+  formula:"凯利公式 f* = (b·p − q)/b，p 为胜率，q=1−p，b 为盈亏比（平均盈利÷平均亏损）",
+  inputs:[
+   {id:"p", label:"胜率", unit:"%", def:"60", min:0, max:100},
+   {id:"b", label:"盈亏比", def:"1", min:0}
+  ],
+  run:"var pf=Number(p)/100,q=1-pf,bv=Number(b);if(!(bv>0))return {ok:false,msg:'盈亏比须大于 0'};var f=(bv*pf-q)/bv;var txt=f<=0?'0%（期望不占优，不建议参与）':(f*100).toFixed(1)+'%（实务中常减半使用）';return {ok:true,html:'<div class=\"big\">最优比例 '+txt+'</div><div class=\"row\">凯利比例是长期增长率最优值，波动很大，多数人用 1/2 凯利</div>'};",
+  test:{inputs:{"p": 60, "b": 1}, expect:"20.0%"}},
+ {id:"jrdraw", cat:"jr", icon:"📉", name:"最大回撤与回本涨幅", desc:"由高点与低点算回撤幅度及回本需要的涨幅",
+  formula:"回撤 =（高点−低点）÷高点；回本涨幅 = 回撤 ÷（1−回撤）",
+  inputs:[
+   {id:"peak", label:"高点（净值/价格）", def:"100"},
+   {id:"trough", label:"低点（净值/价格）", def:"50"}
+  ],
+  run:"var pk=Number(peak),tr=Number(trough);if(!(pk>0&&tr>0&&tr<=pk))return {ok:false,msg:'低点须小于等于高点且都大于 0'};var dd=(pk-tr)/pk*100,rec=(pk/tr-1)*100;return {ok:true,html:'<div class=\"big\">回撤 '+dd.toFixed(2)+'% · 回本需涨 '+rec.toFixed(2)+'%</div><div class=\"row\">回撤 50% 需要上涨 100% 才回本，回撤越大回本越难</div>'};",
+  test:{inputs:{"peak": 100, "trough": 50}, expect:"100.00%"}},
+ {id:"jrrebal", cat:"jr", icon:"⚖️", name:"资产配置再平衡", desc:"按目标比例算每类资产要买入或卖出多少",
+  formula:"目标金额 = 总资产 × 目标比例；调整额 = 目标金额 − 当前金额（正为买入，负为卖出）",
+  inputs:[
+   {id:"a1", label:"资产一当前金额", def:"6000"},
+   {id:"a2", label:"资产二当前金额", def:"3000"},
+   {id:"a3", label:"资产三当前金额", def:"1000"},
+   {id:"t1", label:"资产一目标比例", unit:"%", def:"50"},
+   {id:"t2", label:"资产二目标比例", unit:"%", def:"30"},
+   {id:"t3", label:"资产三目标比例", unit:"%", def:"20"}
+  ],
+  run:"var tot=Number(a1)+Number(a2)+Number(a3),ts=Number(t1)+Number(t2)+Number(t3);if(!(tot>0))return {ok:false,msg:'金额须大于 0'};if(Math.abs(ts-100)>0.5)return {ok:false,msg:'三个目标比例之和应为 100%（当前 '+ts+'%）'};function adj(a,t){var g=tot*Number(t)/100,d=g-Number(a);return '目标 '+g.toFixed(0)+'，'+(d>=0?'买入 '+d.toFixed(0):'卖出 '+(-d).toFixed(0));}return {ok:true,html:'<div class=\"big\">总资产 '+tot.toFixed(0)+'</div><div class=\"row\">资产一：'+adj(a1,t1)+'</div><div class=\"row\">资产二：'+adj(a2,t2)+'</div><div class=\"row\">资产三：'+adj(a3,t3)+'</div>'};",
+  test:{inputs:{"a1": 6000, "a2": 3000, "a3": 1000, "t1": 50, "t2": 30, "t3": 20}, expect:"买入 1000"}},
+ {id:"shvolweight", cat:"sh", icon:"📦", name:"快递体积重（计泡）", desc:"按抛比算体积重并与实重比较取计费重",
+  formula:"体积重（kg）= 长×宽×高（cm）÷ 抛比；计费重取体积重与实际重量较大者",
+  inputs:[
+   {id:"l", label:"长", unit:"cm", def:"40"},
+   {id:"w", label:"宽", unit:"cm", def:"30"},
+   {id:"h", label:"高", unit:"cm", def:"20"},
+   {id:"wt", label:"实际重量", unit:"kg", def:"3"},
+   {id:"ratio", label:"抛比", type:"select", options:[{v:"8000",t:"8000（国内快递常用）"},{v:"6000",t:"6000（空运/国际常用）"},{v:"5000",t:"5000"}]}
+  ],
+  run:"var vw=Number(l)*Number(w)*Number(h)/Number(ratio);if(!(vw>0&&Number(wt)>0))return {ok:false,msg:'尺寸与重量须大于 0'};var ch=Math.max(vw,Number(wt));return {ok:true,html:'<div class=\"big\">体积重 '+vw.toFixed(2)+' kg · 计费重 '+ch.toFixed(2)+' kg</div><div class=\"row\">'+(vw>Number(wt)?'体积重更大，按体积重计费（轻泡货）':'实重更大，按实重计费')+'</div>'};",
+  test:{inputs:{"l": 40, "w": 30, "h": 20, "wt": 3, "ratio": "6000"}, expect:"4.00"}},
+ {id:"sxbinom", cat:"sx", icon:"🎯", name:"二项分布概率", desc:"算 P(X=k) 与累积概率 P(X≤k)",
+  formula:"P(X=k)=C(n,k)·p^k·(1−p)^(n−k)；累积概率为 k 项之和",
+  inputs:[
+   {id:"n", label:"试验次数 n", def:"10", min:1, max:1000},
+   {id:"k", label:"成功次数 k", def:"5", min:0},
+   {id:"p", label:"单次成功概率 p", def:"0.5", min:0, max:1}
+  ],
+  run:"var N=Math.trunc(Number(n)),K=Math.trunc(Number(k)),P=Number(p);if(!(N>=1&&N<=1000))return {ok:false,msg:'n 须在 1~1000'};if(!(K>=0&&K<=N))return {ok:false,msg:'k 须在 0~n 之间'};if(!(P>=0&&P<=1))return {ok:false,msg:'p 须在 0~1'};function pmf(i){if(P===0)return i===0?1:0;if(P===1)return i===N?1:0;var v=Math.pow(1-P,N);for(var j=0;j<i;j++)v=v*(N-j)/(j+1)*P/(1-P);return v;}var pk=pmf(K),cum=0;for(var i2=0;i2<=K;i2++)cum+=pmf(i2);return {ok:true,html:'<div class=\"big\">P(X='+K+') = '+pk.toFixed(4)+'</div><div class=\"row\">P(X≤'+K+') = '+cum.toFixed(4)+'；期望 np = '+(N*P).toFixed(2)+'，方差 np(1−p) = '+(N*P*(1-P)).toFixed(2)+'</div>'};",
+  test:{inputs:{"n": 10, "k": 5, "p": 0.5}, expect:"0.2461"}},
+ {id:"sxnorm", cat:"sx", icon:"📊", name:"正态分布概率", desc:"由 x、均值、标准差算 z 值与累积概率 Φ",
+  formula:"z=(x−μ)/σ；Φ(z) 为标准正态累积概率（误差函数近似，精度约 1e-7）",
+  inputs:[
+   {id:"x", label:"数值 x", def:"100"},
+   {id:"mu", label:"均值 μ", def:"90"},
+   {id:"sigma", label:"标准差 σ", def:"10", min:0}
+  ],
+  run:"var sg=Number(sigma);if(!(sg>0))return {ok:false,msg:'标准差须大于 0'};var z=(Number(x)-Number(mu))/sg;function Phi(zz){var t=1/(1+0.2316419*Math.abs(zz));var d=0.3989422804014327*Math.exp(-zz*zz/2);var pr=d*t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));return zz>0?1-pr:pr;}var F=Phi(z);return {ok:true,html:'<div class=\"big\">z = '+z.toFixed(3)+' · Φ(z) = '+F.toFixed(4)+'</div><div class=\"row\">P(X≤x)='+F.toFixed(4)+'；落在 μ±|x−μ| 内的概率 = '+(2*Phi(Math.abs(z))-1).toFixed(4)+'</div>'};",
+  test:{inputs:{"x": 90, "mu": 90, "sigma": 10}, expect:"0.5000"}},
+ {id:"wlcarnot", cat:"wl", icon:"♨️", name:"卡诺热机效率", desc:"两热源温度下的理论最高效率",
+  formula:"卡诺效率 η = 1 − T_c/T_h（温度须用开尔文）",
+  inputs:[
+   {id:"th", label:"高温热源温度", unit:"K", def:"600"},
+   {id:"tc", label:"低温热源温度", unit:"K", def:"300"}
+  ],
+  run:"var TH=Number(th),TC=Number(tc);if(!(TH>0&&TC>=0))return {ok:false,msg:'温度参数不对'};if(TC>=TH)return {ok:false,msg:'低温热源温度须低于高温热源'};return {ok:true,html:'<div class=\"big\">η = '+((1-TC/TH)*100).toFixed(2)+'%</div><div class=\"row\">这是任何热机在两热源间的效率上限，实际热机远低于此</div>'};",
+  test:{inputs:{"th": 600, "tc": 300}, expect:"50.00%"}},
+ {id:"wlspl", cat:"wl", icon:"🔊", name:"声强级计算", desc:"声强换算为分贝（声强级）",
+  formula:"声强级 L = 10·lg(I/I₀)，基准声强 I₀=10⁻¹² W/m²（人耳听阈）",
+  inputs:[
+   {id:"ii", label:"声强", unit:"W/m²", def:"0.000001"}
+  ],
+  run:"var I=Number(ii);if(!(I>0))return {ok:false,msg:'声强须大于 0'};var db=10*Math.log10(I/1e-12);return {ok:true,html:'<div class=\"big\">'+db.toFixed(1)+' dB</div><div class=\"row\">参考：听阈 0 dB，安静房间约 40 dB，交谈约 60 dB，繁忙街道约 80 dB，痛阈约 120 dB</div>'};",
+  test:{inputs:{"ii": 1e-06}, expect:"60.0"}},
+ {id:"wlorbit", cat:"wl", icon:"🛰️", name:"环绕轨道速度与周期", desc:"按轨道高度算环绕速度和周期",
+  formula:"v=√(GM/r)，T=2πr/v；GM=3.986×10¹⁴ m³/s²，地球半径 6371 km",
+  inputs:[
+   {id:"h", label:"轨道高度", unit:"km", def:"400", min:0}
+  ],
+  run:"var r=(6371+Number(h))*1000;if(!(r>0))return {ok:false,msg:'高度不对'};var v=Math.sqrt(3.986004418e14/r),Tm=2*Math.PI*r/v/60;return {ok:true,html:'<div class=\"big\">环绕速度 '+(v/1000).toFixed(2)+' km/s</div><div class=\"row\">轨道周期 '+Tm.toFixed(1)+' 分钟；高度 0 时即第一宇宙速度 7.91 km/s</div>'};",
+  test:{inputs:{"h": 0}, expect:"7.91"}},
+ {id:"wlefield", cat:"wl", icon:"⚡", name:"点电荷电场强度", desc:"点电荷在空间某点产生的电场强度",
+  formula:"E = k·Q/r²，k=8.988×10⁹ N·m²/C²",
+  inputs:[
+   {id:"q", label:"电荷量", unit:"μC", def:"1"},
+   {id:"r", label:"距离", unit:"m", def:"1", min:0}
+  ],
+  run:"var Q=Number(q)*1e-6,RR=Number(r);if(!(RR>0))return {ok:false,msg:'距离须大于 0'};var E=8.987551787e9*Math.abs(Q)/(RR*RR);return {ok:true,html:'<div class=\"big\">E = '+E.toFixed(2)+' N/C</div><div class=\"row\">方向沿电荷连线，正电荷向外、负电荷向内；强度与距离平方成反比</div>'};",
+  test:{inputs:{"q": 1, "r": 1}, expect:"8987.55"}},
+ {id:"wlcap2", cat:"wl", icon:"🔋", name:"平行板电容计算", desc:"极板面积、间距与介质算电容量",
+  formula:"C = ε₀·εᵣ·A/d，ε₀=8.854×10⁻¹² F/m",
+  inputs:[
+   {id:"a", label:"极板面积", unit:"cm²", def:"100"},
+   {id:"d", label:"极板间距", unit:"mm", def:"1", min:0},
+   {id:"er", label:"相对介电常数 εᵣ", def:"1", hint:"空气≈1，纸≈3.5，云母≈6，陶瓷可达数千"}
+  ],
+  run:"var A=Number(a)*1e-4,D=Number(d)*1e-3,ER=Number(er);if(!(A>0&&D>0&&ER>=1))return {ok:false,msg:'参数不对（εᵣ 应 ≥1）'};var C=8.854187e-12*ER*A/D;return {ok:true,html:'<div class=\"big\">C = '+(C*1e12).toFixed(2)+' pF</div><div class=\"row\">即 '+(C*1e9).toFixed(4)+' nF；面积越大、间距越小、εᵣ 越大，电容越大</div>'};",
+  test:{inputs:{"a": 100, "d": 1, "er": 1}, expect:"88.54"}},
+ {id:"dzsallen", cat:"dz", icon:"🎛️", name:"Sallen-Key低通滤波", desc:"等值电阻 Sallen-Key 低通的截止频率与 Q 值",
+  formula:"单位增益、R₁=R₂=R 时：f₀=1/(2πR√(C₁C₂))，Q=√(C₁C₂)/(2C₂)；C₁=2C₂ 时 Q≈0.707 为巴特沃斯",
+  inputs:[
+   {id:"r", label:"电阻 R（两电阻相等）", unit:"kΩ", def:"10"},
+   {id:"c1", label:"电容 C₁", unit:"nF", def:"20"},
+   {id:"c2", label:"电容 C₂", unit:"nF", def:"10"}
+  ],
+  run:"var R=Number(r)*1000,C1=Number(c1)*1e-9,C2=Number(c2)*1e-9;if(!(R>0&&C1>0&&C2>0))return {ok:false,msg:'参数须大于 0'};var f0=1/(2*Math.PI*R*Math.sqrt(C1*C2)),Q=Math.sqrt(C1*C2)/(2*C2);return {ok:true,html:'<div class=\"big\">f₀ = '+f0.toFixed(1)+' Hz · Q = '+Q.toFixed(3)+'</div><div class=\"row\">Q≈0.707 为巴特沃斯（最平坦）；Q 偏大通带边缘会隆起</div>'};",
+  test:{inputs:{"r": 10, "c1": 20, "c2": 10}, expect:"0.707"}},
+ {id:"kfdms", cat:"kf", icon:"🧭", name:"经纬度度分秒互转", desc:"十进制度与度分秒之间互转",
+  formula:"1° = 60′，1′ = 60″",
+  inputs:[
+   {id:"dmm", label:"转换方向", type:"select", options:[{v:"d2",t:"十进制度 → 度分秒"},{v:"m2",t:"度分秒 → 十进制度"}]},
+   {id:"dec", label:"十进制度", when:"dmm=d2", def:"113.25"},
+   {id:"dg", label:"度", when:"dmm=m2", def:"113"},
+   {id:"dm", label:"分", when:"dmm=m2", def:"15"},
+   {id:"ds", label:"秒", when:"dmm=m2", def:"0"}
+  ],
+  run:"if(dmm==='d2'){var v=Number(dec),sg=v<0?'-':'',av=Math.abs(v),D=Math.floor(av),M=Math.floor((av-D)*60),S=((av-D)*60-M)*60;return {ok:true,html:'<div class=\"big\">'+sg+D+'° '+M+'′ '+S.toFixed(1)+'″</div>'};}var sg2=Number(dg)<0?'-':'';var v2=Math.abs(Number(dg))+Number(dm)/60+Number(ds)/3600;return {ok:true,html:'<div class=\"big\">'+sg2+v2.toFixed(6)+'°</div>'};",
+  test:{inputs:{"dmm": "d2", "dec": 113.25}, expect:"15′"}},
+ {id:"ydjump", cat:"yd", icon:"🏃", name:"垂直纵跳摸高估算", desc:"由起跳高度算起跳速度与滞空时间",
+  formula:"v=√(2gh)，滞空时间 t=2v/g（g=9.8）",
+  inputs:[
+   {id:"h", label:"起跳高度", unit:"cm", def:"50", min:0}
+  ],
+  run:"var H=Number(h)/100;if(!(H>0))return {ok:false,msg:'高度须大于 0'};var v=Math.sqrt(2*9.8*H),t=2*v/9.8;return {ok:true,html:'<div class=\"big\">起跳速度 '+v.toFixed(2)+' m/s</div><div class=\"row\">滞空时间 '+t.toFixed(2)+' s（不计起跳姿势差异）</div>'};",
+  test:{inputs:{"h": 50}, expect:"3.13"}},
+ {id:"ydcooper", cat:"yd", icon:"🫁", name:"Cooper 12分钟跑", desc:"12 分钟跑距离估算最大摄氧量 VO₂max",
+  formula:"Cooper 公式：VO₂max =（12 分钟跑距离 − 504.9）÷ 44.73（ml/kg/min）",
+  inputs:[
+   {id:"d", label:"12 分钟跑距离", unit:"m", def:"3000", min:0}
+  ],
+  run:"var D=Number(d);if(!(D>600))return {ok:false,msg:'距离须大于 600 m 才有意义'};var vo=(D-504.9)/44.73,pace=720/D;var pm=Math.floor(pace),ps=Math.round((pace-pm)*60);return {ok:true,html:'<div class=\"big\">VO₂max ≈ '+vo.toFixed(1)+' ml/kg/min</div><div class=\"row\">平均配速 '+pm+':'+(ps<10?'0':'')+ps+' /km；该公式为 Cooper 1968 年人群估算，个体误差约 ±10%</div>'};",
+  test:{inputs:{"d": 3000}, expect:"55.8"}},
+ {id:"kfisbn", cat:"kf", icon:"📚", name:"ISBN-13 校验位", desc:"由前 12 位算 ISBN-13 校验位，或校验完整 13 位",
+  formula:"ISBN-13：前 12 位奇数位×1、偶数位×3 求和，校验位 =（10 − 总和 mod 10）mod 10",
+  inputs:[
+   {id:"isbn", label:"ISBN（12 或 13 位数字）", type:"text", def:"978030640615"}
+  ],
+  run:"var s=String(isbn).replace(/[- ]/g,'');if(!/^\\d{12,13}$/.test(s))return {ok:false,msg:'请输入 12 或 13 位数字（可带连字符）'};var sum=0;for(var i=0;i<12;i++)sum+=Number(s[i])*(i%2===0?1:3);var chk=(10-sum%10)%10;if(s.length===12)return {ok:true,html:'<div class=\"big\">校验位 '+chk+' · 完整 ISBN：'+s+chk+'</div>'};return {ok:true,html:'<div class=\"big\">'+(Number(s[12])===chk?'校验通过 ✓':'校验不通过 ✗（应为 '+chk+'）')+'</div>'};",
+  test:{inputs:{"isbn": "978030640615"}, expect:"9780306406157"}},
+ {id:"hxosm", cat:"hx", icon:"💧", name:"渗透压计算", desc:"按 van 't Hoff 公式算稀溶液渗透压",
+  formula:"π = i·c·R·T，R=0.082057 L·atm/(mol·K)，i 为 van 't Hoff 因子（非电解质=1，NaCl≈2）",
+  inputs:[
+   {id:"c", label:"溶质浓度", unit:"mol/L", def:"0.1"},
+   {id:"tk", label:"温度", unit:"K", def:"298"},
+   {id:"i", label:"van 't Hoff 因子 i", def:"1"}
+  ],
+  run:"var pi=Number(i)*Number(c)*0.082057*Number(tk);if(!(pi>0))return {ok:false,msg:'参数须大于 0'};return {ok:true,html:'<div class=\"big\">π = '+pi.toFixed(3)+' atm</div><div class=\"row\">约 '+(pi*101.325).toFixed(1)+' kPa；生理盐水（0.154 mol/L NaCl，i≈2，37℃）约 7.8 atm</div>'};",
+  test:{inputs:{"c": 0.1, "tk": 298, "i": 1}, expect:"2.445"}}
 );
 /* ===== WAVE-3C 开发工具 ===== */
 CATS.push({id:"kf", name:"开发工具"});
