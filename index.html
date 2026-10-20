@@ -6302,6 +6302,235 @@ RENDER["nvrstore"]=function(tool){
   };
 };
 
+/* ===== BATCH-C 第四批新工具（300+ 波次·2026-10-20） ===== */
+TOOLS.push(
+ {id:"wlsolen", cat:"wl", icon:"🧲", name:"螺线管磁场", desc:"长螺线管内部磁感应强度，可选芯材磁导率",
+  formula:"B = μ₀·μr·n·I（长螺线管近似，忽略端部效应）；只知总匝数时 n = N ÷ L；μ₀ = 4π×10⁻⁷ H/m，空气芯 μr ≈ 1",
+  inputs:[
+   {id:"mode", label:"已知量", type:"select", def:"n", options:[{v:"n",t:"单位长度匝数 n"},{v:"N",t:"总匝数 N 与管长 L"}]},
+   {id:"n", label:"单位长度匝数 n", unit:"匝/m", when:"mode=n", def:"1000"},
+   {id:"N", label:"总匝数 N", unit:"匝", when:"mode=N", def:"500"},
+   {id:"L", label:"螺线管长度 L", unit:"m", when:"mode=N", def:"0.5"},
+   {id:"I", label:"电流 I", unit:"A", def:"2"},
+   {id:"mur", label:"芯材相对磁导率 μr", def:"1", hint:"空气/铜≈1，铁芯可达数百至数千"}
+  ],
+  run:"var cur=Number(I),mu=Number(mur),nn;if(!(cur>=0))return {ok:false,msg:'电流不能为负'};if(!(mu>0))return {ok:false,msg:'相对磁导率须大于 0'};if(String(mode)==='n'){nn=Number(n);if(!(nn>0))return {ok:false,msg:'单位长度匝数须大于 0'};}else{var NN=Number(N),LL=Number(L);if(!(NN>0))return {ok:false,msg:'总匝数须大于 0'};if(!(LL>0))return {ok:false,msg:'螺线管长度须大于 0'};nn=NN/LL;}var B=4*Math.PI*1e-7*mu*nn*cur;function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}return {ok:true,html:'<div class=\"big\">B = '+F(B*1000)+' mT</div><div class=\"row\">B = '+B.toPrecision(4)+' T，n = '+F(nn)+' 匝/m，μr = '+mu+'</div><div class=\"row\">长螺线管近似：管内磁场近似均匀，端部附近会减弱</div>'};",
+  test:{inputs:{mode:"n",n:1000,N:500,L:0.5,I:2,mur:1}, expect:"2.513"}},
+ {id:"wlgrating", cat:"wl", icon:"🌈", name:"光栅衍射方程", desc:"由光栅常数与波长算各级明纹衍射角与最高级次",
+  formula:"光栅方程 d·sinθ = kλ（k = 0,1,2,…）；最高级次 kmax = floor(d ÷ λ)，kλ > d 的级次不存在（缺级另计）",
+  inputs:[
+   {id:"d", label:"光栅常数 d", unit:"μm", def:"2"},
+   {id:"lam", label:"波长 λ", unit:"nm", def:"500"},
+   {id:"k", label:"衍射级次 k", def:"1"}
+  ],
+  run:"var dd=Number(d),lm=Number(lam),kk=Number(k);if(!(dd>0))return {ok:false,msg:'光栅常数须大于 0'};if(!(lm>0))return {ok:false,msg:'波长须大于 0'};if(!(kk>=0)||Math.floor(kk)!==kk)return {ok:false,msg:'级次须为不小于 0 的整数'};var dnm=dd*1000;var kmax=Math.floor(dnm/lm);var ratio=kk*lm/dnm;if(ratio>1)return {ok:false,msg:'该级次不存在：kλ/d = '+ratio.toFixed(3)+' > 1，最高级次为 '+kmax};var th=Math.asin(ratio)*180/Math.PI;return {ok:true,html:'<div class=\"big\">θ = '+th.toFixed(2)+' °</div><div class=\"row\">sinθ = kλ/d = '+ratio.toFixed(4)+'；该光栅对 '+lm+' nm 光最高可见级次 kmax = '+kmax+'</div>'};",
+  test:{inputs:{d:2,lam:500,k:1}, expect:"14.48"}},
+ {id:"wlstring", cat:"wl", icon:"🎸", name:"弦上驻波频率", desc:"由弦长、张力与线密度算基频与各次谐波频率",
+  formula:"波速 v = √(T ÷ μ)；驻波频率 fₙ = n·v ÷ (2L)（n = 1 为基频）；μ 为线密度，本工具输入 g/m 自动换算 kg/m",
+  inputs:[
+   {id:"n", label:"谐波次数 n（1 = 基频）", def:"1"},
+   {id:"L", label:"弦长 L", unit:"m", def:"1"},
+   {id:"T", label:"张力 T", unit:"N", def:"100"},
+   {id:"mu", label:"线密度 μ", unit:"g/m", def:"10"}
+  ],
+  run:"var nn=Number(n),LL=Number(L),TT=Number(T),mm=Number(mu);if(!(nn>=1)||Math.floor(nn)!==nn)return {ok:false,msg:'谐波次数须为不小于 1 的整数'};if(!(LL>0))return {ok:false,msg:'弦长须大于 0'};if(!(TT>0))return {ok:false,msg:'张力须大于 0'};if(!(mm>0))return {ok:false,msg:'线密度须大于 0'};var v=Math.sqrt(TT/(mm/1000));var f=nn*v/(2*LL);return {ok:true,html:'<div class=\"big\">f = '+f.toFixed(2)+' Hz</div><div class=\"row\">弦上波速 v = '+v.toFixed(2)+' m/s；基频 '+(v/(2*LL)).toFixed(2)+' Hz，本次为第 '+nn+' 次谐波</div>'};",
+  test:{inputs:{n:1,L:1,T:100,mu:10}, expect:"50.00"}},
+ {id:"wlcyclo", cat:"wl", icon:"🌀", name:"带电粒子回旋半径", desc:"带电粒子垂直射入匀强磁场的回旋半径与回旋频率",
+  formula:"r = m·v ÷ (|q|·B)；回旋频率 f = |q|·B ÷ (2π·m)（与速度无关）；电子 m=9.1094e-31 kg，质子 m=1.6726e-27 kg，α粒子 m=6.6447e-27 kg、电荷 2e；e = 1.6022e-19 C",
+  inputs:[
+   {id:"p", label:"粒子", type:"select", def:"p", options:[{v:"e",t:"电子"},{v:"p",t:"质子"},{v:"a",t:"α 粒子"}]},
+   {id:"v", label:"速度 v", unit:"m/s", def:"1000000"},
+   {id:"B", label:"磁感应强度 B", unit:"T", def:"1"}
+  ],
+  run:"var vv=Number(v),BB=Number(B);if(!(vv>0))return {ok:false,msg:'速度须大于 0'};if(!(BB>0))return {ok:false,msg:'磁感应强度须大于 0'};var M={'e':[9.1094e-31,1],'p':[1.6726e-27,1],'a':[6.6447e-27,2]};var pr=M[String(p)]||M['p'];var m=pr[0],q=pr[1]*1.6022e-19;var r=m*vv/(q*BB);var f=q*BB/(2*Math.PI*m);function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}return {ok:true,html:'<div class=\"big\">回旋半径 r = '+r.toPrecision(4)+' m</div><div class=\"row\">r = '+F(r*100)+' cm；回旋频率 f = '+F(f/1e6)+' MHz，周期 T = '+(1/f).toPrecision(4)+' s</div>'};",
+  test:{inputs:{p:"p",v:1000000,B:1}, expect:"0.01044"}},
+ {id:"hxvdw", cat:"hx", icon:"🎈", name:"范德华方程（真实气体）", desc:"用范德华方程算真实气体压强，并与理想气体对比",
+  formula:"(P + a·n²/V²)(V − n·b) = nRT → P = nRT ÷ (V − nb) − a·n²/V²；R = 0.08314 L·bar/(mol·K)；a、b 取常用值：CO₂ 3.640/0.04267，N₂ 1.370/0.03870，O₂ 1.382/0.03186（L²·bar/mol²、L/mol）",
+  inputs:[
+   {id:"gas", label:"气体", type:"select", def:"co2", options:[{v:"co2",t:"二氧化碳 CO₂"},{v:"n2",t:"氮气 N₂"},{v:"o2",t:"氧气 O₂"},{v:"cust",t:"自定义 a、b"}]},
+   {id:"a", label:"常数 a", unit:"L²·bar/mol²", when:"gas=cust", def:"3.640"},
+   {id:"b", label:"常数 b", unit:"L/mol", when:"gas=cust", def:"0.04267"},
+   {id:"n", label:"物质的量 n", unit:"mol", def:"1"},
+   {id:"T", label:"温度 T", unit:"K", def:"300"},
+   {id:"V", label:"体积 V", unit:"L", def:"1"}
+  ],
+  run:"var TAB={co2:[3.640,0.04267],n2:[1.370,0.03870],o2:[1.382,0.03186]};var pr=TAB[String(gas)];var aa=pr?pr[0]:Number(a),bb=pr?pr[1]:Number(b);var nn=Number(n),TT=Number(T),VV=Number(V);if(!(aa>=0)||!(bb>=0))return {ok:false,msg:'范德华常数不能为负'};if(!(nn>0))return {ok:false,msg:'物质的量须大于 0'};if(!(TT>0))return {ok:false,msg:'温度须大于 0'};if(!(VV>0))return {ok:false,msg:'体积须大于 0'};if(VV<=nn*bb)return {ok:false,msg:'体积须大于 n·b = '+(nn*bb).toFixed(4)+' L（分子本身占据的体积）'};var R=0.08314;var P=nn*R*TT/(VV-nn*bb)-aa*nn*nn/(VV*VV);var Pi=nn*R*TT/VV;var dev=(P/Pi-1)*100;return {ok:true,html:'<div class=\"big\">P = '+P.toFixed(2)+' bar</div><div class=\"row\">同条件理想气体压强 '+Pi.toFixed(2)+' bar，真实值偏差 '+(dev>=0?'+':'')+dev.toFixed(2)+'%（a = '+aa+'，b = '+bb+'）</div>'};",
+  test:{inputs:{gas:"co2",a:3.64,b:0.04267,n:1,T:300,V:1}, expect:"22.41"}}
+);
+
+TOOLS.push(
+ {id:"hxbond", cat:"hx", icon:"🔗", name:"键能估算反应焓变", desc:"选断键与成键及个数，按平均键能估算 ΔH",
+  formula:"ΔH ≈ Σ(断键键能) − Σ(成键键能)；平均键能 kJ/mol：H−H 436、O=O 498、N≡N 946、C−H 413、C−C 348、C=C 614、C≡C 839、C−O 358、C=O 745、O−H 463、N−H 391、H−Cl 431、Cl−Cl 242、C−Cl 328、H−F 567、F−F 158、Br−Br 193、H−Br 366。键能为平均值，估算结果为近似（气态口径）",
+  inputs:[
+   {id:"b1", label:"断键 1", type:"select", def:"hh", options:[{v:"hh",t:"H−H 436"},{v:"oo",t:"O=O 498"},{v:"nn3",t:"N≡N 946"},{v:"ch",t:"C−H 413"},{v:"cc",t:"C−C 348"},{v:"cc2",t:"C=C 614"},{v:"cc3",t:"C≡C 839"},{v:"co",t:"C−O 358"},{v:"co2",t:"C=O 745"},{v:"oh",t:"O−H 463"},{v:"nh",t:"N−H 391"},{v:"hcl",t:"H−Cl 431"},{v:"clcl",t:"Cl−Cl 242"},{v:"ccl",t:"C−Cl 328"},{v:"hf",t:"H−F 567"},{v:"ff",t:"F−F 158"},{v:"brbr",t:"Br−Br 193"},{v:"hbr",t:"H−Br 366"}]},
+   {id:"b1n", label:"断键 1 个数", def:"1"},
+   {id:"b2", label:"断键 2", type:"select", def:"clcl", options:[{v:"hh",t:"H−H 436"},{v:"oo",t:"O=O 498"},{v:"nn3",t:"N≡N 946"},{v:"ch",t:"C−H 413"},{v:"cc",t:"C−C 348"},{v:"cc2",t:"C=C 614"},{v:"cc3",t:"C≡C 839"},{v:"co",t:"C−O 358"},{v:"co2",t:"C=O 745"},{v:"oh",t:"O−H 463"},{v:"nh",t:"N−H 391"},{v:"hcl",t:"H−Cl 431"},{v:"clcl",t:"Cl−Cl 242"},{v:"ccl",t:"C−Cl 328"},{v:"hf",t:"H−F 567"},{v:"ff",t:"F−F 158"},{v:"brbr",t:"Br−Br 193"},{v:"hbr",t:"H−Br 366"}]},
+   {id:"b2n", label:"断键 2 个数", def:"1"},
+   {id:"b3", label:"断键 3", type:"select", def:"cc", options:[{v:"hh",t:"H−H 436"},{v:"oo",t:"O=O 498"},{v:"nn3",t:"N≡N 946"},{v:"ch",t:"C−H 413"},{v:"cc",t:"C−C 348"},{v:"cc2",t:"C=C 614"},{v:"cc3",t:"C≡C 839"},{v:"co",t:"C−O 358"},{v:"co2",t:"C=O 745"},{v:"oh",t:"O−H 463"},{v:"nh",t:"N−H 391"},{v:"hcl",t:"H−Cl 431"},{v:"clcl",t:"Cl−Cl 242"},{v:"ccl",t:"C−Cl 328"},{v:"hf",t:"H−F 567"},{v:"ff",t:"F−F 158"},{v:"brbr",t:"Br−Br 193"},{v:"hbr",t:"H−Br 366"}]},
+   {id:"b3n", label:"断键 3 个数（不用填 0）", def:"0"},
+   {id:"f1", label:"成键 1", type:"select", def:"hcl", options:[{v:"hh",t:"H−H 436"},{v:"oo",t:"O=O 498"},{v:"nn3",t:"N≡N 946"},{v:"ch",t:"C−H 413"},{v:"cc",t:"C−C 348"},{v:"cc2",t:"C=C 614"},{v:"cc3",t:"C≡C 839"},{v:"co",t:"C−O 358"},{v:"co2",t:"C=O 745"},{v:"oh",t:"O−H 463"},{v:"nh",t:"N−H 391"},{v:"hcl",t:"H−Cl 431"},{v:"clcl",t:"Cl−Cl 242"},{v:"ccl",t:"C−Cl 328"},{v:"hf",t:"H−F 567"},{v:"ff",t:"F−F 158"},{v:"brbr",t:"Br−Br 193"},{v:"hbr",t:"H−Br 366"}]},
+   {id:"f1n", label:"成键 1 个数", def:"2"},
+   {id:"f2", label:"成键 2", type:"select", def:"hcl", options:[{v:"hh",t:"H−H 436"},{v:"oo",t:"O=O 498"},{v:"nn3",t:"N≡N 946"},{v:"ch",t:"C−H 413"},{v:"cc",t:"C−C 348"},{v:"cc2",t:"C=C 614"},{v:"cc3",t:"C≡C 839"},{v:"co",t:"C−O 358"},{v:"co2",t:"C=O 745"},{v:"oh",t:"O−H 463"},{v:"nh",t:"N−H 391"},{v:"hcl",t:"H−Cl 431"},{v:"clcl",t:"Cl−Cl 242"},{v:"ccl",t:"C−Cl 328"},{v:"hf",t:"H−F 567"},{v:"ff",t:"F−F 158"},{v:"brbr",t:"Br−Br 193"},{v:"hbr",t:"H−Br 366"}]},
+   {id:"f2n", label:"成键 2 个数（不用填 0）", def:"0"},
+   {id:"f3", label:"成键 3", type:"select", def:"cc", options:[{v:"hh",t:"H−H 436"},{v:"oo",t:"O=O 498"},{v:"nn3",t:"N≡N 946"},{v:"ch",t:"C−H 413"},{v:"cc",t:"C−C 348"},{v:"cc2",t:"C=C 614"},{v:"cc3",t:"C≡C 839"},{v:"co",t:"C−O 358"},{v:"co2",t:"C=O 745"},{v:"oh",t:"O−H 463"},{v:"nh",t:"N−H 391"},{v:"hcl",t:"H−Cl 431"},{v:"clcl",t:"Cl−Cl 242"},{v:"ccl",t:"C−Cl 328"},{v:"hf",t:"H−F 567"},{v:"ff",t:"F−F 158"},{v:"brbr",t:"Br−Br 193"},{v:"hbr",t:"H−Br 366"}]},
+   {id:"f3n", label:"成键 3 个数（不用填 0）", def:"0"}
+  ],
+  run:"var E={hh:436,oo:498,nn3:946,ch:413,cc:348,cc2:614,cc3:839,co:358,co2:745,oh:463,nh:391,hcl:431,clcl:242,ccl:328,hf:567,ff:158,brbr:193,hbr:366};var bs=[String(b1),String(b2),String(b3)],fs=[String(f1),String(f2),String(f3)],bn=[Number(b1n),Number(b2n),Number(b3n)],fn=[Number(f1n),Number(f2n),Number(f3n)];var i;for(i=0;i<3;i++){if(!(bn[i]>=0&&bn[i]<=999)||Math.floor(bn[i])!==bn[i]||!(fn[i]>=0&&fn[i]<=999)||Math.floor(fn[i])!==fn[i])return {ok:false,msg:'键的个数须为 0~999 的整数'};if(E[bs[i]]===undefined||E[fs[i]]===undefined)return {ok:false,msg:'请选择键型'};}var sb=0,sf=0;for(i=0;i<3;i++){sb+=E[bs[i]]*bn[i];sf+=E[fs[i]]*fn[i];}if(sb===0&&sf===0)return {ok:false,msg:'请至少填写一组断键或成键个数'};var dh=sb-sf;return {ok:true,html:'<div class=\"big\">ΔH ≈ '+(dh>0?'+':'')+dh+' kJ/mol</div><div class=\"row\">断键吸热 '+sb+' kJ/mol − 成键放热 '+sf+' kJ/mol = '+(dh>0?'+':'')+dh+' kJ/mol，反应'+(dh<0?'放热':dh>0?'吸热':'近似不吸放热')+'</div><div class=\"row\">平均键能估算，与实测值可差数十 kJ/mol</div>'};",
+  test:{inputs:{b1:"hh",b1n:1,b2:"clcl",b2n:1,b3:"cc",b3n:0,f1:"hcl",f1n:2,f2:"hcl",f2n:0,f3:"cc",f3n:0}, expect:"-184"}},
+ {id:"hxempf", cat:"hx", icon:"🧫", name:"经验式（最简式）求算", desc:"由各元素质量分数求化合物的最简整数比",
+  formula:"各元素物质的量比 = 质量分数 ÷ 原子量，再全体除以最小值并取整（必要时同乘 2/3/4 消小数）；原子量：H 1.008、C 12.011、N 14.007、O 15.999、S 32.06、Cl 35.45、Na 22.990、K 39.098、Ca 40.078、Fe 55.845、P 30.974、Br 79.904",
+  inputs:[
+   {id:"e1", label:"元素 1", type:"select", def:"C", options:[{v:"H",t:"H 氢"},{v:"C",t:"C 碳"},{v:"N",t:"N 氮"},{v:"O",t:"O 氧"},{v:"S",t:"S 硫"},{v:"Cl",t:"Cl 氯"},{v:"Na",t:"Na 钠"},{v:"K",t:"K 钾"},{v:"Ca",t:"Ca 钙"},{v:"Fe",t:"Fe 铁"},{v:"P",t:"P 磷"},{v:"Br",t:"Br 溴"}]},
+   {id:"p1", label:"元素 1 质量分数", unit:"%", def:"40.00"},
+   {id:"e2", label:"元素 2", type:"select", def:"H", options:[{v:"H",t:"H 氢"},{v:"C",t:"C 碳"},{v:"N",t:"N 氮"},{v:"O",t:"O 氧"},{v:"S",t:"S 硫"},{v:"Cl",t:"Cl 氯"},{v:"Na",t:"Na 钠"},{v:"K",t:"K 钾"},{v:"Ca",t:"Ca 钙"},{v:"Fe",t:"Fe 铁"},{v:"P",t:"P 磷"},{v:"Br",t:"Br 溴"}]},
+   {id:"p2", label:"元素 2 质量分数", unit:"%", def:"6.71"},
+   {id:"e3", label:"元素 3（不用选任意、分数填 0）", type:"select", def:"O", options:[{v:"H",t:"H 氢"},{v:"C",t:"C 碳"},{v:"N",t:"N 氮"},{v:"O",t:"O 氧"},{v:"S",t:"S 硫"},{v:"Cl",t:"Cl 氯"},{v:"Na",t:"Na 钠"},{v:"K",t:"K 钾"},{v:"Ca",t:"Ca 钙"},{v:"Fe",t:"Fe 铁"},{v:"P",t:"P 磷"},{v:"Br",t:"Br 溴"}]},
+   {id:"p3", label:"元素 3 质量分数", unit:"%", def:"53.29"}
+  ],
+  run:"var M={H:1.008,C:12.011,N:14.007,O:15.999,S:32.06,Cl:35.45,Na:22.99,K:39.098,Ca:40.078,Fe:55.845,P:30.974,Br:79.904};var es=[String(e1),String(e2),String(e3)],ps=[Number(p1),Number(p2),Number(p3)];var used=[],i;for(i=0;i<3;i++){if(!(ps[i]>=0))return {ok:false,msg:'质量分数不能为负'};if(ps[i]>0){if(M[es[i]]===undefined)return {ok:false,msg:'请选择元素'};if(used.indexOf(es[i])>=0)return {ok:false,msg:'元素不能重复选择'};used.push(es[i]);}}var sum=ps[0]+ps[1]+ps[2];if(!(sum>0))return {ok:false,msg:'请至少填写一个元素的质量分数'};if(sum>100.5)return {ok:false,msg:'质量分数之和不能超过 100%（当前 '+sum.toFixed(2)+'%）'};var moles=used.map(function(s,j){return [s,ps[es.indexOf(s)]/M[s]];});var mn=Math.min.apply(null,moles.map(function(x){return x[1];}));var ratios=moles.map(function(x){return x[1]/mn;});var mult=1,ints=null;for(var mm=1;mm<=4;mm++){var cand=ratios.map(function(r){return Math.round(r*mm);});var okk=true;for(var j=0;j<ratios.length;j++){if(Math.abs(ratios[j]*mm-cand[j])>0.12||cand[j]<1)okk=false;}if(okk){mult=mm;ints=cand;break;}}if(!ints){ints=ratios.map(function(r){return Math.max(1,Math.round(r));});}var formula='',mass=0;for(i=0;i<used.length;i++){formula+=used[i]+(ints[i]>1?ints[i]:'');mass+=M[used[i]]*ints[i];}return {ok:true,html:'<div class=\"big\">经验式 '+formula+'</div><div class=\"row\">量比 '+moles.map(function(x){return x[0]+' '+x[1].toFixed(3);}).join(' : ')+'，归一比 '+ratios.map(function(r){return r.toFixed(2);}).join(' : ')+(mult>1?'（×'+mult+' 取整）':'')+'；经验式相对质量 '+mass.toFixed(2)+'</div>'+(sum<99.5?'<div class=\"row\">已填分数之和 '+sum.toFixed(2)+'%，其余成分未计入</div>':'')};",
+  test:{inputs:{e1:"C",p1:40,e2:"H",p2:6.71,e3:"O",p3:53.29}, expect:"CH2O"}},
+ {id:"dzshock", cat:"dz", icon:"🔶", name:"二极管肖克利方程", desc:"PN结正向压降与电流互算（含温度与发射系数）",
+  formula:"I = Is·(e^(Vd ÷ (n·Vt)) − 1)；Vt = kT ÷ q，25℃ 时约 25.69 mV；n 为发射系数（硅管常取 1~2）；Is 为反向饱和电流，本工具以 fA（1e-15 A）输入，硅管典型约 10 fA 量级",
+  inputs:[
+   {id:"mode", label:"计算方向", type:"select", def:"i", options:[{v:"i",t:"已知压降 Vd → 电流 I"},{v:"v",t:"已知电流 I → 压降 Vd"}]},
+   {id:"vd", label:"正向压降 Vd", unit:"V", when:"mode=i", def:"0.7"},
+   {id:"ii", label:"正向电流 I", unit:"mA", when:"mode=v", def:"1"},
+   {id:"isat", label:"反向饱和电流 Is", unit:"fA", def:"10"},
+   {id:"nn", label:"发射系数 n", def:"1"},
+   {id:"temp", label:"温度", unit:"℃", def:"25"}
+  ],
+  run:"var Is=Number(isat)*1e-15,nn2=Number(nn),tp=Number(temp);if(!(Is>0))return {ok:false,msg:'反向饱和电流 Is 须大于 0'};if(!(nn2>=0.5&&nn2<=3))return {ok:false,msg:'发射系数 n 应在 0.5~3 之间（硅管常取 1~2）'};if(!(tp>-273.15&&tp<1000))return {ok:false,msg:'温度超出合理范围'};var Vt=(tp+273.15)*8.617333e-5;if(String(mode)==='i'){var vd2=Number(vd);if(!isFinite(vd2))return {ok:false,msg:'压降无效'};var x=vd2/(nn2*Vt);if(x>100)return {ok:false,msg:'压降过大，电流超出肖克利模型适用范围'};var cur=Is*(Math.exp(x)-1);var disp;if(cur===0)disp='0 A';else if(Math.abs(cur)>=1e-3)disp=(cur*1000).toFixed(3)+' mA';else if(Math.abs(cur)>=1e-6)disp=(cur*1e6).toFixed(3)+' μA';else if(Math.abs(cur)>=1e-9)disp=(cur*1e9).toFixed(3)+' nA';else disp=(cur*1e12).toFixed(3)+' pA';return {ok:true,html:'<div class=\"big\">I = '+disp+'</div><div class=\"row\">Vt = '+(Vt*1000).toFixed(2)+' mV（'+tp+'℃），Is = '+isat+' fA，n = '+nn2+'</div>'};}var imA=Number(ii);if(!(imA>=0))return {ok:false,msg:'电流不能为负'};var Vd=nn2*Vt*Math.log(imA*1e-3/Is+1);return {ok:true,html:'<div class=\"big\">Vd = '+Vd.toFixed(4)+' V</div><div class=\"row\">Vt = '+(Vt*1000).toFixed(2)+' mV（'+tp+'℃），Is = '+isat+' fA，n = '+nn2+'</div>'};",
+  test:{inputs:{mode:"i",vd:0.7,ii:1,isat:10,nn:1,temp:25}, expect:"6.799"}},
+ {id:"kftwocomp", cat:"kf", icon:"🔟", name:"补码转换", desc:"十进制与原码/反码/补码互转（8/16/32 位）",
+  formula:"正数三码相同；负数原码 = 符号位 1 + 绝对值二进制，反码 = 原码数值位逐位取反，补码 = 反码 + 1；n 位补码范围 −2^(n−1) ~ 2^(n−1)−1，最小负数（如 8 位 −128）无原码/反码",
+  inputs:[
+   {id:"mode", label:"转换方向", type:"select", def:"d2c", options:[{v:"d2c",t:"十进制 → 原码/反码/补码"},{v:"c2d",t:"补码 → 十进制"}]},
+   {id:"dec", label:"十进制整数", when:"mode=d2c", def:"-5"},
+   {id:"bits", label:"位数", type:"select", when:"mode=d2c", def:"8", options:[{v:"8",t:"8 位"},{v:"16",t:"16 位"},{v:"32",t:"32 位"}]},
+   {id:"bin", label:"补码二进制串（8/16/32 位）", type:"text", when:"mode=c2d", def:"11111011"}
+  ],
+  run:"function pad(s,l){while(s.length<l)s='0'+s;return s;}function grp(s){var o='';for(var i=0;i<s.length;i++){if(i>0&&i%4===0)o+=' ';o+=s[i];}return o;}if(String(mode)==='d2c'){var bb=Number(bits),dv=Number(dec);if([8,16,32].indexOf(bb)<0)return {ok:false,msg:'位数须为 8/16/32'};if(!isFinite(dv)||Math.floor(dv)!==dv)return {ok:false,msg:'请输入十进制整数'};var mn=-Math.pow(2,bb-1),mx=Math.pow(2,bb-1)-1;if(dv<mn||dv>mx)return {ok:false,msg:'超出 '+bb+' 位补码范围（'+mn+' ~ '+mx+'）'};var uns=dv<0?Math.pow(2,bb)+dv:dv;var comp=pad(uns.toString(2),bb);var orig,inv;if(dv>=0){orig=comp;inv=comp;}else if(dv===mn){orig='无（超出原码表示范围）';inv='无（超出反码表示范围）';}else{var mag=pad((-dv).toString(2),bb);orig='1'+mag.substring(1);inv='1';for(var i2=1;i2<bb;i2++)inv+=mag[i2]==='0'?'1':'0';}var hx=parseInt(comp,2).toString(16).toUpperCase();hx=pad(hx,bb/4);return {ok:true,html:'<div class=\"big\">补码 '+comp+'</div><div class=\"row\">原码 '+(orig.length===bb?grp(orig):orig)+'；反码 '+(inv.length===bb?grp(inv):inv)+'</div><div class=\"row\">补码分组 '+grp(comp)+'，十六进制 0x'+hx+'，'+bb+' 位范围 '+mn+' ~ '+mx+'</div>'};}var s=String(bin).replace(/\\s+/g,'');if(!/^[01]+$/.test(s))return {ok:false,msg:'补码只能含 0/1 字符'};if([8,16,32].indexOf(s.length)<0)return {ok:false,msg:'补码长度须为 8/16/32 位（当前 '+s.length+' 位）'};var u=parseInt(s,2);var val=s[0]==='1'?u-Math.pow(2,s.length):u;return {ok:true,html:'<div class=\"big\">十进制 '+val+'</div><div class=\"row\">'+s.length+' 位补码 '+grp(s)+'，无符号值 '+u+'</div>'};",
+  test:{inputs:{mode:"d2c",dec:-5,bits:8,bin:"11111011"}, expect:"11111011"}},
+ {id:"kflrc", cat:"kf", icon:"🛡️", name:"LRC纵向冗余校验", desc:"十六进制字节串的 LRC 校验字节（Modbus ASCII 用）",
+  formula:"LRC = (−Σ全部数据字节) mod 256，即字节和的二进制补码；校验时 (Σ字节 + LRC) mod 256 = 0",
+  inputs:[
+   {id:"hex", label:"数据字节（十六进制，可带空格）", type:"text", def:"01030000000A", hint:"如 Modbus 帧 01 03 00 00 00 0A"}
+  ],
+  run:"var s=String(hex).replace(/\\s+/g,'');if(s==='')return {ok:false,msg:'请输入十六进制字节串'};if(s.length%2!==0)return {ok:false,msg:'十六进制字符个数须为偶数（每字节 2 位）'};if(!/^[0-9a-fA-F]+$/.test(s))return {ok:false,msg:'含非十六进制字符'};var sum=0,i;for(i=0;i<s.length;i+=2)sum+=parseInt(s.substr(i,2),16);var lrc=(256-(sum%256))%256;var lh=lrc.toString(16).toUpperCase();if(lh.length<2)lh='0'+lh;return {ok:true,html:'<div class=\"big\">LRC = '+lh+'</div><div class=\"row\">共 '+(s.length/2)+' 字节，字节和 = '+sum+'，(和 + LRC) mod 256 = '+((sum+lrc)%256)+'（应为 0）；完整帧 '+s.toUpperCase()+' '+lh+'</div>'};",
+  test:{inputs:{hex:"01030000000A"}, expect:"F2"}},
+ {id:"kfcrc16", cat:"kf", icon:"🛰️", name:"CRC-16 Modbus校验", desc:"十六进制字节串的 CRC-16/MODBUS 校验值",
+  formula:"CRC-16/MODBUS：多项式 0xA001（0x8005 反射），初值 0xFFFF，无最终异或；线上传输低字节在前。校验锚点：ASCII 123456789（ hex 3132…39 ）→ 0x4B37",
+  inputs:[
+   {id:"hex", label:"数据字节（十六进制，可带空格）", type:"text", def:"313233343536373839", hint:"31…39 即 ASCII 字符串 123456789"}
+  ],
+  run:"var s=String(hex).replace(/\\s+/g,'');if(s==='')return {ok:false,msg:'请输入十六进制字节串'};if(s.length%2!==0)return {ok:false,msg:'十六进制字符个数须为偶数（每字节 2 位）'};if(!/^[0-9a-fA-F]+$/.test(s))return {ok:false,msg:'含非十六进制字符'};var crc=0xFFFF,i,j;for(i=0;i<s.length;i+=2){crc^=parseInt(s.substr(i,2),16);for(j=0;j<8;j++){crc=(crc&1)?(crc>>1)^0xA001:crc>>1;}}var ch=crc.toString(16).toUpperCase();while(ch.length<4)ch='0'+ch;var lo=ch.substring(2,4),hi=ch.substring(0,2);return {ok:true,html:'<div class=\"big\">CRC-16/MODBUS = 0x'+ch+'</div><div class=\"row\">共 '+(s.length/2)+' 字节；Modbus RTU 帧尾发送顺序（低字节在前）：'+lo+' '+hi+'</div>'};",
+  test:{inputs:{hex:"313233343536373839"}, expect:"4B37"}}
+);
+
+TOOLS.push(
+ {id:"jrgreeks", cat:"jr", icon:"🏛️", name:"期权希腊字母", desc:"Black-Scholes 的 Delta/Gamma/Theta/Vega",
+  formula:"d1 = [ln(S/K) + (r + σ²/2)·T] ÷ (σ√T)，d2 = d1 − σ√T；Δ看涨 = N(d1)，Δ看跌 = N(d1) − 1；Γ = n(d1) ÷ (S·σ√T)；Vega = S·n(d1)·√T ÷ 100（σ 每变动 1% 的价格变化）；Θ 按日给出（年值 ÷ 365）；无股息欧式期权口径",
+  inputs:[
+   {id:"S", label:"标的价格 S", def:"100"},
+   {id:"K", label:"行权价 K", def:"100"},
+   {id:"T", label:"剩余期限 T", unit:"年", def:"1"},
+   {id:"r", label:"无风险利率 r", unit:"%", def:"5"},
+   {id:"sig", label:"波动率 σ", unit:"%", def:"20"},
+   {id:"type", label:"期权类型", type:"select", def:"call", options:[{v:"call",t:"看涨 Call"},{v:"put",t:"看跌 Put"}]}
+  ],
+  run:"function N(x){var s=x<0?-1:1;var ax=Math.abs(x)/Math.sqrt(2);var t=1/(1+0.3275911*ax);var y=1-((((1.061405429*t-1.453152027)*t+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-ax*ax);return 0.5*(1+s*y);}function nd(x){return Math.exp(-x*x/2)/Math.sqrt(2*Math.PI);}var SS=Number(S),KK=Number(K),TT=Number(T),rr=Number(r)/100,sg=Number(sig)/100;if(!(SS>0))return {ok:false,msg:'标的价格须大于 0'};if(!(KK>0))return {ok:false,msg:'行权价须大于 0'};if(!(TT>0))return {ok:false,msg:'剩余期限须大于 0（到期日希腊字母退化）'};if(!(sg>0))return {ok:false,msg:'波动率 σ 须大于 0（σ=0 时 d1 无定义）'};if(!isFinite(rr))return {ok:false,msg:'利率无效'};var sq=Math.sqrt(TT);var d1=(Math.log(SS/KK)+(rr+sg*sg/2)*TT)/(sg*sq);var d2=d1-sg*sq;var delta=String(type)==='call'?N(d1):N(d1)-1;var gamma=nd(d1)/(SS*sg*sq);var vega=SS*nd(d1)*sq/100;var eRT=Math.exp(-rr*TT);var t2;if(eRT===Infinity||!isFinite(eRT)){t2=N(d2)===0?0:eRT;}else{t2=rr*KK*eRT*(String(type)==='call'?N(d2):N(-d2));if(String(type)==='put')t2=-t2;}var thetaYr=-SS*nd(d1)*sg/(2*sq)-(String(type)==='call'?rr*KK*eRT*N(d2):-rr*KK*eRT*N(-d2));if(!isFinite(thetaYr))thetaYr=-SS*nd(d1)*sg/(2*sq);return {ok:true,html:'<div class=\"big\">Delta = '+delta.toFixed(4)+'</div><div class=\"row\">Gamma = '+gamma.toFixed(4)+'（标的每动 1 元 Delta 的变化）；Vega = '+vega.toFixed(4)+'（σ 每 +1%）；Theta = '+(thetaYr/365).toFixed(4)+' /日（年 '+(thetaYr).toFixed(2)+'）</div><div class=\"row\">d1 = '+d1.toFixed(4)+'，d2 = '+d2.toFixed(4)+'；无股息欧式期权口径</div>'};",
+  test:{inputs:{S:100,K:100,T:1,r:5,sig:20,type:"call"}, expect:"0.6368"}},
+ {id:"jrfuture", cat:"jr", icon:"📈", name:"期货保证金与盈亏", desc:"按价格变动、合约乘数与保证金比例算盈亏和占用保证金",
+  formula:"盈亏 = (平仓价 − 开仓价) × 合约乘数 × 手数（做空方向相反）；占用保证金 = 开仓价 × 合约乘数 × 保证金比例 × 手数；保证金收益率 = 盈亏 ÷ 占用保证金。未计手续费与追加保证金",
+  inputs:[
+   {id:"dir", label:"方向", type:"select", def:"long", options:[{v:"long",t:"做多"},{v:"short",t:"做空"}]},
+   {id:"open", label:"开仓价", def:"4000"},
+   {id:"close", label:"平仓价 / 结算价", def:"4050"},
+   {id:"mult", label:"合约乘数", unit:"元/点", def:"300"},
+   {id:"lots", label:"手数", def:"2"},
+   {id:"mgr", label:"保证金比例", unit:"%", def:"12"}
+  ],
+  run:"var op=Number(open),cl=Number(close),mu=Number(mult),lo=Number(lots),mg=Number(mgr);if(!(op>0))return {ok:false,msg:'开仓价须大于 0'};if(!(cl>0))return {ok:false,msg:'平仓价须大于 0'};if(!(mu>0))return {ok:false,msg:'合约乘数须大于 0'};if(!(lo>=1)||Math.floor(lo)!==lo)return {ok:false,msg:'手数须为不小于 1 的整数'};if(!(mg>=0&&mg<=1000))return {ok:false,msg:'保证金比例应在 0~1000% 之间'};var sgn=String(dir)==='short'?-1:1;var pnl=(cl-op)*mu*lo*sgn;var margin=op*mu*(mg/100)*lo;var rom=margin>0?(pnl/margin*100):null;return {ok:true,html:'<div class=\"big\">'+(pnl>0?'盈利 ':pnl<0?'亏损 ':'盈亏 ')+pnl.toFixed(2)+' 元</div><div class=\"row\">占用保证金 '+margin.toFixed(2)+' 元（'+op+' × '+mu+' × '+mg+'% × '+lo+' 手）；价格变动 '+(cl-op)+' 点'+(rom===null?'；保证金为 0，未算保证金收益率':'；保证金收益率 '+(rom>=0?'+':'')+rom.toFixed(2)+'%')+'</div><div class=\"row\">未计手续费、滑点与盘中追加保证金风险</div>'};",
+  test:{inputs:{dir:"long",open:4000,close:4050,mult:300,lots:2,mgr:12}, expect:"30000.00"}},
+ {id:"jrboll", cat:"jr", icon:"🎢", name:"布林带计算", desc:"价格序列的中轨/上轨/下轨（总体标准差口径）",
+  formula:"取最近 N 个价格：中轨 = 简单移动平均；σ 为总体标准差（方差 ÷ N，非样本 ÷(N−1) 口径）；上轨 = 中轨 + kσ，下轨 = 中轨 − kσ；%B = (最新价 − 下轨) ÷ (上轨 − 下轨)",
+  inputs:[
+   {id:"prices", label:"价格序列（逗号或空格分隔）", type:"textarea", def:"1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20"},
+   {id:"N", label:"周期 N", def:"20"},
+   {id:"k", label:"带宽倍数 k", def:"2"}
+  ],
+  run:"var s=String(prices).replace(/，/g,',');var toks=s.split(/[\\s,;；、]+/).filter(function(x){return x!=='';});var xs=[];for(var i=0;i<toks.length;i++){var v=Number(toks[i]);if(!isFinite(v))return {ok:false,msg:'价格序列含非数值内容：'+toks[i]};xs.push(v);}var NN=Number(N),kk=Number(k);if(!(NN>=2)||Math.floor(NN)!==NN)return {ok:false,msg:'周期 N 须为不小于 2 的整数'};if(xs.length<NN)return {ok:false,msg:'数据不足：共 '+xs.length+' 个价格，周期 '+NN+' 需要至少 '+NN+' 个'};if(!(kk>=0))return {ok:false,msg:'带宽倍数 k 不能为负'};var w=xs.slice(xs.length-NN);var mean=0;for(i=0;i<NN;i++)mean+=w[i];mean/=NN;var varr=0;for(i=0;i<NN;i++)varr+=(w[i]-mean)*(w[i]-mean);varr/=NN;var sd=Math.sqrt(varr);var up=mean+kk*sd,lo2=mean-kk*sd;var last=w[NN-1];var pb=(up>lo2)?((last-lo2)/(up-lo2)).toFixed(3):'—（带宽为 0）';return {ok:true,html:'<div class=\"big\">中轨 '+mean.toFixed(2)+' · 上轨 '+up.toFixed(2)+' · 下轨 '+lo2.toFixed(2)+'</div><div class=\"row\">σ（总体标准差，÷N 口径）= '+sd.toFixed(4)+'；最新价 '+last+' 的 %B = '+pb+'；共用最近 '+NN+' 个价格</div>'};",
+  test:{inputs:{prices:"1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20",N:20,k:2}, expect:"22.03"}},
+ {id:"dgtap", cat:"dgjs", icon:"🎚️", name:"变压器分接头调压", desc:"按分接档位与一次侧电压偏差算二次侧实际输出电压",
+  formula:"近似口径：实际输出 ≈ 额定二次电压 × (1 + 一次偏差%) × (1 + 档位 × 每档步进%)；档位以百分数直接修正输出（有载/无励磁分接常见步进 2.5%，范围 ±2×2.5%）；精确值应按铭牌变比与分接位置表核算",
+  inputs:[
+   {id:"U2", label:"额定二次电压", unit:"V", def:"400"},
+   {id:"dev", label:"一次侧电压偏差", unit:"%", def:"0", hint:"实际一次电压相对额定的偏差，如偏低填 −3"},
+   {id:"step", label:"每档步进", unit:"%", def:"2.5"},
+   {id:"tap", label:"分接档位", type:"select", def:"0", options:[{v:"-2",t:"−2 档"},{v:"-1",t:"−1 档"},{v:"0",t:"0 档（额定）"},{v:"1",t:"+1 档"},{v:"2",t:"+2 档"}]}
+  ],
+  run:"var U=Number(U2),dv=Number(dev),st=Number(step),tp=Number(tap);if(!(U>0))return {ok:false,msg:'额定二次电压须大于 0'};if(!(dv>-100&&dv<=100))return {ok:false,msg:'一次侧偏差应在 (−100%, +100%] 之间'};if(!(st>0&&st<=10))return {ok:false,msg:'每档步进应在 (0, 10%] 之间'};if([ -2,-1,0,1,2].indexOf(tp)<0)return {ok:false,msg:'档位无效'};var out=U*(1+dv/100)*(1+tp*st/100);var rows='';for(var t=-2;t<=2;t++){var vv=U*(1+dv/100)*(1+t*st/100);rows+='<div class=\"row\">'+(t===tp?'▶ ':'')+(t>0?'+':'')+t+' 档：'+vv.toFixed(1)+' V</div>';}return {ok:true,html:'<div class=\"big\">实际输出 ≈ '+out.toFixed(1)+' V</div>'+rows+'<div class=\"row\">全档位范围 '+((U*(1+dv/100)*(1-2*st/100)).toFixed(1))+' ~ '+((U*(1+dv/100)*(1+2*st/100)).toFixed(1))+' V（一次偏差 '+dv+'% 已计入）</div>'};",
+  test:{inputs:{U2:400,dev:0,step:2.5,tap:1}, expect:"410"}},
+ {id:"dgpe", cat:"dgjs", icon:"🟩", name:"保护接地线截面积", desc:"按相线截面积查保护线（PE）最小截面积与推荐规格",
+  formula:"口径 GB 50054 / IEC 60364-5-54（同材质、绝热相同近似）：相线 S ≤ 16 mm² → PE = S；16 < S ≤ 35 → PE = 16；S > 35 → PE = S ÷ 2；推荐规格为不小于计算值的标准截面",
+  inputs:[
+   {id:"S", label:"相线截面积 S", unit:"mm²", def:"50", hint:"标准截面：1.5/2.5/4/6/10/16/25/35/50/70/95/120…"}
+  ],
+  run:"var SS=Number(S);if(!(SS>=1.5&&SS<=1000))return {ok:false,msg:'相线截面积应在 1.5~1000 mm² 之间'};var pe=SS<=16?SS:(SS<=35?16:SS/2);var STD=[1.5,2.5,4,6,10,16,25,35,50,70,95,120,150,185,240,300,400,500,630,800,1000];var rec=pe;for(var i=0;i<STD.length;i++){if(STD[i]>=pe-1e-9){rec=STD[i];break;}}function F(x){var s=x.toFixed(2);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}return {ok:true,html:'<div class=\"big\">PE 最小截面积 '+F(pe)+' mm²</div><div class=\"row\">相线 '+F(SS)+' mm² 适用「'+(SS<=16?'S ≤ 16：PE = S':SS<=35?'16 < S ≤ 35：PE = 16':'S > 35：PE = S ÷ 2')+'」；推荐标准规格 '+F(rec)+' mm²</div><div class=\"row\">PE 与相线同材质口径；单独敷设且无机械保护时铜 PE 不宜小于 4 mm²，有机械保护不宜小于 2.5 mm²</div>'};",
+  test:{inputs:{S:50}, expect:"25"}},
+ {id:"shscale", cat:"sh", icon:"📐", name:"比例尺换算", desc:"图上距离与实际距离按比例尺双向换算",
+  formula:"实际距离 = 图上距离 × 比例尺分母 N（比例尺 1:N）；图上距离 = 实际距离 ÷ N；图上距离以 cm 输入，实际距离自动以 cm/m/km 合适单位显示",
+  inputs:[
+   {id:"mode", label:"换算方向", type:"select", def:"m2r", options:[{v:"m2r",t:"图上距离 → 实际距离"},{v:"r2m",t:"实际距离 → 图上距离"}]},
+   {id:"mapcm", label:"图上距离", unit:"cm", when:"mode=m2r", def:"5"},
+   {id:"realv", label:"实际距离数值", when:"mode=r2m", def:"1"},
+   {id:"realunit", label:"实际距离单位", type:"select", when:"mode=r2m", def:"km", options:[{v:"km",t:"千米 km"},{v:"m",t:"米 m"}]},
+   {id:"N", label:"比例尺分母 N（1:N）", def:"1000"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var NN=Number(N);if(!(NN>0))return {ok:false,msg:'比例尺分母须大于 0'};if(String(mode)==='m2r'){var mc=Number(mapcm);if(!(mc>=0))return {ok:false,msg:'图上距离不能为负'};var rc=mc*NN;var disp=rc>=100000?F(rc/100000)+' km':rc>=100?F(rc/100)+' m':F(rc)+' cm';return {ok:true,html:'<div class=\"big\">实际距离 '+disp+'</div><div class=\"row\">'+mc+' cm × '+NN+' = '+F(rc)+' cm（比例尺 1:'+NN+'）</div>'};}var rv=Number(realv);if(!(rv>=0))return {ok:false,msg:'实际距离不能为负'};var rcm=String(realunit)==='km'?rv*100000:rv*100;var mp=rcm/NN;return {ok:true,html:'<div class=\"big\">图上距离 '+F(mp)+' cm</div><div class=\"row\">'+rv+' '+(String(realunit)==='km'?'km':'m')+' = '+F(rcm)+' cm ÷ '+NN+' = '+F(mp)+' cm（约 '+F(mp*10)+' mm）</div>'};",
+  test:{inputs:{mode:"m2r",mapcm:5,realv:1,realunit:"km",N:1000}, expect:"50"}},
+ {id:"shwallpaper", cat:"sh", icon:"🧻", name:"壁纸用量计算", desc:"按房间墙面面积、卷规格与损耗率算需要几卷壁纸",
+  formula:"墙面面积 = 2 × (长 + 宽) × 高 − 门窗扣除；需购面积 = 净面积 × (1 + 损耗率)；卷数 = 向上取整(需购面积 ÷ (卷宽 × 卷长))；面积法估算，对花图案请提高损耗率（常取 15%~20%）",
+  inputs:[
+   {id:"L", label:"房间长", unit:"m", def:"5"},
+   {id:"W", label:"房间宽", unit:"m", def:"4"},
+   {id:"H", label:"层高", unit:"m", def:"3"},
+   {id:"rollW", label:"每卷宽度", unit:"m", def:"0.53"},
+   {id:"rollL", label:"每卷长度", unit:"m", def:"10.05"},
+   {id:"waste", label:"损耗率", unit:"%", def:"10"},
+   {id:"deduct", label:"门窗扣除面积", unit:"m²", def:"0"}
+  ],
+  run:"var LL=Number(L),WW=Number(W),HH=Number(H),rw=Number(rollW),rl=Number(rollL),wa=Number(waste),dd=Number(deduct);if(!(LL>0)||!(WW>0)||!(HH>0))return {ok:false,msg:'房间长宽高须大于 0'};if(!(rw>0)||!(rl>0))return {ok:false,msg:'壁纸卷规格须大于 0'};if(!(wa>=0&&wa<=100))return {ok:false,msg:'损耗率应在 0~100% 之间'};if(!(dd>=0))return {ok:false,msg:'扣除面积不能为负'};var area=2*(LL+WW)*HH;var net=area-dd;if(!(net>0))return {ok:false,msg:'门窗扣除面积不小于墙面总面积，请检查'};var need=net*(1+wa/100);var ra=rw*rl;var rolls=Math.ceil(need/ra-1e-9);return {ok:true,html:'<div class=\"big\">需要 '+rolls+' 卷</div><div class=\"row\">墙面总面积 '+area.toFixed(1)+' m²，扣门窗后 '+net.toFixed(1)+' m²，含损耗 '+wa+'% 需 '+need.toFixed(1)+' m²；每卷可铺 '+ra.toFixed(2)+' m²</div><div class=\"row\">面积法估算；竖贴裁条法（按周长÷卷宽算条数）可能略有出入，对花图案损耗更高</div>'};",
+  test:{inputs:{L:5,W:4,H:3,rollW:0.5,rollL:10,waste:0,deduct:0}, expect:"11 卷"}},
+ {id:"sxlin3", cat:"sx", icon:"🧮", name:"三元一次方程组", desc:"克拉默法则解三元一次方程组（唯一解判断）",
+  formula:"D 为系数行列式；x = Dx ÷ D，y = Dy ÷ D，z = Dz ÷ D（Dx 等为把常数列替换对应系数列后的行列式）；|D| ≈ 0 时无唯一解（无解或无穷多解）",
+  inputs:[
+   {id:"a1", label:"a₁（x 系数·式1）", def:"1"},
+   {id:"b1", label:"b₁（y 系数·式1）", def:"1"},
+   {id:"c1", label:"c₁（z 系数·式1）", def:"1"},
+   {id:"d1", label:"d₁（常数·式1）", def:"6"},
+   {id:"a2", label:"a₂（x 系数·式2）", def:"2"},
+   {id:"b2", label:"b₂（y 系数·式2）", def:"-1"},
+   {id:"c2", label:"c₂（z 系数·式2）", def:"1"},
+   {id:"d2", label:"d₂（常数·式2）", def:"3"},
+   {id:"a3", label:"a₃（x 系数·式3）", def:"1"},
+   {id:"b3", label:"b₃（y 系数·式3）", def:"2"},
+   {id:"c3", label:"c₃（z 系数·式3）", def:"-1"},
+   {id:"d3", label:"d₃（常数·式3）", def:"2"}
+  ],
+  run:"var A=[a1,b1,c1,d1,a2,b2,c2,d2,a3,b3,c3,d3];for(var i=0;i<12;i++){if(A[i]===''||A[i]===undefined||!isFinite(Number(A[i])))return {ok:false,msg:'请完整填写 12 个系数（须为数值）'};}var v=A.map(Number);var A1=v[0],B1=v[1],C1=v[2],D1=v[3],A2=v[4],B2=v[5],C2=v[6],D2=v[7],A3=v[8],B3=v[9],C3=v[10],D3=v[11];function det(a,b,c,d,e,f,g,h,k){return a*(e*k-f*h)-b*(d*k-f*g)+c*(d*h-e*g);}var D=det(A1,B1,C1,A2,B2,C2,A3,B3,C3);if(Math.abs(D)<1e-12)return {ok:false,msg:'系数行列式 D = 0，方程组无唯一解（无解或无穷多解）'};var x=det(D1,B1,C1,D2,B2,C2,D3,B3,C3)/D;var y=det(A1,D1,C1,A2,D2,C2,A3,D3,C3)/D;var z=det(A1,B1,D1,A2,B2,D2,A3,B3,D3)/D;function F(t){if(t===0)return '0';var s=t.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}return {ok:true,html:'<div class=\"big\">x = '+F(x)+'，y = '+F(y)+'，z = '+F(z)+'</div><div class=\"row\">系数行列式 D = '+F(D)+'（克拉默法则）</div>'};",
+  test:{inputs:{a1:1,b1:1,c1:1,d1:6,a2:2,b2:-1,c2:1,d2:3,a3:1,b3:2,c3:-1,d3:2}, expect:"x = 1"}},
+ {id:"sxparab", cat:"sx", icon:"🎯", name:"二次函数顶点与焦点", desc:"抛物线 y=ax²+bx+c 的顶点、对称轴、根与焦点准线",
+  formula:"顶点 (−b ÷ 2a, (4ac − b²) ÷ 4a)；判别式 Δ = b² − 4ac 决定实根个数；焦点 = 顶点 + (0, 1 ÷ 4a)，准线 y = 顶点纵坐标 − 1 ÷ 4a；a > 0 开口向上",
+  inputs:[
+   {id:"a", label:"a（二次项系数）", def:"1"},
+   {id:"b", label:"b（一次项系数）", def:"-4"},
+   {id:"c", label:"c（常数项）", def:"3"}
+  ],
+  run:"var aa=Number(a),bb=Number(b),cc=Number(c);if(!isFinite(aa)||!isFinite(bb)||!isFinite(cc))return {ok:false,msg:'系数须为数值'};if(aa===0)return {ok:false,msg:'a 不能为 0，否则不是二次函数'};function F(t){if(t===0)return '0';var ax=Math.abs(t);if(ax>=1e7||ax<1e-4)return t.toPrecision(4);var s=t.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var h=-bb/(2*aa),kv=(4*aa*cc-bb*bb)/(4*aa);var dl=bb*bb-4*aa*cc;var pp=1/(4*aa);var roots;if(dl>0){var sq=Math.sqrt(dl);roots='两个实根 x₁ = '+F((-bb-sq)/(2*aa))+'，x₂ = '+F((-bb+sq)/(2*aa));}else if(dl===0){roots='重根 x = '+F(-bb/(2*aa));}else{roots='无实根（与 x 轴无交点）';}return {ok:true,html:'<div class=\"big\">顶点 ('+F(h)+', '+F(kv)+')</div><div class=\"row\">开口'+(aa>0?'向上':'向下')+'，对称轴 x = '+F(h)+'；Δ = '+F(dl)+'，'+roots+'</div><div class=\"row\">焦点 ('+F(h)+', '+F(kv+pp)+')，准线 y = '+F(kv-pp)+'；与 y 轴交点 (0, '+F(cc)+')</div>'};",
+  test:{inputs:{a:1,b:-4,c:3}, expect:"(2, -1)"}}
+);
+
 
 /* 数据驱动工具自动注册渲染器（必须在所有 TOOLS.push 之后、初始化之前执行） */
 TOOLS.forEach(function(t){ if(t.run&&!RENDER[t.id]){ RENDER[t.id]=function(tool){ renderDataTool(tool); }; } });
