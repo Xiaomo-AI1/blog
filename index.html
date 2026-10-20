@@ -3155,6 +3155,137 @@ TOOLS.push(
   run:"var fee=base+Math.max(0,km-bkm)*pk+wait*pw; return {ok:true,html:'<div class=\"big\">约 '+fee.toFixed(0)+' 元</div><div class=\"row\">起步'+base+'元（含'+bkm+'km），超程每km '+pk+'元，等候每分钟 '+pw+'元</div>'};",
   test:{inputs:{km:10,wait:20,base:10,bkm:3,pk:2,pw:0.5}, expect:"34"}}
 );
+
+/* ===== 2026-10-20 精品新增（13个） ===== */
+TOOLS.push(
+ {id:"jripo", cat:"jr", icon:"💹", name:"孖展认购成本计算", desc:"按融资金额、年利率和占用天数算打新孖展利息与总成本",
+  formula:"利息=融资金额×年利率×占用天数÷365；总成本=利息+认购手续费",
+  inputs:[
+   {id:"fin", label:"融资金额", unit:"元", def:"90000", min:1},
+   {id:"rate", label:"孖展年利率", unit:"%", def:"3.8", min:0, max:100},
+   {id:"days", label:"占用天数", unit:"天", def:"7", min:0},
+   {id:"fee", label:"认购手续费", unit:"元", def:"100", min:0}
+  ],
+  run:"var fin=Number(fin),rate=Number(rate),days=Number(days),fee=Number(fee); if(!(fin>0)) return {ok:false,msg:'融资金额须大于0'}; if(!(rate>=0&&rate<=100)) return {ok:false,msg:'年利率应在0~100%之间'}; if(!(days>=0)) return {ok:false,msg:'占用天数不能为负'}; if(!(fee>=0)) return {ok:false,msg:'手续费不能为负'}; var interest=fin*rate/100*days/365; var total=interest+fee; return {ok:true,html:'<div class=\"big\">总成本 '+total.toFixed(2)+' 元</div><div class=\"row\">孖展利息 '+interest.toFixed(2)+' 元（'+fin+'元 × '+rate+'% × '+days+'天 ÷ 365）＋认购手续费 '+fee.toFixed(2)+' 元</div><div class=\"row\">未计中签与否的盈亏，融资成本与认购金额无关地固定发生</div>'};",
+  test:{inputs:{fin:90000,rate:3.8,days:7,fee:100}, expect:"165.59"}},
+ {id:"jravg", cat:"jr", icon:"📉", name:"股票补仓均价", desc:"多次买入的加权平均成本，附现价浮盈亏",
+  formula:"均价=Σ(买入价×股数)÷Σ股数；浮盈亏=(现价−均价)×总股数",
+  inputs:[
+   {id:"p1", label:"第1笔买入价", unit:"元", def:"10", min:0},
+   {id:"s1", label:"第1笔股数", unit:"股", def:"1000", min:0},
+   {id:"p2", label:"第2笔买入价", unit:"元", def:"8", min:0},
+   {id:"s2", label:"第2笔股数", unit:"股", def:"1000", min:0},
+   {id:"p3", label:"第3笔买入价", unit:"元", def:"0", min:0},
+   {id:"s3", label:"第3笔股数", unit:"股", def:"0", min:0},
+   {id:"p4", label:"第4笔买入价", unit:"元", def:"0", min:0},
+   {id:"s4", label:"第4笔股数", unit:"股", def:"0", min:0},
+   {id:"now", label:"现价（选填）", unit:"元", def:"0", min:0}
+  ],
+  run:"var ps=[Number(p1),Number(p2),Number(p3),Number(p4)],ss=[Number(s1),Number(s2),Number(s3),Number(s4)],now=Number(now); for(var i=0;i<4;i++){ if(!(ps[i]>=0)||!(ss[i]>=0)) return {ok:false,msg:'买入价和股数不能为负'}; } if(!(now>=0)) return {ok:false,msg:'现价不能为负'}; var amt=0,sh=0; for(var j=0;j<4;j++){ if(ps[j]>0&&ss[j]>0){ amt+=ps[j]*ss[j]; sh+=ss[j]; } } if(!(sh>0)) return {ok:false,msg:'请至少填一组买入价和股数'}; var avg=amt/sh; var html='<div class=\"big\">加权均价 '+avg.toFixed(2)+' 元</div><div class=\"row\">总股数 '+sh+' 股，总投入 '+amt.toFixed(2)+' 元（未计交易费用）</div>'; if(now>0){ var pl=(now-avg)*sh, pct=(now/avg-1)*100; html+='<div class=\"row\">按现价 '+now+' 元：浮'+(pl>=0?'盈':'亏')+' '+Math.abs(pl).toFixed(2)+' 元（'+(pct>=0?'+':'')+pct.toFixed(2)+'%）</div>'; } return {ok:true,html:html};",
+  test:{inputs:{p1:10,s1:1000,p2:8,s2:1000,p3:0,s3:0,p4:0,s4:0,now:0}, expect:"9.00"}},
+ {id:"jrexdiv", cat:"jr", icon:"🧮", name:"除权除息参考价", desc:"派息加送转后的除权除息参考价",
+  formula:"参考价=(前收盘价−每股派息)÷(1+每10股送转÷10)",
+  inputs:[
+   {id:"close", label:"前收盘价", unit:"元", def:"10", min:0},
+   {id:"div", label:"每股派息", unit:"元", def:"0.5", min:0},
+   {id:"bonus", label:"每10股送转", unit:"股", def:"5", min:0, max:10}
+  ],
+  run:"var close=Number(close),div=Number(div),bonus=Number(bonus); if(!(close>0)) return {ok:false,msg:'前收盘价须大于0'}; if(!(div>=0)) return {ok:false,msg:'派息不能为负'}; if(div>=close) return {ok:false,msg:'每股派息必须小于前收盘价'}; if(!(bonus>=0)) return {ok:false,msg:'送转股数不能为负'}; var ref=(close-div)/(1+bonus/10); var chg=(ref/close-1)*100; return {ok:true,html:'<div class=\"big\">除权除息参考价 '+ref.toFixed(2)+' 元</div><div class=\"row\">('+close+' − '+div+') ÷ (1 + '+bonus+'/10) = '+ref.toFixed(4)+' 元，较前收盘 '+chg.toFixed(2)+'%（持仓总市值理论上不变）</div>'};",
+  test:{inputs:{close:10,div:0.5,bonus:5}, expect:"6.33"}},
+ {id:"dgtreff", cat:"dgjs", icon:"🔌", name:"变压器效率计算", desc:"由铁损铜损算变压器效率与最大效率负载率",
+  formula:"P2=S×β×cosφ；损耗=P0+Pk×β²；η=P2÷(P2+损耗)；最大效率点 β=√(P0/Pk)",
+  inputs:[
+   {id:"sn", label:"额定容量", unit:"kVA", def:"1000", min:1},
+   {id:"beta", label:"负载率", unit:"%", def:"80", min:0, max:200},
+   {id:"p0", label:"铁损（空载损耗）", unit:"kW", def:"2", min:0},
+   {id:"pk", label:"额定铜损（负载损耗）", unit:"kW", def:"10", min:0},
+   {id:"pf", label:"负载功率因数", unit:"", def:"0.9", min:0, max:1}
+  ],
+  run:"var sn=Number(sn),beta=Number(beta),p0=Number(p0),pk=Number(pk),pf=Number(pf); if(!(sn>0)) return {ok:false,msg:'额定容量须大于0'}; if(!(beta>=0&&beta<=200)) return {ok:false,msg:'负载率应在0~200%之间'}; if(!(p0>=0)) return {ok:false,msg:'铁损不能为负'}; if(!(pk>=0)) return {ok:false,msg:'铜损不能为负'}; if(!(pf>0&&pf<=1)) return {ok:false,msg:'功率因数应在(0,1]之间'}; var b=beta/100; var p2=sn*b*pf; var loss=p0+pk*b*b; var den=p2+loss; var eff=den>0?p2/den*100:0; var mb=pk>0?Math.sqrt(p0/pk)*100:-1; var html='<div class=\"big\">效率 '+eff.toFixed(2)+' %</div><div class=\"row\">输出功率 '+p2.toFixed(1)+' kW，总损耗 '+loss.toFixed(2)+' kW（铁损 '+p0+' + 铜损 '+(pk*b*b).toFixed(2)+'）</div>'; if(mb>=0){ html+='<div class=\"row\">最大效率点负载率 '+mb.toFixed(1)+'%（铁损=铜损时效率最高）</div>'; } return {ok:true,html:html};",
+  test:{inputs:{sn:1000,beta:80,p0:2,pk:10,pf:0.9}, expect:"98.85"}},
+ {id:"dgconduit", cat:"dgjs", icon:"🧵", name:"穿线管管径估算", desc:"按填充率由导线外径和根数反推所需穿线管规格",
+  formula:"导线总截面=n×π(d/2)²；所需管内截面=总截面÷填充率；内径=2√(管内截面/π)",
+  inputs:[
+   {id:"d", label:"导线外径（含绝缘）", unit:"mm", def:"3.2", min:0},
+   {id:"n", label:"导线根数", unit:"根", def:"3", min:1},
+   {id:"fill", label:"允许填充率", unit:"%", def:"40", min:1, max:100}
+  ],
+  run:"var d=Number(d),n=Number(n),fill=Number(fill); if(!(d>0)) return {ok:false,msg:'导线外径须大于0'}; if(!(n>=1)||Math.floor(n)!==n) return {ok:false,msg:'根数须为≥1的整数'}; if(!(fill>0&&fill<=100)) return {ok:false,msg:'填充率应在(0,100]%之间'}; var tot=n*Math.PI*d*d/4; var need=tot/(fill/100); var dia=2*Math.sqrt(need/Math.PI); var specs=[16,20,25,32,40,50,63],inner=[13,16.5,21,27,34,43,55],pick=-1; for(var i=0;i<specs.length;i++){ if(inner[i]>=dia){ pick=specs[i]; break; } } var html='<div class=\"row\">导线总截面积（含绝缘）'+tot.toFixed(1)+' mm²，按填充率 '+fill+'% 所需最小管内径 '+dia.toFixed(1)+' mm</div>'; if(pick>0){ html='<div class=\"big\">推荐 '+pick+' 管</div>'+html+'<div class=\"row\">PVC管公称 '+pick+'（估算内径约 '+inner[specs.indexOf(pick)]+' mm），实际选型以管材标注内径为准</div>'; } else { html='<div class=\"big\">超出常用规格</div>'+html+'<div class=\"row\">所需内径超过 63 管（内径约55mm），请改用更大管径、线槽或分管敷设</div>'; } return {ok:true,html:html};",
+  test:{inputs:{d:3.2,n:3,fill:40}, expect:"推荐 16"}},
+ {id:"dgpv", cat:"dgjs", icon:"☀️", name:"光伏发电量估算", desc:"按装机容量与等效日照小时估算日月年发电量与收益",
+  formula:"日发电=装机×等效日照×系统效率；月=日×30；年=日×365；年收益=年发电×电价",
+  inputs:[
+   {id:"kwp", label:"装机容量", unit:"kW", def:"10", min:0},
+   {id:"sun", label:"等效日照小时", unit:"h/天", def:"4", min:0, max:24},
+   {id:"eff", label:"系统效率", unit:"%", def:"80", min:0, max:100},
+   {id:"price", label:"电价", unit:"元/kWh", def:"0.6", min:0}
+  ],
+  run:"var kwp=Number(kwp),sun=Number(sun),eff=Number(eff),price=Number(price); if(!(kwp>0)) return {ok:false,msg:'装机容量须大于0'}; if(!(sun>=0&&sun<=24)) return {ok:false,msg:'等效日照小时应在0~24之间'}; if(!(eff>=0&&eff<=100)) return {ok:false,msg:'系统效率应在0~100%之间'}; if(!(price>=0)) return {ok:false,msg:'电价不能为负'}; var day=kwp*sun*eff/100; var mon=day*30,yr=day*365,inc=yr*price; return {ok:true,html:'<div class=\"big\">年发电约 '+yr.toFixed(0)+' kWh</div><div class=\"row\">日均 '+day.toFixed(1)+' kWh，月均 '+mon.toFixed(0)+' kWh；按 '+price+' 元/kWh 年收益约 '+inc.toFixed(0)+' 元</div><div class=\"row\">等效日照与系统效率为估算值，实际受朝向、倾角、遮挡与季节影响</div>'};",
+  test:{inputs:{kwp:10,sun:4,eff:80,price:0.6}, expect:"11680"}},
+ {id:"djbeltlen", cat:"dj", icon:"🔗", name:"开口皮带长度计算", desc:"由主从动轮直径与中心距算开口带长与小轮包角",
+  formula:"L=2C+π/2×(D+d)+(D−d)²÷(4C)；小轮包角=180°−(D−d)÷C×57.2958°",
+  inputs:[
+   {id:"D", label:"大轮直径", unit:"mm", def:"200", min:1},
+   {id:"d", label:"小轮直径", unit:"mm", def:"100", min:1},
+   {id:"C", label:"中心距", unit:"mm", def:"500", min:1}
+  ],
+  run:"var D=Number(D),d=Number(d),C=Number(C); if(!(D>0)||!(d>0)) return {ok:false,msg:'带轮直径须大于0'}; if(D<d) return {ok:false,msg:'大轮直径不能小于小轮直径'}; if(!(C>0)) return {ok:false,msg:'中心距须大于0'}; var L=2*C+Math.PI/2*(D+d)+(D-d)*(D-d)/(4*C); var ang=180-(D-d)/C*57.2958; var html='<div class=\"big\">皮带长度 L = '+L.toFixed(1)+' mm</div><div class=\"row\">小轮包角 '+ang.toFixed(1)+'°'; if(ang<120){ html+='，包角偏小（建议≥120°），易打滑，可加大中心距或加张紧轮'; } html+='</div><div class=\"row\">开口传动近似公式，订购时按带型节线长度为准</div>'; return {ok:true,html:html};",
+  test:{inputs:{D:200,d:100,C:500}, expect:"1476.2"}},
+ {id:"djgeargeo", cat:"dj", icon:"⚙️", name:"齿轮几何尺寸", desc:"标准直齿轮分度圆、齿顶圆、齿根圆与齿轮副中心距",
+  formula:"d=mz；da=m(z+2)；df=m(z−2.5)；h=2.25m；p=πm；a=m(z1+z2)/2；i=z2/z1",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"single", options:[{v:"single",t:"单齿轮"},{v:"pair",t:"齿轮副"}]},
+   {id:"m", label:"模数", unit:"mm", def:"2", min:0},
+   {id:"z1", label:"齿数 z1", unit:"齿", def:"20", min:6},
+   {id:"z2", label:"齿数 z2", unit:"齿", def:"40", min:6, when:"mode=pair"}
+  ],
+  run:"var m=Number(m),z1=Number(z1),z2=Number(z2); function F(x){ return String(parseFloat(x.toFixed(2))); } if(!(m>0)) return {ok:false,msg:'模数须大于0'}; if(!(z1>=6)||Math.floor(z1)!==z1) return {ok:false,msg:'齿数须为≥6的整数（过小会根切）'}; var html='<div class=\"big\">齿顶圆 da = '+F(m*(z1+2))+' mm</div><div class=\"row\">分度圆 d='+F(m*z1)+' mm，齿根圆 df='+F(m*(z1-2.5))+' mm，齿高 h='+F(2.25*m)+' mm，齿距 p='+F(Math.PI*m)+' mm</div>'; if(String(mode)==='pair'){ if(!(z2>=6)||Math.floor(z2)!==z2) return {ok:false,msg:'z2须为≥6的整数'}; html+='<div class=\"row\">齿轮副：中心距 a='+F(m*(z1+z2)/2)+' mm，传动比 i='+F(z2/z1)+'，从动轮齿顶圆 da2='+F(m*(z2+2))+' mm</div>'; } html+='<div class=\"row\">标准直齿圆柱齿轮（压力角20°、正常齿制）</div>'; return {ok:true,html:html};",
+  test:{inputs:{mode:"single",m:2,z1:20,z2:40}, expect:"44"}},
+ {id:"djscrew", cat:"dj", icon:"🔩", name:"丝杠扭矩与推力", desc:"由轴向推力与导程算丝杠驱动扭矩和功率",
+  formula:"T=F×导程÷(2π×效率)；P=T×2πn÷60",
+  inputs:[
+   {id:"F", label:"轴向推力", unit:"N", def:"1000", min:0},
+   {id:"lead", label:"导程", unit:"mm", def:"5", min:0},
+   {id:"eta", label:"传动效率", unit:"%", def:"90", min:0, max:100},
+   {id:"n", label:"转速", unit:"r/min", def:"600", min:0}
+  ],
+  run:"var F=Number(F),lead=Number(lead),eta=Number(eta),n=Number(n); if(!(F>0)) return {ok:false,msg:'轴向推力须大于0'}; if(!(lead>0)) return {ok:false,msg:'导程须大于0'}; if(!(eta>0&&eta<=100)) return {ok:false,msg:'效率应在(0,100]%之间'}; if(!(n>=0)) return {ok:false,msg:'转速不能为负'}; var T=F*lead/1000/(2*Math.PI*eta/100); var P=T*2*Math.PI*n/60/1000; return {ok:true,html:'<div class=\"big\">驱动扭矩 T = '+T.toFixed(2)+' N·m</div><div class=\"row\">按 '+n+' r/min 所需功率约 '+P.toFixed(3)+' kW（未含加速与摩擦余量，选电机请留裕量）</div><div class=\"row\">滚珠丝杠效率常取85~95%，滑动丝杠约30~50%</div>'};",
+  test:{inputs:{F:1000,lead:5,eta:90,n:600}, expect:"0.88"}},
+ {id:"dzcapdrop", cat:"dz", icon:"💡", name:"阻容降压电流估算", desc:"按降压电容算阻容降压电源的近似输出电流",
+  formula:"Xc=1÷(2πfC)；I≈U÷Xc（负载电压远小于电网电压时近似）",
+  inputs:[
+   {id:"c", label:"降压电容", unit:"µF", def:"1", min:0},
+   {id:"f", label:"电网频率", unit:"Hz", def:"50", min:0},
+   {id:"u", label:"电网电压", unit:"V", def:"220", min:0}
+  ],
+  run:"var c=Number(c),f=Number(f),u=Number(u); if(!(c>0)) return {ok:false,msg:'电容须大于0'}; if(!(f>0)) return {ok:false,msg:'频率须大于0'}; if(!(u>0)) return {ok:false,msg:'电压须大于0'}; var xc=1/(2*Math.PI*f*c*1e-6); var i=u/xc; return {ok:true,html:'<div class=\"big\">输出电流约 '+(i*1000).toFixed(1)+' mA</div><div class=\"row\">容抗 Xc = '+xc.toFixed(0)+' Ω，I ≈ '+u+' ÷ '+xc.toFixed(0)+'（负载电压远低于电网电压的近似，实际略小）</div><div class=\"row\">⚠️ 阻容降压与市电不隔离，整机带电，调试使用务必注意安全</div>'};",
+  test:{inputs:{c:1,f:50,u:220}, expect:"69.1"}},
+ {id:"dzantenna", cat:"dz", icon:"📡", name:"天线长度计算", desc:"按频率算四分之一波长等常用振子长度（含速度因子）",
+  formula:"λ=300÷f(MHz)（m）；实际长度=自由空间长度×速度因子",
+  inputs:[
+   {id:"f", label:"工作频率", unit:"MHz", def:"100", min:0},
+   {id:"vf", label:"速度因子", unit:"", def:"0.95", min:0, max:1}
+  ],
+  run:"var f=Number(f),vf=Number(vf); if(!(f>0)) return {ok:false,msg:'频率须大于0'}; if(!(vf>0&&vf<=1)) return {ok:false,msg:'速度因子应在(0,1]之间'}; function F(x){ return String(parseFloat(x.toFixed(3))); } var lam=300/f; var q=lam/4,h=lam/2,e=lam*5/8; return {ok:true,html:'<div class=\"big\">1/4λ 实际长 '+F(q*vf)+' m</div><div class=\"row\">波长 λ='+F(lam)+' m；1/4λ 自由空间 '+F(q)+' m、1/2λ '+F(h)+' m（实际 '+F(h*vf)+' m）、5/8λ '+F(e)+' m（实际 '+F(e*vf)+' m）</div><div class=\"row\">速度因子按导体与结构取 0.93~0.98，制作时留长再修剪至谐振</div>'};",
+  test:{inputs:{f:100,vf:0.95}, expect:"0.71"}},
+ {id:"yqsmd", cat:"yqj", icon:"🔍", name:"贴片电阻代码读数", desc:"解析三位/四位数字、R记号与EIA-96贴片电阻代码",
+  formula:"三位 AB×10^C；四位 ABC×10^D；R为小数点；EIA-96 查E96数列×字母乘数",
+  inputs:[
+   {id:"code", label:"电阻代码", type:"text", def:"103", ph:"如 103 / 1002 / 4R7 / 01C"}
+  ],
+  run:"var s=String(code).trim().toUpperCase(); if(!s) return {ok:false,msg:'请输入贴片电阻代码'}; var E96=[100,102,105,107,110,113,115,118,121,124,127,130,133,137,140,143,147,150,154,158,162,165,169,174,178,182,187,191,196,200,205,210,215,221,226,232,237,243,249,255,261,267,274,280,287,294,301,309,316,324,332,340,348,357,365,374,383,392,402,412,422,432,442,453,464,475,487,499,511,523,536,549,562,576,590,604,619,634,649,665,681,698,715,732,750,768,787,806,825,845,866,887,909,931,953,976]; var MULT={Z:0.001,Y:0.01,X:0.1,A:1,B:10,C:100,D:1000,E:10000,F:100000}; var v=null,kind=''; var mR=s.match(/^(\\d*)R(\\d*)$/); if(mR&&(mR[1]!==''||mR[2]!=='')){ v=parseFloat((mR[1]||'0')+'.'+(mR[2]||'0')); kind='R记号（R为小数点）'; } else if(/^\\d{3}$/.test(s)){ v=parseInt(s.slice(0,2),10)*Math.pow(10,parseInt(s.charAt(2),10)); kind='三位代码'; } else if(/^\\d{4}$/.test(s)){ v=parseInt(s.slice(0,3),10)*Math.pow(10,parseInt(s.charAt(3),10)); kind='四位代码'; } else if(/^\\d{1,2}$/.test(s)){ v=parseInt(s,10); kind='直标阻值'; } else { var mE=s.match(/^(\\d{2})([ZYXABCDEF])$/); if(mE){ var idx=parseInt(mE[1],10); if(idx>=1&&idx<=96){ v=E96[idx-1]/100*MULT[mE[2]]; kind='EIA-96代码'; } } } if(v===null||!isFinite(v)) return {ok:false,msg:'无法识别该代码，支持三位/四位数字、R记号与EIA-96'}; function F(x){ return String(parseFloat(x.toFixed(3))); } var disp=v>=1e6?F(v/1e6)+' MΩ':(v>=1000?F(v/1000)+' kΩ':F(v)+' Ω'); return {ok:true,html:'<div class=\"big\">'+disp+'</div><div class=\"row\">代码 '+s+'（'+kind+'），阻值 '+F(v)+' Ω</div>'};",
+  test:{inputs:{code:"103"}, expect:"10 kΩ"}},
+ {id:"shevcost", cat:"sh", icon:"🚗", name:"电动车充电成本", desc:"按百公里电耗与电价算每公里、充满与全年充电花费",
+  formula:"每公里成本=百公里电耗÷100×电价；年花费=年里程÷100×百公里电耗×电价",
+  inputs:[
+   {id:"cons", label:"百公里电耗", unit:"kWh/100km", def:"15", min:0},
+   {id:"price", label:"电价", unit:"元/kWh", def:"0.6", min:0},
+   {id:"batt", label:"电池容量", unit:"kWh", def:"60", min:0},
+   {id:"km", label:"年行驶里程", unit:"km", def:"15000", min:0}
+  ],
+  run:"var cons=Number(cons),price=Number(price),batt=Number(batt),km=Number(km); if(!(cons>0)) return {ok:false,msg:'百公里电耗须大于0'}; if(!(price>=0)) return {ok:false,msg:'电价不能为负'}; if(!(batt>=0)) return {ok:false,msg:'电池容量不能为负'}; if(!(km>=0)) return {ok:false,msg:'年里程不能为负'}; var per=cons/100*price; var full=batt*price; var yk=km/100*cons; var yc=yk*price; return {ok:true,html:'<div class=\"big\">年充电花费约 '+yc.toFixed(0)+' 元</div><div class=\"row\">每公里成本 '+per.toFixed(3)+' 元，充满一次 '+full.toFixed(1)+' 元，年充电量 '+yk.toFixed(0)+' kWh（按电表电量计，未含充电损耗）</div>'};",
+  test:{inputs:{cons:15,price:0.6,batt:60,km:15000}, expect:"1350"}}
+);
 /* ===== WAVE-3C 开发工具 ===== */
 CATS.push({id:"kf", name:"开发工具"});
 TOOLS.push(
