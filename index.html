@@ -1109,11 +1109,6 @@ TOOLS.push(
   inputs:[{id:"r0", label:"标称阻值", unit:"Ω", def:"100", min:0.001},{id:"t0", label:"标称温度", unit:"℃", def:"20"},{id:"t1", label:"实际温度", unit:"℃", def:"75"},{id:"al", label:"温度系数α", unit:"/℃", def:"0.00393", min:0}],
   run:"var r=r0*(1+al*(t1-t0)); return {ok:true,html:'<div class=\"big\">R = '+r.toFixed(2)+' Ω</div><div class=\"row\">R = R₀(1 + αΔT)，铜 α=0.00393/℃</div>'};",
   test:{inputs:{r0:100,t0:20,t1:75,al:0.00393}, expect:"R = 121.62 Ω"}},
- {id:"dzreson", cat:"dz", icon:"🔔", name:"LC谐振频率", desc:"已知电感电容求谐振频率",
-  formula:"f = 1 / (2π√LC)",
-  inputs:[{id:"l", label:"电感", unit:"μH", def:"100", min:0.001},{id:"cc", label:"电容", unit:"pF", def:"100", min:0.001}],
-  run:"if(!(l>0)||!(cc>0)) return {ok:false,msg:'电感/电容须大于0'}; var f=1/(2*Math.PI*Math.sqrt(l*1e-6*cc*1e-12))/1e6; return {ok:true,html:'<div class=\"big\">f = '+f.toFixed(2)+' MHz</div><div class=\"row\">f = 1/(2π√LC)</div>'};",
-  test:{inputs:{l:100,cc:100}, expect:"f = 1.59 MHz"}},
  {id:"dzrms", cat:"dz", icon:"〰️", name:"正弦峰值有效值换算", desc:"正弦交流电有效值与峰峰值互换",
   formula:"Vpp = 2√2 × Vrms",
   inputs:[{id:"vr", label:"有效值", unit:"V", def:"220", min:0.001}],
@@ -1139,16 +1134,6 @@ TOOLS.push(
   inputs:[{id:"l", label:"电感", unit:"μH", def:"100", min:0.001},{id:"i", label:"电流", unit:"A", def:"2", min:0}],
   run:"return {ok:true,html:'<div class=\"big\">E = '+(0.5*l*1e-6*i*i*1e6).toFixed(0)+' μJ</div><div class=\"row\">E = ½LI²</div>'};",
   test:{inputs:{l:100,i:2}, expect:"E = 200 μJ"}},
- {id:"dzindser", cat:"dz", icon:"🔗", name:"电感串联", desc:"无互感时电感串联总值",
-  formula:"L = L1 + L2 + …",
-  inputs:[{id:"l1", label:"L1", unit:"μH", def:"100", min:0},{id:"l2", label:"L2", unit:"μH", def:"220", min:0}],
-  run:"return {ok:true,html:'<div class=\"big\">L = '+(l1+l2).toFixed(1)+' μH</div><div class=\"row\">无互感时串联直接相加（有互感须计入 ±2M）</div>'};",
-  test:{inputs:{l1:100,l2:220}, expect:"L = 320.0 μH"}},
- {id:"dzindpar", cat:"dz", icon:"🔀", name:"电感并联", desc:"无互感时电感并联总值",
-  formula:"L = L1×L2 / (L1+L2)",
-  inputs:[{id:"l1", label:"L1", unit:"μH", def:"100", min:0.001},{id:"l2", label:"L2", unit:"μH", def:"100", min:0.001}],
-  run:"return {ok:true,html:'<div class=\"big\">L = '+(l1*l2/(l1+l2)).toFixed(1)+' μH</div><div class=\"row\">无互感时并联公式与电阻并联相同</div>'};",
-  test:{inputs:{l1:100,l2:100}, expect:"L = 50.0 μH"}},
  {id:"dzqfactor", cat:"dz", icon:"🎯", name:"电感品质因数Q", desc:"串联电感的品质因数",
   formula:"Q = 2πfL / R",
   inputs:[{id:"f", label:"频率", unit:"MHz", def:"1", min:0.0001},{id:"l", label:"电感", unit:"μH", def:"10", min:0.001},{id:"r", label:"串联电阻", unit:"Ω", def:"2", min:0.001}],
@@ -1159,16 +1144,6 @@ TOOLS.push(
   inputs:[{id:"r", label:"电阻", unit:"Ω", def:"10", min:0.001},{id:"l", label:"电感", unit:"μH", def:"100", min:0.001}],
   run:"if(!(l>0)) return {ok:false,msg:'电感须大于0'}; return {ok:true,html:'<div class=\"big\">BW = '+(r/(2*Math.PI*l*1e-6)/1000).toFixed(2)+' kHz</div><div class=\"row\">串联谐振带宽 BW = R/(2πL)</div>'};",
   test:{inputs:{r:10,l:100}, expect:"BW = 15.92 kHz"}},
- {id:"dzxc", cat:"dz", icon:"🌊", name:"容抗计算", desc:"已知频率和电容求容抗",
-  formula:"Xc = 1 / (2πfC)",
-  inputs:[{id:"f", label:"频率", unit:"Hz", def:"50", min:0.001},{id:"cc", label:"电容", unit:"μF", def:"100", min:0.0001}],
-  run:"if(!(f>0)) return {ok:false,msg:'频率须大于0'}; if(!(cc>0)) return {ok:false,msg:'电容须大于0'}; return {ok:true,html:'<div class=\"big\">Xc = '+(1/(2*Math.PI*f*cc*1e-6)).toFixed(2)+' Ω</div><div class=\"row\">Xc = 1/(2πfC)，频率越高容抗越小</div>'};",
-  test:{inputs:{f:50,cc:100}, expect:"Xc = 31.83 Ω"}},
- {id:"dzxl", cat:"dz", icon:"🌀", name:"感抗计算", desc:"已知频率和电感求感抗",
-  formula:"XL = 2πfL",
-  inputs:[{id:"f", label:"频率", unit:"Hz", def:"50", min:0.001},{id:"l", label:"电感", unit:"mH", def:"100", min:0.0001}],
-  run:"return {ok:true,html:'<div class=\"big\">XL = '+(2*Math.PI*f*l*1e-3).toFixed(2)+' Ω</div><div class=\"row\">XL = 2πfL，频率越高感抗越大</div>'};",
-  test:{inputs:{f:50,l:100}, expect:"XL = 31.42 Ω"}},
  {id:"dzimpz", cat:"dz", icon:"📐", name:"串联阻抗", desc:"R-X串联电路的阻抗模与相位角",
   formula:"|Z| = √(R²+X²)，φ = arctan(X/R)",
   inputs:[{id:"r", label:"电阻", unit:"Ω", def:"30", min:0},{id:"x", label:"电抗", unit:"Ω", def:"40"}],
@@ -2541,26 +2516,18 @@ TOOLS.push(
   inputs:[{id:"sbp", label:"收缩压", unit:"mmHg", def:"135", min:60, max:260},{id:"dbp", label:"舒张压", unit:"mmHg", def:"85", min:30, max:160}],
   run:"var lv='';if(sbp<90||dbp<60){lv='偏低';}else if(sbp<120&&dbp<80){lv='正常';}else if(sbp<140&&dbp<90){lv='正常高值';}else{lv='高血压（建议就医）';}return {ok:true,html:'<div class=\"big\">'+lv+'</div><div class=\"row\">'+sbp+'/'+dbp+' mmHg</div>'};",
   test:{inputs:{sbp:135,dbp:85}, expect:"正常高值"}},
- {id:"ydrhr", cat:"yd", icon:"💓", name:"静息心率评估", desc:"晨起静息心率水平评估",
-  formula:"60–100次/分正常",
-  inputs:[{id:"rhr", label:"静息心率", unit:"bpm", def:"72", min:30, max:150}],
-  run:"var lv=rhr<60?'偏低（运动员常见）':rhr<=100?'正常':'偏快（建议关注）';return {ok:true,html:'<div class=\"big\">'+lv+'</div><div class=\"row\">'+rhr+' bpm</div>'};",
-  test:{inputs:{rhr:72}, expect:"正常"}},
- {id:"ydhrr", cat:"yd", icon:"🎯", name:"Karvonen目标心率", desc:"心率储备法算运动目标心率",
-  formula:"(HRmax−静息)×强度% + 静息",
-  inputs:[{id:"age", label:"年龄", unit:"岁", def:"25", min:10, max:100},{id:"rhr", label:"静息心率", unit:"bpm", def:"60", min:30, max:150},{id:"lv", label:"强度", type:"select", options:[{v:"60",t:"60% 燃脂"},{v:"70",t:"70% 有氧"},{v:"80",t:"80% 强化"}], def:"60"}],
-  run:"var hrmax=220-age,target=(hrmax-rhr)*Number(lv)/100+rhr;return {ok:true,html:'<div class=\"big\">'+target.toFixed(0)+' bpm</div><div class=\"row\">最大心率约 '+hrmax+'，强度 '+lv+'%</div>'};",
-  test:{inputs:{age:25,rhr:60,lv:"60"}, expect:"141 bpm"}},
- {id:"ydfatburn", cat:"yd", icon:"🔥", name:"燃脂心率区间", desc:"最大心率60%-70%燃脂区间",
-  formula:"HRmax×60% ～ HRmax×70%",
-  inputs:[{id:"age", label:"年龄", unit:"岁", def:"25", min:10, max:100}],
-  run:"var hrmax=220-age;return {ok:true,html:'<div class=\"big\">'+Math.round(hrmax*0.6)+' – '+Math.round(hrmax*0.7)+' bpm</div><div class=\"row\">最大心率约 '+hrmax+' bpm</div>'};",
-  test:{inputs:{age:25}, expect:"117 – 137"}},
- {id:"ydhrzone", cat:"yd", icon:"📊", name:"心率五区间", desc:"按最大心率划分五个训练区间",
-  formula:"Z1 50-60% … Z5 90-100%",
-  inputs:[{id:"age", label:"年龄", unit:"岁", def:"25", min:10, max:100}],
-  run:"var hrmax=220-age,z=function(p){return Math.round(hrmax*p/100);};var rows='<div class=\"row\">Z1 恢复 '+z(50)+'–'+z(60)+'</div><div class=\"row\">Z2 燃脂 '+z(60)+'–'+z(70)+'</div><div class=\"row\">Z3 有氧 '+z(70)+'–'+z(80)+'</div><div class=\"row\">Z4 阈值 '+z(80)+'–'+z(90)+'</div><div class=\"row\">Z5 极限 '+z(90)+'–'+z(100)+'</div>';return {ok:true,html:'<div class=\"big\">最大心率 '+hrmax+'</div>'+rows};",
-  test:{inputs:{age:25}, expect:"Z2 燃脂 117–137"}},
+ {id:"ydhr", cat:"yd", icon:"💓", name:"心率计算", desc:"最大心率(三公式)/五区间/燃脂/Karvonen目标/乳酸阈值/静息与恢复心率评估一站式",
+  formula:"最大心率：Fox 220−年龄、Tanaka 208−0.7×年龄、Gellish 207−0.7×年龄；区间按 220−年龄 的 50%~100% 分五区；Karvonen 目标=（最大−静息）×强度+静息；乳酸阈值≈最大×88%",
+  inputs:[
+   {id:"mode", label:"功能", type:"select", def:"zone", options:[{v:"zone",t:"心率五区间/燃脂区间"},{v:"max",t:"最大心率估算（三公式）"},{v:"karvonen",t:"Karvonen 目标心率"},{v:"lactate",t:"乳酸阈值心率"},{v:"rest",t:"静息心率评估"},{v:"rec",t:"恢复心率评估"}]},
+   {id:"age", label:"年龄", unit:"岁", when:"mode=zone,max,karvonen,lactate", def:"25", min:5, max:100},
+   {id:"rhr", label:"静息心率", unit:"bpm", when:"mode=karvonen,rest", def:"60"},
+   {id:"lv", label:"运动强度", unit:"%", when:"mode=karvonen", type:"select", def:"60", options:[{v:"40",t:"40%"},{v:"50",t:"50%"},{v:"60",t:"60%"},{v:"70",t:"70%"},{v:"80",t:"80%"},{v:"90",t:"90%"}]},
+   {id:"peak", label:"运动结束时心率", unit:"bpm", when:"mode=rec", def:"170"},
+   {id:"after", label:"1 分钟后心率", unit:"bpm", when:"mode=rec", def:"140"}
+  ],
+  run:"function row(k,v){return '<div class=\"row\">'+k+'：'+v+'</div>';}\nvar ageN=Number(age);\nif(mode==='rest'){\n  var r0=Number(rhr);\n  if(!(r0>0))return {ok:false,msg:'请输入静息心率'};\n  var lv0=r0<60?'偏低（运动员常见）':r0<=100?'正常':'偏快（建议关注）';\n  return {ok:true,html:'<div class=\"big\">'+lv0+'</div>'+row('静息心率',r0+' bpm（晨起静卧时测量最准，仅供参考）')};\n}\nif(mode==='rec'){\n  var pk=Number(peak),af=Number(after);\n  if(!(pk>0&&af>0))return {ok:false,msg:'请输入运动后心率'};\n  var drop=pk-af,lv1=drop>=30?'优秀':drop>=20?'良好':drop>=12?'一般':'偏弱';\n  return {ok:true,html:'<div class=\"big\">下降 '+drop+' bpm · '+lv1+'</div>'+row('说明','运动停止 1 分钟后的心率下降幅度，反映心肺恢复能力')};\n}\nif(!(ageN>=5&&ageN<=100))return {ok:false,msg:'年龄须在 5~100 之间'};\nvar fox=220-ageN,tanaka=208-0.7*ageN,gellish=207-0.7*ageN;\nif(mode==='max'){\n  return {ok:true,html:'<div class=\"big\">≈ '+tanaka.toFixed(0)+' bpm（Tanaka）</div>'+row('Fox 公式','220 − 年龄 = '+fox+' bpm')+row('Tanaka 公式','208 − 0.7×年龄 = '+tanaka.toFixed(0)+' bpm')+row('Gellish 公式','207 − 0.7×年龄 = '+gellish.toFixed(0)+' bpm')+row('说明','均为人群估算，个体以实测为准')};\n}\nif(mode==='zone'){\n  function z(p){return Math.round(fox*p/100);}\n  var html='<div class=\"big\">最大心率 '+fox+' bpm（220−年龄）</div>';\n  html+='<div class=\"row\">Z1 恢复 '+z(50)+'–'+z(60)+'</div>';\n  html+='<div class=\"row\">Z2 燃脂 '+z(60)+'–'+z(70)+'</div>';\n  html+='<div class=\"row\">Z3 有氧 '+z(70)+'–'+z(80)+'</div>';\n  html+='<div class=\"row\">Z4 阈值 '+z(80)+'–'+z(90)+'</div>';\n  html+='<div class=\"row\">Z5 极限 '+z(90)+'–'+z(100)+'</div>';\n  return {ok:true,html:html};\n}\nif(mode==='karvonen'){\n  var r1=Number(rhr);\n  if(!(r1>0&&r1<fox))return {ok:false,msg:'静息心率须大于 0 且小于最大心率'};\n  var target=(fox-r1)*Number(lv)/100+r1;\n  return {ok:true,html:'<div class=\"big\">'+target.toFixed(0)+' bpm</div>'+row('公式','目标心率 =（最大心率 − 静息心率）×强度 + 静息心率')+row('参数','最大心率 '+fox+'（220−年龄），强度 '+lv+'%')};\n}\nif(mode==='lactate'){\n  var lthr=Math.round(fox*0.88);\n  return {ok:true,html:'<div class=\"big\">'+lthr+' bpm</div>'+row('说明','乳酸阈值心率 ≈ 最大心率（220−年龄）×88%，仅供参考')};\n}\nreturn {ok:false,msg:'请选择功能'};",
+  test:{inputs:{mode:"zone",age:25}, expect:"Z2 燃脂 117–137"}},
  {id:"ydkcal", cat:"yd", icon:"🔥", name:"热量消耗计算", desc:"23种运动+登山爬升+跑步+BMR/TDEE一站式计算，结果公示公式并附参考消耗表",
   formula:"运动 kcal = MET×体重×时长；登山爬升 ≈ 体重×爬升米数×0.01；跑步 ≈ 体重×公里数×1.036；BMR（Mifflin-St Jeor）男 = 10W+6.25H−5A+5，女 −161；TDEE = BMR×活动系数。MET 数据：2011 Compendium",
   inputs:[
@@ -3592,24 +3559,6 @@ TOOLS.push(
   ],
   run:"var stride=height*0.0045, km=steps*stride/1000; return {ok:true,html:'<div class=\"big\">约 '+km.toFixed(2)+' km</div><div class=\"row\">步幅约 '+stride.toFixed(2)+' m</div>'};",
   test:{inputs:{steps:10000,height:170}, expect:"7.65 km"}},
- {id:"ydlactate", cat:"yd", icon:"❤", name:"乳酸阈值心率", desc:"估算乳酸阈值心率",
-  formula:"LTHR ≈ (220 − 年龄) × 88%",
-  inputs:[{id:"age", label:"年龄", unit:"岁", def:"30", min:10, max:80}],
-  run:"var lthr=Math.round((220-age)*0.88); return {ok:true,html:'<div class=\"big\">'+lthr+' bpm</div><div class=\"row\">乳酸阈值心率≈最大心率×88%，仅供参考</div>'};",
-  test:{inputs:{age:30}, expect:"167 bpm"}},
- {id:"ydhrmax", cat:"yd", icon:"💓", name:"最大心率估算", desc:"Tanaka公式估算最大心率",
-  formula:"最大心率 = 208 − 0.7 × 年龄",
-  inputs:[{id:"age", label:"年龄", unit:"岁", def:"30", min:10, max:80}],
-  run:"var m=208-0.7*age; return {ok:true,html:'<div class=\"big\">'+m.toFixed(0)+' bpm</div><div class=\"row\">Tanaka公式，仅供参考</div>'};",
-  test:{inputs:{age:30}, expect:"187 bpm"}},
- {id:"ydrecovery", cat:"yd", icon:"🩺", name:"恢复心率评估", desc:"运动后1分钟心率下降评估恢复能力",
-  formula:"下降≥30优秀，≥20良好，≥12一般，否则偏弱",
-  inputs:[
-   {id:"peak", label:"运动峰值心率", unit:"bpm", def:"170", min:100, max:220},
-   {id:"after", label:"1分钟后心率", unit:"bpm", def:"140", min:50, max:200}
-  ],
-  run:"var drop=peak-after, lv=drop>=30?'优秀':drop>=20?'良好':drop>=12?'一般':'偏弱'; return {ok:true,html:'<div class=\"big\">下降 '+drop+' bpm · '+lv+'</div><div class=\"row\">心肺恢复能力参考</div>'};",
-  test:{inputs:{peak:170,after:140}, expect:"优秀"}},
  {id:"ydrest", cat:"yd", icon:"⏸", name:"组间休息建议", desc:"按训练目标给组间休息时间",
   formula:"增肌90~120秒，力量3~5分钟，减脂30~60秒，耐力30秒以内",
   inputs:[{id:"goal", label:"训练目标", type:"select", options:[{v:"90~120秒",t:"增肌"},{v:"3~5分钟",t:"最大力量"},{v:"30~60秒",t:"减脂"},{v:"30秒以内",t:"耐力"}], def:"90~120秒"}],
@@ -4497,20 +4446,6 @@ TOOLS.push(
   test:{inputs:{sbp:120,dbp:80}, expect:"正常高值"}}
 );
 TOOLS.push(
- {id:"shrhr", cat:"sh", icon:"💓", name:"静息心率判断", desc:"判断安静时心率是否正常",
-  formula:"成人静息心率 60–100次/分正常；<60偏慢，>100偏快；运动员可低于60",
-  inputs:[
-   {id:"hr", label:"静息心率", unit:"次/分", def:"72", min:20, max:220}
-  ],
-  run:"var c=hr<60?'偏慢':hr<=100?'正常':'偏快'; return {ok:true,html:'<div class=\"big\">'+c+'</div><div class=\"row\">'+hr+'次/分；晨起静卧时测量最准（仅供参考）</div>'};",
-  test:{inputs:{hr:72}, expect:"正常"}},
- {id:"shhrzone", cat:"yd", icon:"🏃", name:"运动心率区间", desc:"按年龄算5个运动心率区间",
-  formula:"最大心率≈220−年龄；热身50–60%，燃脂60–70%，有氧70–80%，无氧80–90%，极限90–100%",
-  inputs:[
-   {id:"age", label:"年龄", unit:"岁", def:"30", min:10, max:100}
-  ],
-  run:"var mx=220-age; function z(a,b){return Math.round(mx*a/100)+'–'+Math.round(mx*b/100);} return {ok:true,html:'<div class=\"big\">最大心率 ≈ '+mx+'</div><div class=\"row\">热身 '+z(50,60)+'｜燃脂 '+z(60,70)+'｜有氧 '+z(70,80)+'｜无氧 '+z(80,90)+'｜极限 '+z(90,100)+'（次/分，仅供参考）</div>'};",
-  test:{inputs:{age:30}, expect:"190"}},
  {id:"shwhr", cat:"sh", icon:"📐", name:"腰臀比WHR", desc:"判断腹部脂肪堆积情况",
   formula:"WHR = 腰围 ÷ 臀围；男<0.9正常，女<0.8正常",
   inputs:[
@@ -4794,24 +4729,26 @@ TOOLS.push(
   ],
   run:"if(!(ifx>0)) return {ok:false,msg:'工作电流必须大于 0'}; var r=(vs-vf)*1000/ifx; if(!(r>0)) return {ok:false,msg:'电源电压必须大于 LED 压降'}; var std=Math.ceil(r-1e-9); return {ok:true,html:'<div class=\"big\">R = '+r.toFixed(1)+' Ω</div><div class=\"row\">建议选用标称值 '+std+' Ω（E24 系列就近取大）</div>'};",
   test:{inputs:{vs:5,vf:2,ifx:20}, expect:"150.0"}},
- {id:"dzrser", cat:"dz", icon:"⛓️", name:"电阻串联", desc:"多个电阻串联求总阻值",
-  formula:"R总 = R₁ + R₂ + R₃",
+ {id:"dzcombo", cat:"dz", icon:"🔌", name:"串并联与谐振", desc:"电阻/电容/电感串并联+容抗+感抗+LC谐振+RC时间常数一站式",
+  formula:"电阻/电感：串联相加、并联倒数和；电容相反。Xc=1/(2πfC)，XL=2πfL，f₀=1/(2π√LC)，τ=RC，fc=1/(2πRC)",
   inputs:[
-   {id:"r1", label:"R1", unit:"Ω", def:"100", min:0},
-   {id:"r2", label:"R2", unit:"Ω", def:"200", min:0},
-   {id:"r3", label:"R3", unit:"Ω", optional:true, hint:"可空"}
+   {id:"mode", label:"功能", type:"select", def:"sp", options:[{v:"sp",t:"串并联计算"},{v:"xc",t:"容抗"},{v:"xl",t:"感抗"},{v:"lc",t:"LC 谐振频率"},{v:"rc",t:"RC 时间常数/截止频率"}]},
+   {id:"kind", label:"元件类型", when:"mode=sp", type:"select", def:"R", options:[{v:"R",t:"电阻（Ω）"},{v:"C",t:"电容（μF）"},{v:"L",t:"电感（mH）"}]},
+   {id:"conn", label:"连接方式", when:"mode=sp", type:"select", def:"par", options:[{v:"ser",t:"串联"},{v:"par",t:"并联"}]},
+   {id:"v1", label:"元件 1", when:"mode=sp", def:"100"},
+   {id:"v2", label:"元件 2", when:"mode=sp", def:"100"},
+   {id:"v3", label:"元件 3（不用填 0）", when:"mode=sp", def:"0"},
+   {id:"fq", label:"频率", unit:"Hz", when:"mode=xc", def:"50"},
+   {id:"cv", label:"电容", unit:"μF", when:"mode=xc", def:"100"},
+   {id:"fq2", label:"频率", unit:"Hz", when:"mode=xl", def:"50"},
+   {id:"lv2", label:"电感", unit:"mH", when:"mode=xl", def:"100"},
+   {id:"lv3", label:"电感", unit:"mH", when:"mode=lc", def:"10"},
+   {id:"cv3", label:"电容", unit:"nF", when:"mode=lc", def:"100"},
+   {id:"rv", label:"电阻", unit:"Ω", when:"mode=rc", def:"10000"},
+   {id:"cv4", label:"电容", unit:"μF", when:"mode=rc", def:"10"}
   ],
-  run:"var r=r1+r2+(r3||0); return {ok:true,html:'<div class=\"big\">R总 = '+r+' Ω</div>'};",
-  test:{inputs:{r1:100,r2:200,r3:300}, expect:"600"}},
- {id:"dzrpar", cat:"dz", icon:"🔀", name:"电阻并联", desc:"多个电阻并联求总阻值",
-  formula:"1/R总 = 1/R₁ + 1/R₂（+ 1/R₃）",
-  inputs:[
-   {id:"r1", label:"R1", unit:"Ω", def:"100", min:0.001},
-   {id:"r2", label:"R2", unit:"Ω", def:"100", min:0.001},
-   {id:"r3", label:"R3", unit:"Ω", optional:true, hint:"可空"}
-  ],
-  run:"var rs=[r1,r2]; if(typeof r3!=='undefined'&&r3)rs.push(r3); var s=0; for(var i=0;i<rs.length;i++){ if(!(rs[i]>0)) return {ok:false,msg:'阻值必须大于 0'}; s+=1/rs[i]; } var r=1/s; return {ok:true,html:'<div class=\"big\">R总 = '+r.toFixed(2)+' Ω</div>'};",
-  test:{inputs:{r1:100,r2:100}, expect:"50.00"}},
+  run:"function row(k,v){return '<div class=\"row\">'+k+'：'+v+'</div>';}\nfunction F(x){return String(parseFloat(x.toFixed(4)));}\nif(mode==='sp'){\n  var vs=[Number(v1),Number(v2),Number(v3)].filter(function(x){return x>0;});\n  if(vs.length<2)return {ok:false,msg:'至少接入两个元件（数值须大于 0，第三个不用可填 0）'};\n  var sum=vs.reduce(function(a,b){return a+b;},0),inv=vs.reduce(function(a,b){return a+1/b;},0);\n  var isC=kind==='C',r;\n  if(conn==='ser')r=isC?1/inv:sum;else r=isC?sum:1/inv;\n  var un=kind==='R'?'Ω':kind==='C'?'μF':'mH',kn=kind==='R'?'电阻':kind==='C'?'电容':'电感';\n  var fm=kind==='C'?(conn==='ser'?'串联：1/C总 = 1/C₁ + 1/C₂ + …':'并联：C总 = C₁ + C₂ + …'):(conn==='ser'?kn+'串联：总值 = 各值之和':kn+'并联：1/总值 = 1/各值之和');\n  return {ok:true,html:'<div class=\"big\">'+F(r)+' '+un+'</div>'+row('公式',fm)+row('接入',vs.length+' 个'+kn)};\n}\nif(mode==='xc'){\n  var f=Number(fq),c=Number(cv);\n  if(!(f>0))return {ok:false,msg:'频率须大于 0'};\n  if(!(c>0))return {ok:false,msg:'电容须大于 0'};\n  var xc=1/(2*Math.PI*f*c*1e-6);\n  return {ok:true,html:'<div class=\"big\">Xc = '+xc.toFixed(2)+' Ω</div>'+row('公式','Xc = 1/(2πfC)，频率越高容抗越小')};\n}\nif(mode==='xl'){\n  var f2=Number(fq2),l=Number(lv2);\n  if(!(f2>0))return {ok:false,msg:'频率须大于 0'};\n  if(!(l>0))return {ok:false,msg:'电感须大于 0'};\n  var xl=2*Math.PI*f2*l*1e-3;\n  return {ok:true,html:'<div class=\"big\">XL = '+xl.toFixed(2)+' Ω</div>'+row('公式','XL = 2πfL，频率越高感抗越大')};\n}\nif(mode==='lc'){\n  var L=Number(lv3)/1000,C=Number(cv3)/1e9;\n  if(!(L>0&&C>0))return {ok:false,msg:'电感与电容必须大于 0'};\n  var f0=1/(2*Math.PI*Math.sqrt(L*C));\n  var fs=f0>=1000?(f0/1000).toFixed(3)+' kHz':f0.toFixed(1)+' Hz';\n  return {ok:true,html:'<div class=\"big\">f₀ = '+f0.toFixed(1)+' Hz（'+fs+'）</div>'+row('公式','f₀ = 1/(2π√LC)')};\n}\nif(mode==='rc'){\n  var R=Number(rv),C2=Number(cv4);\n  if(!(R>0))return {ok:false,msg:'电阻须大于 0'};\n  if(!(C2>0))return {ok:false,msg:'电容须大于 0'};\n  var tau=R*C2/1e6,fc=1/(2*Math.PI*R*C2*1e-6);\n  return {ok:true,html:'<div class=\"big\">τ = '+tau.toFixed(3)+' s（'+(tau*1000).toFixed(1)+' ms）</div>'+row('截止频率','fc = '+fc.toFixed(2)+' Hz（RC 低通/高通同值）')+row('充放电','约 '+(5*tau).toFixed(3)+' s（5τ）后完成 99%')};\n}\nreturn {ok:false,msg:'请选择功能'};",
+  test:{inputs:{mode:"sp",kind:"R",conn:"par",v1:100,v2:100,v3:0}, expect:"50"}},
  {id:"dzvdiv", cat:"dz", icon:"➗", name:"电阻分压", desc:"两电阻分压求输出电压",
   formula:"Vout = Vin × R₂ ÷ (R₁ + R₂)",
   inputs:[
@@ -4830,49 +4767,7 @@ TOOLS.push(
   ],
   run:"var i1=itot*r2/(r1+r2); var i2=itot*r1/(r1+r2); return {ok:true,html:'<div class=\"big\">I₁ = '+i1.toFixed(1)+' mA，I₂ = '+i2.toFixed(1)+' mA</div>'};",
   test:{inputs:{itot:100,r1:100,r2:100}, expect:"50.0"}},
- {id:"dzcser", cat:"dz", icon:"🔋", name:"电容串联", desc:"多个电容串联求总容量",
-  formula:"1/C总 = 1/C₁ + 1/C₂（+ 1/C₃）",
-  inputs:[
-   {id:"c1", label:"C1", unit:"μF", def:"10", min:0.000001},
-   {id:"c2", label:"C2", unit:"μF", def:"10", min:0.000001},
-   {id:"c3", label:"C3", unit:"μF", optional:true, hint:"可空"}
-  ],
-  run:"var cs=[c1,c2]; if(typeof c3!=='undefined'&&c3)cs.push(c3); var s=0; for(var i=0;i<cs.length;i++){ if(!(cs[i]>0)) return {ok:false,msg:'容量必须大于 0'}; s+=1/cs[i]; } var c=1/s; return {ok:true,html:'<div class=\"big\">C总 = '+c.toFixed(2)+' μF</div><div class=\"row\">串联后耐压为各电容耐压之和</div>'};",
-  test:{inputs:{c1:10,c2:10}, expect:"5.00"}},
- {id:"dzcpar", cat:"dz", icon:"🪫", name:"电容并联", desc:"多个电容并联求总容量",
-  formula:"C总 = C₁ + C₂ + C₃",
-  inputs:[
-   {id:"c1", label:"C1", unit:"μF", def:"10", min:0},
-   {id:"c2", label:"C2", unit:"μF", def:"22", min:0},
-   {id:"c3", label:"C3", unit:"μF", optional:true, hint:"可空"}
-  ],
-  run:"var c=c1+c2+((typeof c3!=='undefined'&&c3)?c3:0); return {ok:true,html:'<div class=\"big\">C总 = '+c+' μF</div><div class=\"row\">并联后耐压取最低者</div>'};",
-  test:{inputs:{c1:10,c2:22}, expect:"32"}},
- {id:"dzlser", cat:"dz", icon:"🧲", name:"电感串联", desc:"多个电感串联求总电感（无互感）",
-  formula:"L总 = L₁ + L₂ + L₃（忽略互感）",
-  inputs:[
-   {id:"l1", label:"L1", unit:"mH", def:"10", min:0},
-   {id:"l2", label:"L2", unit:"mH", def:"22", min:0},
-   {id:"l3", label:"L3", unit:"mH", optional:true, hint:"可空"}
-  ],
-  run:"var l=l1+l2+((typeof l3!=='undefined'&&l3)?l3:0); return {ok:true,html:'<div class=\"big\">L总 = '+l+' mH</div>'};",
-  test:{inputs:{l1:10,l2:22}, expect:"32"}},
- {id:"dzlpar", cat:"dz", icon:"🌀", name:"电感并联", desc:"多个电感并联求总电感（无互感）",
-  formula:"1/L总 = 1/L₁ + 1/L₂（忽略互感）",
-  inputs:[
-   {id:"l1", label:"L1", unit:"mH", def:"10", min:0.000001},
-   {id:"l2", label:"L2", unit:"mH", def:"10", min:0.000001}
-  ],
-  run:"var s=1/l1+1/l2; var l=1/s; return {ok:true,html:'<div class=\"big\">L总 = '+l.toFixed(2)+' mH</div>'};",
-  test:{inputs:{l1:10,l2:10}, expect:"5.00"}},
- {id:"dzrctc", cat:"dz", icon:"⏱️", name:"RC时间常数", desc:"算 RC 电路的时间常数 τ",
-  formula:"τ = R × C；约 5τ 后充放电基本完成",
-  inputs:[
-   {id:"r", label:"电阻", unit:"Ω", def:"10000", min:0.001},
-   {id:"c", label:"电容", unit:"μF", def:"10", min:0.000001}
-  ],
-  run:"var t=r*c/1e6; return {ok:true,html:'<div class=\"big\">τ = '+t.toFixed(3)+' s（'+(t*1000).toFixed(1)+' ms）</div><div class=\"row\">约 '+(5*t).toFixed(3)+' s 后充放电完成 99%</div>'};",
-  test:{inputs:{r:10000,c:10}, expect:"0.100"}}
+
 );
 TOOLS.push(
  {id:"dz555a", cat:"dz", icon:"📻", name:"555无稳态频率占空比", desc:"555 定时器无稳态（方波）电路算频率",
@@ -4892,30 +4787,6 @@ TOOLS.push(
   ],
   run:"var t=1.1*(r*1000)*(c/1e6); return {ok:true,html:'<div class=\"big\">脉宽 T = '+t.toFixed(3)+' s（'+(t*1000).toFixed(1)+' ms）</div>'};",
   test:{inputs:{r:10,c:10}, expect:"0.110"}},
- {id:"dzlc", cat:"dz", icon:"📡", name:"LC谐振频率", desc:"LC 谐振电路的谐振频率",
-  formula:"f₀ = 1 ÷ (2π√(LC))",
-  inputs:[
-   {id:"l", label:"电感", unit:"mH", def:"10", min:0.000001},
-   {id:"c", label:"电容", unit:"nF", def:"100", min:0.000001}
-  ],
-  run:"var L=l/1000, C=c/1e9; if(!(L>0&&C>0)) return {ok:false,msg:'电感与电容必须大于 0'}; var f=1/(2*Math.PI*Math.sqrt(L*C)); var fs=f>=1000?(f/1000).toFixed(3)+' kHz':f.toFixed(1)+' Hz'; return {ok:true,html:'<div class=\"big\">f₀ = '+f.toFixed(1)+' Hz（'+fs+'）</div>'};",
-  test:{inputs:{l:10,c:100}, expect:"5032.9"}},
- {id:"dzrclp", cat:"dz", icon:"🔉", name:"RC低通截止频率", desc:"RC 低通滤波器的 -3dB 截止频率",
-  formula:"fc = 1 ÷ (2πRC)",
-  inputs:[
-   {id:"r", label:"电阻", unit:"Ω", def:"1600", min:0.001},
-   {id:"c", label:"电容", unit:"nF", def:"100", min:0.000001}
-  ],
-  run:"if(!(r>0&&c>0)) return {ok:false,msg:'电阻与电容必须大于 0'}; var fc=1/(2*Math.PI*r*(c/1e9)); return {ok:true,html:'<div class=\"big\">fc = '+fc.toFixed(1)+' Hz</div><div class=\"row\">高于 fc 的信号被衰减</div>'};",
-  test:{inputs:{r:1600,c:100}, expect:"994.7"}},
- {id:"dzrchp", cat:"dz", icon:"🔊", name:"RC高通截止频率", desc:"RC 高通滤波器的 -3dB 截止频率",
-  formula:"fc = 1 ÷ (2πRC)",
-  inputs:[
-   {id:"r", label:"电阻", unit:"Ω", def:"1000", min:0.001},
-   {id:"c", label:"电容", unit:"nF", def:"1000", min:0.000001}
-  ],
-  run:"if(!(r>0&&c>0)) return {ok:false,msg:'电阻与电容必须大于 0'}; var fc=1/(2*Math.PI*r*(c/1e9)); return {ok:true,html:'<div class=\"big\">fc = '+fc.toFixed(1)+' Hz</div><div class=\"row\">低于 fc 的信号被衰减</div>'};",
-  test:{inputs:{r:1000,c:1000}, expect:"159.2"}},
  {id:"dzninv", cat:"dz", icon:"➕", name:"同相放大器增益", desc:"运放同相比例放大电路电压增益",
   formula:"Av = 1 + Rf ÷ R₁",
   inputs:[
@@ -5003,22 +4874,6 @@ TOOLS.push(
   ],
   run:"var e=0.5*(c/1e6)*v*v; return {ok:true,html:'<div class=\"big\">E = '+e.toFixed(4)+' J</div>'};",
   test:{inputs:{c:1000,v:12}, expect:"0.0720"}},
- {id:"dzindz", cat:"dz", icon:"🧲", name:"电感感抗", desc:"电感在交流下的阻抗",
-  formula:"XL = 2πfL",
-  inputs:[
-   {id:"f", label:"频率", unit:"Hz", def:"1000", min:0.000001},
-   {id:"l", label:"电感", unit:"mH", def:"10", min:0.000001}
-  ],
-  run:"var xl=2*Math.PI*f*(l/1000); return {ok:true,html:'<div class=\"big\">XL = '+xl.toFixed(2)+' Ω</div>'};",
-  test:{inputs:{f:1000,l:10}, expect:"62.83"}},
- {id:"dzcapz", cat:"dz", icon:"🌊", name:"电容容抗", desc:"电容在交流下的阻抗",
-  formula:"XC = 1 ÷ (2πfC)",
-  inputs:[
-   {id:"f", label:"频率", unit:"Hz", def:"1000", min:0.000001},
-   {id:"c", label:"电容", unit:"μF", def:"1", min:0.000001}
-  ],
-  run:"if(!(f>0&&c>0)) return {ok:false,msg:'频率与电容必须大于 0'}; var xc=1/(2*Math.PI*f*(c/1e6)); return {ok:true,html:'<div class=\"big\">XC = '+xc.toFixed(2)+' Ω</div>'};",
-  test:{inputs:{f:1000,c:1}, expect:"159.15"}},
  {id:"dzwheat", cat:"dz", icon:"⚖️", name:"惠斯通电桥平衡判断", desc:"判断电桥是否平衡",
   formula:"平衡条件：R₁/R₂ = R₃/R₄",
   inputs:[
