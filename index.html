@@ -1555,76 +1555,6 @@ TOOLS.push(
   test:{inputs:{d:"2025-10-01",km:20000,im:6,ikm:5000,ref:"2026-01-01",now:23000}, expect:"2026-04-01"}}
 );
 TOOLS.push(
- {id:"sjaddmonths", cat:"sjrq", icon:"📅", name:"日期加减月数", desc:"日期加减N个月，月末自动对齐",
-  formula:"如1月31日+1个月=2月28日（闰年29日）",
-  inputs:[{id:"d", label:"日期", type:"text", def:"2026-01-31", ph:"YYYY-MM-DD"},{id:"n", label:"加减月数", def:"1", hint:"负数为往前推"}],
-  run:"n=Math.trunc(n); if(!(n>=-12000&&n<=12000)) return {ok:false,msg:'加减月数须在±12000个月以内'}; var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t),y=dd.getUTCFullYear(),m=dd.getUTCMonth()+Math.trunc(n),day=dd.getUTCDate(); y+=Math.floor(m/12); m=((m%12)+12)%12; var dim=new Date(Date.UTC(y,m+1,0)).getUTCDate(); function f2(x){return String(x).padStart(2,'0');} return {ok:true,html:'<div class=\"big\">'+y+'-'+f2(m+1)+'-'+f2(Math.min(day,dim))+'</div>'};",
-  test:{inputs:{d:"2026-01-31",n:1}, expect:"2026-02-28"}},
- {id:"sjaddyears", cat:"sjrq", icon:"📆", name:"日期加减年数", desc:"日期加减N年，闰日自动对齐",
-  formula:"如2024-02-29+1年=2025-02-28",
-  inputs:[{id:"d", label:"日期", type:"text", def:"2024-02-29", ph:"YYYY-MM-DD"},{id:"n", label:"加减年数", def:"1", hint:"负数为往前推"}],
-  run:"n=Math.trunc(n); if(!(n>=-10000&&n<=10000)) return {ok:false,msg:'加减年数须在±10000年以内'}; var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t),y=dd.getUTCFullYear()+Math.trunc(n),m=dd.getUTCMonth(),day=dd.getUTCDate(); var dim=new Date(Date.UTC(y,m+1,0)).getUTCDate(); function f2(x){return String(x).padStart(2,'0');} return {ok:true,html:'<div class=\"big\">'+y+'-'+f2(m+1)+'-'+f2(Math.min(day,dim))+'</div>'};",
-  test:{inputs:{d:"2024-02-29",n:1}, expect:"2025-02-28"}},
- {id:"sjdatecalc", cat:"sjrq", icon:"🧮", name:"日期加减组合", desc:"日期同时加减年、月、日",
-  formula:"先加减年月（月末对齐），再加减天数",
-  inputs:[{id:"d", label:"日期", type:"text", def:"2026-01-31", ph:"YYYY-MM-DD"},{id:"yy", label:"加减年", def:"0"},{id:"mm", label:"加减月", def:"1"},{id:"dd", label:"加减天", def:"0"}],
-  run:"yy=Math.trunc(yy); mm=Math.trunc(mm); dd=Math.trunc(dd); if(!(yy>=-10000&&yy<=10000)) return {ok:false,msg:'加减年须在±10000年以内'}; if(!(mm>=-120000&&mm<=120000)) return {ok:false,msg:'加减月须在±120000个月以内'}; if(!(dd>=-3650000&&dd<=3650000)) return {ok:false,msg:'加减天须在±365万天以内'}; var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var o=new Date(t),y=o.getUTCFullYear()+Math.trunc(yy),m=o.getUTCMonth()+Math.trunc(mm),day=o.getUTCDate(); y+=Math.floor(m/12); m=((m%12)+12)%12; var dim=new Date(Date.UTC(y,m+1,0)).getUTCDate(); var r=new Date(Date.UTC(y,m,Math.min(day,dim))+Math.trunc(dd)*86400000); function f2(x){return String(x).padStart(2,'0');} return {ok:true,html:'<div class=\"big\">'+r.getUTCFullYear()+'-'+f2(r.getUTCMonth()+1)+'-'+f2(r.getUTCDate())+'</div>'};",
-  test:{inputs:{d:"2026-01-31",yy:0,mm:1,dd:0}, expect:"2026-02-28"}},
- {id:"sjweekdiff", cat:"sjrq", icon:"📏", name:"相差周数", desc:"算两个日期相差几周零几天",
-  formula:"周数 = 相差天数 ÷ 7（取整），余数为零头天数",
-  inputs:[{id:"d1", label:"日期1", type:"text", def:"2026-01-01", ph:"YYYY-MM-DD"},{id:"d2", label:"日期2", type:"text", def:"2026-01-20", ph:"YYYY-MM-DD"}],
-  run:"var a=Date.parse(d1),b=Date.parse(d2); if(isNaN(a)||isNaN(b)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var days=Math.round(Math.abs(b-a)/86400000); var w=Math.floor(days/7), r=days%7; return {ok:true,html:'<div class=\"big\">'+w+'周余'+r+'天</div><div class=\"row\">共 '+days+' 天</div>'};",
-  test:{inputs:{d1:"2026-01-01",d2:"2026-01-20"}, expect:"2周余5天"}},
- {id:"sjmonthdiff", cat:"sjrq", icon:"🗓️", name:"相差整月数", desc:"算两个日期相差几个完整月",
-  formula:"整月数 = 年月差 −（结束日<起始日 ? 1 : 0）",
-  inputs:[{id:"d1", label:"日期1", type:"text", def:"2026-01-15", ph:"YYYY-MM-DD"},{id:"d2", label:"日期2", type:"text", def:"2026-04-14", ph:"YYYY-MM-DD"}],
-  run:"var a=new Date(Date.parse(d1)),b=new Date(Date.parse(d2)); if(isNaN(a)||isNaN(b)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var s=a<b?a:b, e=a<b?b:a; var m=(e.getUTCFullYear()-s.getUTCFullYear())*12+(e.getUTCMonth()-s.getUTCMonth()); if(e.getUTCDate()<s.getUTCDate()) m--; return {ok:true,html:'<div class=\"big\">相差 '+m+' 个整月</div>'};",
-  test:{inputs:{d1:"2026-01-01",d2:"2026-01-01"}, expect:"相差 0 个整月"}},
- {id:"sjeaster", cat:"sjrq", icon:"🐣", name:"复活节日期", desc:"算指定年份的复活节是哪天",
-  formula:"Meeus复活节算法（格里高利历）",
-  inputs:[{id:"y", label:"年份", def:"2026", min:1900, max:2100}],
-  run:"y=Math.trunc(+y); if(!(y>=1582&&y<=9999)) return {ok:false,msg:'年份须在1582~9999之间'}; var a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451); var mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1; function f2(x){return String(x).padStart(2,'0');} var ds=y+'-'+f2(mo)+'-'+f2(da); var w=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][new Date(Date.UTC(y,mo-1,da)).getUTCDay()]; return {ok:true,html:'<div class=\"big\">'+ds+' '+w+'</div><div class=\"row\">复活节为春分后第一个满月后的星期日</div>'};",
-  test:{inputs:{y:2026}, expect:"2026-04-05"}},
- {id:"sjthanksgiving", cat:"sjrq", icon:"🦃", name:"感恩节日期", desc:"算指定年份美国感恩节是哪天",
-  formula:"11月第4个星期四",
-  inputs:[{id:"y", label:"年份", def:"2026", min:1900, max:2100}],
-  run:"y=Math.trunc(+y); if(!(y>=1582&&y<=9999)) return {ok:false,msg:'年份须在1582~9999之间'}; var dow=new Date(Date.UTC(y,10,1)).getUTCDay(); var day=1+((4-dow+7)%7)+21; function f2(x){return String(x).padStart(2,'0');} return {ok:true,html:'<div class=\"big\">'+y+'-11-'+f2(day)+'</div><div class=\"row\">11月第4个星期四</div>'};",
-  test:{inputs:{y:2026}, expect:"2026-11-26"}},
- {id:"sjmothersday", cat:"sjrq", icon:"💐", name:"母亲节日期", desc:"算指定年份母亲节是哪天",
-  formula:"5月第2个星期日",
-  inputs:[{id:"y", label:"年份", def:"2026", min:1900, max:2100}],
-  run:"y=Math.trunc(+y); if(!(y>=1582&&y<=9999)) return {ok:false,msg:'年份须在1582~9999之间'}; var dow=new Date(Date.UTC(y,4,1)).getUTCDay(); var day=1+((7-dow)%7)+7; function f2(x){return String(x).padStart(2,'0');} return {ok:true,html:'<div class=\"big\">'+y+'-05-'+f2(day)+'</div><div class=\"row\">5月第2个星期日</div>'};",
-  test:{inputs:{y:2026}, expect:"2026-05-10"}},
- {id:"sjfathersday", cat:"sjrq", icon:"👔", name:"父亲节日期", desc:"算指定年份父亲节是哪天",
-  formula:"6月第3个星期日",
-  inputs:[{id:"y", label:"年份", def:"2026", min:1900, max:2100}],
-  run:"y=Math.trunc(+y); if(!(y>=1582&&y<=9999)) return {ok:false,msg:'年份须在1582~9999之间'}; var dow=new Date(Date.UTC(y,5,1)).getUTCDay(); var day=1+((7-dow)%7)+14; function f2(x){return String(x).padStart(2,'0');} return {ok:true,html:'<div class=\"big\">'+y+'-06-'+f2(day)+'</div><div class=\"row\">6月第3个星期日</div>'};",
-  test:{inputs:{y:2026}, expect:"2026-06-21"}},
- {id:"sjfestdate", cat:"sjrq", icon:"🎉", name:"节日日期查询", desc:"查指定年份常见节日的日期和星期",
-  formula:"固定公历节日的日期 + 星期推算",
-  inputs:[{id:"y", label:"年份", def:"2026", min:1900, max:2100},{id:"f", label:"节日", type:"select", options:[{v:"01-01",t:"元旦"},{v:"02-14",t:"情人节"},{v:"03-08",t:"妇女节"},{v:"05-01",t:"劳动节"},{v:"06-01",t:"儿童节"},{v:"09-10",t:"教师节"},{v:"10-01",t:"国庆节"},{v:"10-31",t:"万圣节"},{v:"12-25",t:"圣诞节"}], def:"12-25"}],
-  run:"y=Math.trunc(+y); if(!(y>=1582&&y<=9999)) return {ok:false,msg:'年份须在1582~9999之间'}; var ds=y+'-'+f; var t=Date.parse(ds); var w=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][new Date(t).getUTCDay()]; return {ok:true,html:'<div class=\"big\">'+ds+' '+w+'</div>'};",
-  test:{inputs:{y:2026,f:"12-25"}, expect:"星期五"}},
- {id:"sjhalfyear", cat:"sjrq", icon:"📊", name:"上下半年判断", desc:"判断日期在上半年还是下半年及剩余天数",
-  formula:"1~6月为上半年，7~12月为下半年；剩余 = 半年度末 − 当天",
-  inputs:[{id:"d", label:"日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t), m=dd.getUTCMonth(); var half=m<6?'上半年':'下半年'; var end=m<6?Date.UTC(dd.getUTCFullYear(),6,1)-86400000:Date.UTC(dd.getUTCFullYear()+1,0,1)-86400000; var left=Math.round((end-t)/86400000); return {ok:true,html:'<div class=\"big\">'+half+'，剩余 '+left+' 天</div>'};",
-  test:{inputs:{d:"2026-10-18"}, expect:"下半年，剩余 74 天"}},
- {id:"sjcentury", cat:"sjrq", icon:"🏛️", name:"世纪年代判断", desc:"按年份判断属于哪个世纪哪个年代",
-  formula:"世纪 = 年份÷100向上取整；年代 = 十位数×10",
-  inputs:[{id:"y", label:"年份", def:"1998", min:1, max:9999}],
-  run:"var c=Math.ceil(y/100), d=Math.floor((y%100)/10)*10; return {ok:true,html:'<div class=\"big\">'+c+'世纪'+d+'年代</div>'};",
-  test:{inputs:{y:1998}, expect:"20世纪90年代"}},
- {id:"sjms2dhms", cat:"sjrq", icon:"⏱️", name:"毫秒转天时分秒", desc:"把毫秒数换算成天小时分秒毫秒",
-  formula:"逐级整除取余：天/时/分/秒/毫秒",
-  inputs:[{id:"ms", label:"毫秒数", def:"90061001", min:0}],
-  run:"var x=Math.trunc(ms); var d=Math.floor(x/86400000); x%=86400000; var h=Math.floor(x/3600000); x%=3600000; var mi=Math.floor(x/60000); x%=60000; var s=Math.floor(x/1000); var mss=x%1000; return {ok:true,html:'<div class=\"big\">'+d+'天'+h+'小时'+mi+'分'+s+'秒'+mss+'毫秒</div>'};",
-  test:{inputs:{ms:90061001}, expect:"1天1小时1分1秒1毫秒"}},
- {id:"sjmin2w", cat:"sjrq", icon:"🕐", name:"分钟转周天时分", desc:"把分钟数换算成几周几天几小时几分",
-  formula:"1周=10080分钟，1天=1440分钟",
-  inputs:[{id:"mi", label:"分钟数", def:"100000", min:0}],
-  run:"var x=Math.trunc(mi); var w=Math.floor(x/10080); x%=10080; var d=Math.floor(x/1440); x%=1440; var h=Math.floor(x/60); var m=x%60; return {ok:true,html:'<div class=\"big\">'+w+'周'+d+'天'+h+'小时'+m+'分</div>'};",
-  test:{inputs:{mi:100000}, expect:"9周6天10小时40分"}},
  {id:"sjjetlag", cat:"sjrq", icon:"✈️", name:"倒时差计划", desc:"按时差小时数估算需要几天调整过来",
   formula:"调整天数 = 时差 ÷ 1.5（向上取整，人体每天约调1.5小时）",
   inputs:[{id:"h", label:"时差", unit:"小时", def:"8", min:1, max:12}],
@@ -1635,41 +1565,6 @@ TOOLS.push(
   inputs:[{id:"d", label:"基准日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}],
   run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t); var ny=Date.UTC(dd.getUTCFullYear()+1,0,1); var days=Math.round((ny-t)/86400000); return {ok:true,html:'<div class=\"big\">距元旦还有 '+days+' 天</div><div class=\"row\">'+(dd.getUTCFullYear()+1)+'年1月1日</div>'};",
   test:{inputs:{d:"2026-10-18"}, expect:"75 天"}},
- {id:"sjmonthend", cat:"sjrq", icon:"📅", name:"月末倒计时", desc:"算距离本月最后一天还有多少天",
-  formula:"剩余 = 月末 − 当天",
-  inputs:[{id:"d", label:"日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t); var end=Date.UTC(dd.getUTCFullYear(),dd.getUTCMonth()+1,1)-86400000; var left=Math.round((end-t)/86400000); return {ok:true,html:'<div class=\"big\">距月末还有 '+left+' 天</div>'};",
-  test:{inputs:{d:"2026-10-18"}, expect:"13 天"}},
- {id:"sjyearend", cat:"sjrq", icon:"📆", name:"年末倒计时", desc:"算距离12月31日还有多少天",
-  formula:"剩余 = 12月31日 − 当天",
-  inputs:[{id:"d", label:"日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t); var end=Date.UTC(dd.getUTCFullYear()+1,0,1)-86400000; var left=Math.round((end-t)/86400000); return {ok:true,html:'<div class=\"big\">距年末还有 '+left+' 天</div>'};",
-  test:{inputs:{d:"2026-10-18"}, expect:"74 天"}},
- {id:"sjquarterend", cat:"sjrq", icon:"📈", name:"季度末倒计时", desc:"算距离本季度最后一天还有多少天",
-  formula:"季度末为3/6/9/12月末；剩余 = 季度末 − 当天",
-  inputs:[{id:"d", label:"日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t); var q=Math.floor(dd.getUTCMonth()/3); var end=Date.UTC(dd.getUTCFullYear(),(q+1)*3,1)-86400000; var left=Math.round((end-t)/86400000); var qn=['一','二','三','四'][q]; return {ok:true,html:'<div class=\"big\">第'+qn+'季度末，剩余 '+left+' 天</div>'};",
-  test:{inputs:{d:"2026-10-18"}, expect:"第四季度末"}},
- {id:"sjdayofweekcount", cat:"sjrq", icon:"🗓️", name:"某月第N个星期X", desc:"算某年某月第几个星期X是几号",
-  formula:"首个星期X = 1 + (X − 首日星期 + 7) % 7，再加(N−1)×7",
-  inputs:[{id:"y", label:"年份", def:"2026", min:1900, max:2100},{id:"mo", label:"月份", def:"11", min:1, max:12},{id:"n", label:"第几个", def:"3", min:1, max:5},{id:"w", label:"星期", type:"select", options:[{v:"0",t:"星期日"},{v:"1",t:"星期一"},{v:"2",t:"星期二"},{v:"3",t:"星期三"},{v:"4",t:"星期四"},{v:"5",t:"星期五"},{v:"6",t:"星期六"}], def:"4"}],
-  run:"y=Math.trunc(+y); if(!(y>=1582&&y<=9999)) return {ok:false,msg:'年份须在1582~9999之间'}; mo=Math.trunc(+mo); if(!(mo>=1&&mo<=12)) return {ok:false,msg:'月份须在1~12之间'}; var first=new Date(Date.UTC(y,mo-1,1)); var dow=first.getUTCDay(); var day=1+(((+w)-dow+7)%7)+(n-1)*7; var dim=new Date(Date.UTC(y,mo,0)).getUTCDate(); if(day>dim) return {ok:true,html:'<div class=\"big\">本月没有第'+n+'个该星期</div>'}; function f2(x){return String(x).padStart(2,'0');} return {ok:true,html:'<div class=\"big\">'+y+'-'+f2(mo)+'-'+f2(day)+'</div>'};",
-  test:{inputs:{y:2026,mo:11,n:3,w:"4"}, expect:"2026-11-19"}},
- {id:"sjlastweekday", cat:"sjrq", icon:"📌", name:"某月最后一个星期X", desc:"算某年某月最后一个星期X是几号",
-  formula:"从月末倒推到目标星期",
-  inputs:[{id:"y", label:"年份", def:"2026", min:1900, max:2100},{id:"mo", label:"月份", def:"11", min:1, max:12},{id:"w", label:"星期", type:"select", options:[{v:"0",t:"星期日"},{v:"1",t:"星期一"},{v:"2",t:"星期二"},{v:"3",t:"星期三"},{v:"4",t:"星期四"},{v:"5",t:"星期五"},{v:"6",t:"星期六"}], def:"5"}],
-  run:"y=Math.trunc(+y); if(!(y>=1582&&y<=9999)) return {ok:false,msg:'年份须在1582~9999之间'}; mo=Math.trunc(+mo); if(!(mo>=1&&mo<=12)) return {ok:false,msg:'月份须在1~12之间'}; var dim=new Date(Date.UTC(y,mo,0)).getUTCDate(); var dow=new Date(Date.UTC(y,mo-1,dim)).getUTCDay(); var day=dim-((dow-(+w)+7)%7); function f2(x){return String(x).padStart(2,'0');} return {ok:true,html:'<div class=\"big\">'+y+'-'+f2(mo)+'-'+f2(day)+'</div>'};",
-  test:{inputs:{y:2026,mo:11,w:"5"}, expect:"2026-11-27"}},
- {id:"sjweeksinmonth", cat:"sjrq", icon:"🔢", name:"某月有几个星期X", desc:"数某年某月有几个星期一/二/…/日",
-  formula:"从首个星期X起每7天计数",
-  inputs:[{id:"y", label:"年份", def:"2026", min:1900, max:2100},{id:"mo", label:"月份", def:"11", min:1, max:12},{id:"w", label:"星期", type:"select", options:[{v:"0",t:"星期日"},{v:"1",t:"星期一"},{v:"2",t:"星期二"},{v:"3",t:"星期三"},{v:"4",t:"星期四"},{v:"5",t:"星期五"},{v:"6",t:"星期六"}], def:"6"}],
-  run:"var dim=new Date(Date.UTC(y,mo,0)).getUTCDate(); var dow=new Date(Date.UTC(y,mo-1,1)).getUTCDay(); var d0=1+(((+w)-dow+7)%7); var c=0; for(var d=d0;d<=dim;d+=7)c++; return {ok:true,html:'<div class=\"big\">'+c+' 个</div>'};",
-  test:{inputs:{y:2026,mo:11,w:"6"}, expect:"4 个"}},
- {id:"sjfriday13", cat:"sjrq", icon:"🖤", name:"黑色星期五", desc:"查指定年份有哪些13号星期五",
-  formula:"逐月检查13号是否为星期五",
-  inputs:[{id:"y", label:"年份", def:"2026", min:1900, max:2100}],
-  run:"var out=[]; for(var m=0;m<12;m++){var dt=new Date(Date.UTC(y,m,13)); if(dt.getUTCDay()===5)out.push((m+1)+'月13日');} return {ok:true,html:'<div class=\"big\">'+y+'年共 '+out.length+' 个黑色星期五</div><div class=\"row\">'+(out.join('、')||'无')+'</div>'};",
-  test:{inputs:{y:2026}, expect:"共 3 个"}},
  {id:"sjtimeago", cat:"sjrq", icon:"⌛", name:"相对时间描述", desc:"把时间点转成“3小时前”这类说法",
   formula:"按秒/分/时/天/月/年逐级换算，基准之后为“后”",
   inputs:[{id:"d", label:"时间", type:"text", def:"2026-10-18 12:00", ph:"YYYY-MM-DD HH:mm"},{id:"ref", label:"基准时间", type:"text", def:"2026-10-18 15:00", ph:"留空=现在", optional:true}],
@@ -1725,11 +1620,7 @@ TOOLS.push(
   inputs:[{id:"b", label:"出生日期", type:"text", def:"2000-05-20", ph:"YYYY-MM-DD"}],
   run:"var t=Date.parse(b); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t),y=dd.getUTCFullYear(),m=dd.getUTCMonth(),da=dd.getUTCDate(); function fm(yy){function f2(x){return String(x).padStart(2,'0');}return yy+'-'+f2(m+1)+'-'+f2(da);} return {ok:true,html:'<div class=\"big\">16岁（'+fm(y+16)+'）换10年证</div><div class=\"row\">26岁（'+fm(y+26)+'）换20年证；46岁（'+fm(y+46)+'）换长期证</div>'};",
   test:{inputs:{b:"2000-05-20"}, expect:"2046-05-20"}},
- {id:"sjageon", cat:"sjrq", icon:"🎂", name:"指定日期年龄", desc:"算在某个目标日期时的周岁虚岁和天数",
-  formula:"周岁按生日是否已过推算；虚岁=周岁+1",
-  inputs:[{id:"b", label:"出生日期", type:"text", def:"2020-01-15", ph:"YYYY-MM-DD"},{id:"d", label:"目标日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}],
-  run:"var a=Date.parse(b),e=Date.parse(d); if(isNaN(a)||isNaN(e)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; if(e<a) return {ok:false,msg:'目标日期不能早于出生日期'}; var da=new Date(a),de=new Date(e); var y=de.getUTCFullYear()-da.getUTCFullYear(),mo=de.getUTCMonth()-da.getUTCMonth(),dday=de.getUTCDate()-da.getUTCDate(); if(dday<0){mo--;var pm=new Date(Date.UTC(de.getUTCFullYear(),de.getUTCMonth(),0)).getUTCDate();dday+=pm;} if(mo<0){y--;mo+=12;} var months=y*12+mo; var days=Math.round((e-a)/86400000); return {ok:true,html:'<div class=\"big\">'+y+'周岁（虚岁'+(y+1)+'）</div><div class=\"row\">'+months+'个月零'+dday+'天，共 '+days+' 天</div>'};",
-  test:{inputs:{b:"2020-01-15",d:"2026-10-18"}, expect:"6周岁"}}
+
 );
 TOOLS.push(
  {id:"wbwordfreq", cat:"wb", icon:"📊", name:"词频统计", desc:"统计文本中每个词出现的次数",
@@ -4088,22 +3979,35 @@ TOOLS.push(
 /* ===== WAVE-2A 时间日期（40个数据驱动工具） ===== */
 CATS.push({id:"sjrq", name:"时间日期"});
 TOOLS.push(
- {id:"sjdiff", cat:"sjrq", icon:"📅", name:"日期差计算", desc:"算两个日期相差多少天",
-  formula:"相差天数 = |日期2 − 日期1| ÷ 86400000（按自然日，UTC）",
+ {id:"sjdate", cat:"sjrq", icon:"📅", name:"日期计算", desc:"日期加减/工作日/间隔/日期信息/月份信息/年份信息/年龄/时长/时间戳一站式",
+  formula:"日期按 UTC 计算避免时区误差；加年月时月末自动对齐（如1月31日+1月=2月末）；工作日为周一至周五（未扣法定节假日）；复活节用公历 Computus 算法",
   inputs:[
-   {id:"d1", label:"日期1", type:"text", def:"2026-01-01", ph:"YYYY-MM-DD"},
-   {id:"d2", label:"日期2", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}
+   {id:"mode", label:"功能", type:"select", def:"add", options:[{v:"add",t:"日期加减"},{v:"wadd",t:"工作日加减"},{v:"diff",t:"日期间隔"},{v:"info",t:"日期信息"},{v:"month",t:"月份信息"},{v:"year",t:"年份信息"},{v:"age",t:"年龄计算"},{v:"dur",t:"时长分解"},{v:"ts",t:"时间戳转换"}]},
+   {id:"a_d", label:"起始日期", when:"mode=add", type:"text", def:"2024-01-31"},
+   {id:"a_y", label:"加减年", when:"mode=add", def:"0"},
+   {id:"a_m", label:"加减月", when:"mode=add", def:"1"},
+   {id:"a_dd", label:"加减天", when:"mode=add", def:"0"},
+   {id:"w_d", label:"起始日期", when:"mode=wadd", type:"text", def:"2026-10-16"},
+   {id:"w_n", label:"工作日数（可负）", when:"mode=wadd", def:"3"},
+   {id:"f_d1", label:"日期一", when:"mode=diff", type:"text", def:"2026-01-01"},
+   {id:"f_d2", label:"日期二", when:"mode=diff", type:"text", def:"2026-01-11"},
+   {id:"i_d", label:"日期", when:"mode=info", type:"text", def:"2026-10-20"},
+   {id:"mo_y", label:"年份", when:"mode=month", def:"2026"},
+   {id:"mo_m", label:"月份", when:"mode=month", def:"10"},
+   {id:"mo_w", label:"星期", when:"mode=month", type:"select", def:"4", options:[{v:"0",t:"星期日"},{v:"1",t:"星期一"},{v:"2",t:"星期二"},{v:"3",t:"星期三"},{v:"4",t:"星期四"},{v:"5",t:"星期五"},{v:"6",t:"星期六"}]},
+   {id:"mo_n", label:"第几个（1~5）", when:"mode=month", def:"3"},
+   {id:"y_y", label:"年份", when:"mode=year", def:"2026"},
+   {id:"g_b", label:"出生日期", when:"mode=age", type:"text", def:"2000-01-01"},
+   {id:"g_ref", label:"基准日期", when:"mode=age", type:"text", def:"2026-10-18"},
+   {id:"du_v", label:"时长数值", when:"mode=dur", def:"90061"},
+   {id:"du_u", label:"输入单位", when:"mode=dur", type:"select", def:"s", options:[{v:"ms",t:"毫秒"},{v:"s",t:"秒"},{v:"min",t:"分钟"},{v:"h",t:"小时"}]},
+   {id:"ts_dir", label:"转换方向", when:"mode=ts", type:"select", def:"ts2d", options:[{v:"ts2d",t:"时间戳 → 日期"},{v:"d2ts",t:"日期 → 时间戳"}]},
+   {id:"ts_v", label:"时间戳", when:"mode=ts", def:"0"},
+   {id:"ts_d", label:"日期时间", when:"mode=ts", type:"text", def:"1970-01-01"},
+   {id:"ts_u", label:"单位", when:"mode=ts", type:"select", def:"s", options:[{v:"s",t:"秒"},{v:"ms",t:"毫秒"}]}
   ],
-  run:"var t1=Date.parse(d1),t2=Date.parse(d2); if(isNaN(t1)||isNaN(t2)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var days=Math.round(Math.abs(t2-t1)/86400000); return {ok:true,html:'<div class=big>相差 '+days+' 天</div>'};",
-  test:{inputs:{d1:"2026-01-01",d2:"2026-01-11"}, expect:"相差 10 天"}},
- {id:"sjage", cat:"sjrq", icon:"🎂", name:"年龄精确计算", desc:"按出生日期和基准日期算周岁",
-  formula:"先算整年数，再按月日借位调整",
-  inputs:[
-   {id:"birth", label:"出生日期", type:"text", def:"2000-01-01", ph:"YYYY-MM-DD"},
-   {id:"ref", label:"基准日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}
-  ],
-  run:"var b=new Date(Date.parse(birth)),r=new Date(Date.parse(ref)); if(isNaN(b)||isNaN(r)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; if(r<b) return {ok:false,msg:'基准日期不能早于出生日期'}; var y=r.getUTCFullYear()-b.getUTCFullYear(),m=r.getUTCMonth()-b.getUTCMonth(),d=r.getUTCDate()-b.getUTCDate(); if(d<0){m--;var pm=new Date(Date.UTC(r.getUTCFullYear(),r.getUTCMonth(),0)).getUTCDate();d+=pm;} if(m<0){y--;m+=12;} return {ok:true,html:'<div class=big>'+y+'岁 '+m+'个月 '+d+'天</div>'};",
-  test:{inputs:{birth:"2000-01-01",ref:"2026-10-18"}, expect:"26岁 9个月 17天"}},
+  run:"function f2(x){return String(x).padStart(2,'0');}\nfunction fmt(t){var z=new Date(t);return z.getUTCFullYear()+'-'+f2(z.getUTCMonth()+1)+'-'+f2(z.getUTCDate());}\nfunction pd(s){var t=Date.parse(String(s).trim());return isNaN(t)?null:t;}\nfunction row(k,v){return '<div class=\"row\">'+k+'：'+v+'</div>';}\nvar WN=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];\nfunction leapY(y){return (y%4===0&&y%100!==0)||y%400===0;}\nfunction addYM(t,yy,mm){var dd=new Date(t),y=dd.getUTCFullYear()+yy,m=dd.getUTCMonth()+mm,day=dd.getUTCDate();y+=Math.floor(m/12);m=((m%12)+12)%12;var dim=new Date(Date.UTC(y,m+1,0)).getUTCDate();return Date.UTC(y,m,Math.min(day,dim));}\nif(mode==='add'){\n  var t0=pd(a_d);if(t0===null)return {ok:false,msg:'日期格式应为 YYYY-MM-DD'};\n  var yy=Math.trunc(Number(a_y)),mm=Math.trunc(Number(a_m)),ddn=Math.trunc(Number(a_dd));\n  if(!(yy>=-10000&&yy<=10000)||!(mm>=-120000&&mm<=120000)||!(ddn>=-3650000&&ddn<=3650000))return {ok:false,msg:'加减幅度超出范围'};\n  var r=addYM(t0,yy,mm)+ddn*86400000;\n  return {ok:true,html:'<div class=\"big\">'+fmt(r)+'</div>'+row('星期',WN[new Date(r).getUTCDay()])+row('说明','先加年月（月末自动对齐）再加天数')};\n}\nif(mode==='wadd'){\n  var t1=pd(w_d);if(t1===null)return {ok:false,msg:'日期格式应为 YYYY-MM-DD'};\n  var n=Math.trunc(Number(w_n));if(!(n>=-10000&&n<=10000))return {ok:false,msg:'工作日数须在 ±10000 以内'};\n  var step=n>=0?86400000:-86400000,left=Math.abs(n),cur=t1;\n  while(left>0){cur+=step;var dw=new Date(cur).getUTCDay();if(dw>=1&&dw<=5)left--;}\n  return {ok:true,html:'<div class=\"big\">'+fmt(cur)+'</div>'+row('星期',WN[new Date(cur).getUTCDay()])+row('说明',n+' 个工作日'+(n>=0?'后':'前')+'（跳过周六周日，未扣法定节假日）')};\n}\nif(mode==='diff'){\n  var A=pd(f_d1),B=pd(f_d2);if(A===null||B===null)return {ok:false,msg:'日期格式应为 YYYY-MM-DD'};\n  var s=Math.min(A,B),e=Math.max(A,B),days=Math.round((e-s)/86400000);\n  if(days>36600)return {ok:false,msg:'日期范围太大（限 100 年内）'};\n  var sd=new Date(s),ed=new Date(e);\n  var mm2=(ed.getUTCFullYear()-sd.getUTCFullYear())*12+(ed.getUTCMonth()-sd.getUTCMonth());if(ed.getUTCDate()<sd.getUTCDate())mm2--;\n  var Y=ed.getUTCFullYear()-sd.getUTCFullYear(),M=ed.getUTCMonth()-sd.getUTCMonth(),D=ed.getUTCDate()-sd.getUTCDate();\n  if(D<0){M--;D+=new Date(Date.UTC(ed.getUTCFullYear(),ed.getUTCMonth(),0)).getUTCDate();}\n  if(M<0){Y--;M+=12;}\n  var wd=0;for(var i=0;i<days;i++){var dw2=new Date(s+i*86400000).getUTCDay();if(dw2>=1&&dw2<=5)wd++;}\n  var html='<div class=\"big\">相差 '+days+' 天</div>';\n  html+=row('拆分',Y+' 年 '+M+' 个月 '+D+' 天');\n  html+=row('周',Math.floor(days/7)+' 周余 '+days%7+' 天');\n  html+=row('整月数',mm2+' 个整月');\n  html+=row('工作日',wd+' 天（周一至周五，含起点不含终点，未扣法定节假日）');\n  html+=row('小时/分钟',days*24+' 小时 / '+days*1440+' 分钟');\n  return {ok:true,html:html};\n}\nif(mode==='info'){\n  var t2=pd(i_d);if(t2===null)return {ok:false,msg:'日期格式应为 YYYY-MM-DD'};\n  var z=new Date(t2),yy2=z.getUTCFullYear(),mo2=z.getUTCMonth(),da2=z.getUTCDate();\n  var doy=Math.floor((t2-Date.UTC(yy2,0,1))/86400000)+1;\n  var dim2=new Date(Date.UTC(yy2,mo2+1,0)).getUTCDate();\n  var q=Math.floor(mo2/3)+1;\n  var season=(mo2>=2&&mo2<=4)?'春季':(mo2>=5&&mo2<=7)?'夏季':(mo2>=8&&mo2<=10)?'秋季':'冬季';\n  var half=mo2<6?'上半年':'下半年';\n  var halfEnd=mo2<6?Date.UTC(yy2,5,30):Date.UTC(yy2,11,31);\n  var qEnd=Date.UTC(yy2,q*3,0);\n  var dow2=z.getUTCDay(),mon=t2-((dow2+6)%7)*86400000,sun=mon+6*86400000;\n  var age=(((t2-Date.parse('2000-01-06'))/86400000)%29.530588853+29.530588853)%29.530588853;\n  var phases=['新月','娥眉月','上弦月','盈凸月','满月','亏凸月','下弦月','残月'];\n  var html2='<div class=\"big\">'+fmt(t2)+' '+WN[dow2]+'</div>';\n  html2+=row('一年第几天','第 '+doy+' 天');\n  html2+=row('年内第几周','第 '+Math.ceil(doy/7)+' 周（按天数÷7）');\n  html2+=row('一年进度',(doy/(leapY(yy2)?366:365)*100).toFixed(1)+'%');\n  html2+=row('季度/季节','第'+['一','二','三','四'][q-1]+'季度 · '+season+' · '+half);\n  html2+=row('本月','共 '+dim2+' 天，今天是第 '+da2+' 天，距月末 '+(dim2-da2)+' 天');\n  html2+=row('距季末/年末',Math.round((qEnd-t2)/86400000)+' 天 / '+Math.round((Date.UTC(yy2,11,31)-t2)/86400000)+' 天');\n  html2+=row('本半年剩余',Math.round((halfEnd-t2)/86400000)+' 天');\n  html2+=row('本周起止',fmt(mon)+' ~ '+fmt(sun)+'（周一至周日）');\n  html2+=row('月相',phases[Math.floor(age/3.6913236)%8]+'（月龄约 '+age.toFixed(1)+' 天，估算）');\n  return {ok:true,html:html2};\n}\nif(mode==='month'){\n  var Y2=Math.trunc(Number(mo_y)),M2=Math.trunc(Number(mo_m));\n  if(!(Y2>=1582&&Y2<=9999))return {ok:false,msg:'年份须在 1582~9999 之间'};\n  if(!(M2>=1&&M2<=12))return {ok:false,msg:'月份须在 1~12 之间'};\n  var dim3=new Date(Date.UTC(Y2,M2,0)).getUTCDate(),we=0;\n  for(var i2=1;i2<=dim3;i2++){var dw3=new Date(Date.UTC(Y2,M2-1,i2)).getUTCDay();if(dw3===0||dw3===6)we++;}\n  var wkd=dim3-we,W=Number(mo_w),cnt=0,firstDay=-1;\n  for(var i3=1;i3<=dim3;i3++){if(new Date(Date.UTC(Y2,M2-1,i3)).getUTCDay()===W){cnt++;if(cnt===1)firstDay=i3;}}\n  var N2=Math.trunc(Number(mo_n)),nth=(N2>=1&&firstDay>0)?firstDay+(N2-1)*7:-1;\n  var lastDow=new Date(Date.UTC(Y2,M2-1,dim3)).getUTCDay(),lastDay=dim3-((lastDow-W+7)%7);\n  var html3='<div class=\"big\">'+Y2+'年'+M2+'月 · '+dim3+' 天</div>';\n  html3+=row('周末',we+' 天');\n  html3+=row('工作日',wkd+' 天');\n  html3+=row('法定工时',(wkd*8)+' 小时（工作日×8，未扣法定节假日）');\n  html3+=row(WN[W]+'出现',cnt+' 次');\n  html3+=row('第 '+N2+' 个'+WN[W],(nth>0&&nth<=dim3)?(Y2+'-'+f2(M2)+'-'+f2(nth)):'本月没有');\n  html3+=row('最后一个'+WN[W],Y2+'-'+f2(M2)+'-'+f2(lastDay));\n  return {ok:true,html:html3};\n}\nif(mode==='year'){\n  var Y3=Math.trunc(Number(y_y));\n  if(!(Y3>=1582&&Y3<=9999))return {ok:false,msg:'年份须在 1582~9999 之间'};\n  var tg=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'],dz=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'],sx=['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'];\n  var gz=tg[(((Y3-4)%10)+10)%10]+dz[(((Y3-4)%12)+12)%12];\n  var a3=Y3%19,b3=Math.floor(Y3/100),c3=Y3%100,d3=Math.floor(b3/4),e3=b3%4,f3=Math.floor((b3+8)/25),g3=Math.floor((b3-f3+1)/3),h3=(19*a3+b3-d3-g3+15)%30,i4=Math.floor(c3/4),k3=c3%4,l3=(32+2*e3+2*i4-h3-k3)%7,m3=Math.floor((a3+11*h3+22*l3)/451);\n  var emo=Math.floor((h3+l3-7*m3+114)/31),eda=((h3+l3-7*m3+114)%31)+1;\n  function nthDow(y4,m4,w4,n4){var dow4=new Date(Date.UTC(y4,m4-1,1)).getUTCDay();return 1+((w4-dow4+7)%7)+(n4-1)*7;}\n  var f13=[];for(var m5=0;m5<12;m5++){if(new Date(Date.UTC(Y3,m5,13)).getUTCDay()===5)f13.push((m5+1)+'月13日');}\n  var fest=[['01-01','元旦'],['02-14','情人节'],['03-08','妇女节'],['05-01','劳动节'],['06-01','儿童节'],['09-10','教师节'],['10-01','国庆节'],['10-31','万圣节前夜'],['12-25','圣诞节']];\n  var fl='';for(var i5=0;i5<fest.length;i5++){fl+=fest[i5][1]+' '+Y3+'-'+fest[i5][0]+'（'+WN[new Date(Date.parse(Y3+'-'+fest[i5][0])).getUTCDay()]+'）<br>';}\n  var html4='<div class=\"big\">'+Y3+'年 · '+gz+'年 · 属'+sx[(((Y3-4)%12)+12)%12]+'</div>';\n  html4+=row('闰年',leapY(Y3)?'闰年（366 天）':'平年（365 天）');\n  html4+=row('世纪年代',Math.ceil(Y3/100)+'世纪'+Math.floor((Y3%100)/10)*10+'年代');\n  html4+=row('复活节',Y3+'-'+f2(emo)+'-'+f2(eda));\n  html4+=row('母亲节/父亲节',Y3+'-05-'+f2(nthDow(Y3,5,0,2))+' / '+Y3+'-06-'+f2(nthDow(Y3,6,0,3)));\n  html4+=row('感恩节（美国）',Y3+'-11-'+f2(nthDow(Y3,11,4,4)));\n  html4+=row('黑色星期五','共 '+f13.length+' 个'+(f13.length?'：'+f13.join('、'):''));\n  html4+=row('常见节日',fl);\n  return {ok:true,html:html4};\n}\nif(mode==='age'){\n  var B0=pd(g_b),R0=pd(g_ref);if(B0===null||R0===null)return {ok:false,msg:'日期格式应为 YYYY-MM-DD'};\n  if(R0<B0)return {ok:false,msg:'基准日期不能早于出生日期'};\n  var bz=new Date(B0),rz=new Date(R0);\n  var Y4=rz.getUTCFullYear()-bz.getUTCFullYear(),M4=rz.getUTCMonth()-bz.getUTCMonth(),D4=rz.getUTCDate()-bz.getUTCDate();\n  if(D4<0){M4--;D4+=new Date(Date.UTC(rz.getUTCFullYear(),rz.getUTCMonth(),0)).getUTCDate();}\n  if(M4<0){Y4--;M4+=12;}\n  var daysA=Math.round((R0-B0)/86400000),xu=rz.getUTCFullYear()-bz.getUTCFullYear()+1;\n  var sxA=['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'][(((bz.getUTCFullYear()-4)%12)+12)%12];\n  var html5='<div class=\"big\">'+Y4+'岁 '+M4+'个月 '+D4+'天</div>';\n  html5+=row('虚岁',xu+' 岁');\n  html5+=row('已生活天数',daysA+' 天（约 '+Math.floor(daysA/7)+' 周）');\n  html5+=row('出生年生肖','属'+sxA);\n  return {ok:true,html:html5};\n}\nif(mode==='dur'){\n  var v5=Number(du_v);if(!isFinite(v5))return {ok:false,msg:'请输入数值'};\n  var fac={ms:1,s:1000,min:60000,h:3600000},total=v5*fac[du_u];\n  if(total<0)return {ok:false,msg:'时长不能为负'};\n  var x=Math.trunc(total),dd5=Math.floor(x/86400000);x%=86400000;var hh5=Math.floor(x/3600000);x%=3600000;var mi5=Math.floor(x/60000);x%=60000;var ss5=Math.floor(x/1000),ms5=x%1000;\n  var html6='<div class=\"big\">'+dd5+'天 '+hh5+'小时 '+mi5+'分 '+ss5+'秒'+(ms5?' '+ms5+'毫秒':'')+'</div>';\n  html6+=row('总计',(total/1000)+' 秒 / '+(total/60000)+' 分钟 / '+(total/3600000)+' 小时 / '+(total/86400000)+' 天');\n  html6+=row('总毫秒',total+' ms');\n  return {ok:true,html:html6};\n}\nif(mode==='ts'){\n  if(ts_dir==='d2ts'){var t3=pd(ts_d);if(t3===null)return {ok:false,msg:'日期时间格式不对'};var out=ts_u==='s'?t3/1000:t3;return {ok:true,html:'<div class=\"big\">'+out+' '+(ts_u==='s'?'秒':'毫秒')+'</div>'+row('说明','按 UTC 解析（YYYY-MM-DD 或 YYYY-MM-DD HH:MM:SS）')};}\n  var ms6=ts_u==='s'?Number(ts_v)*1000:Number(ts_v);var dz=new Date(ms6);\n  if(isNaN(dz.getTime()))return {ok:false,msg:'时间戳无效'};\n  var s2=dz.getUTCFullYear()+'-'+f2(dz.getUTCMonth()+1)+'-'+f2(dz.getUTCDate())+' '+f2(dz.getUTCHours())+':'+f2(dz.getUTCMinutes())+':'+f2(dz.getUTCSeconds());\n  return {ok:true,html:'<div class=\"big\">'+s2+'</div>'+row('说明','UTC 时间')};\n}\nreturn {ok:false,msg:'请选择功能'};",
+  test:{inputs:{mode:"add",a_d:"2024-01-31",a_y:0,a_m:1,a_dd:0}, expect:"2024-02-29"}},
  {id:"sjcountdown", cat:"sjrq", icon:"⏳", name:"倒计时", desc:"距目标日期还有多少天",
   formula:"剩余天数 = (目标日期 − 基准日期) ÷ 86400000",
   inputs:[
@@ -4120,36 +4024,6 @@ TOOLS.push(
   ],
   run:"var t1=Date.parse(start),t2=Date.parse(ref); if(isNaN(t1)||isNaN(t2)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var diff=Math.round((t2-t1)/86400000); if(diff<0) return {ok:false,msg:'起始日期不能晚于基准日期'}; return {ok:true,html:'<div class=big>已过去 '+diff+' 天</div>'};",
   test:{inputs:{start:"2026-01-01",ref:"2026-10-18"}, expect:"已过去 290 天"}},
- {id:"sjworkday", cat:"sjrq", icon:"💼", name:"工作日计算", desc:"两日期之间有多少个工作日（不含周末）",
-  formula:"逐日遍历，跳过周六周日",
-  inputs:[
-   {id:"d1", label:"开始日期", type:"text", def:"2026-10-01", ph:"YYYY-MM-DD"},
-   {id:"d2", label:"结束日期", type:"text", def:"2026-10-11", ph:"YYYY-MM-DD"}
-  ],
-  run:"var a=Date.parse(d1),b=Date.parse(d2); if(isNaN(a)||isNaN(b)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var s=Math.min(a,b),e=Math.max(a,b); var total=Math.round((e-s)/86400000); if(total>3660) return {ok:false,msg:'日期范围太大（限10年内）'}; var n=0; for(var i=0;i<total;i++){var dow=new Date(s+i*86400000).getUTCDay(); if(dow>=1&&dow<=5)n++;} return {ok:true,html:'<div class=big>工作日 '+n+' 天</div><div class=row>共 '+total+' 天（含起点不含终点）</div>'};",
-  test:{inputs:{d1:"2026-10-01",d2:"2026-10-11"}, expect:"工作日 7 天"}},
- {id:"sjworkadd", cat:"sjrq", icon:"📆", name:"N个工作日后", desc:"从某日期起推N个工作日是几号",
-  formula:"逐日递增，跳过周六周日",
-  inputs:[
-   {id:"d", label:"起始日期", type:"text", def:"2026-10-16", ph:"YYYY-MM-DD"},
-   {id:"n", label:"工作日数", def:"3", min:1, max:1000}
-  ],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; if(!(n>=1)||n>1000) return {ok:false,msg:'天数须在1~1000'}; var cur=t,c=0; while(c<n){cur+=86400000;var dow=new Date(cur).getUTCDay(); if(dow>=1&&dow<=5)c++;} var dd=new Date(cur); var s=dd.getUTCFullYear()+'-'+String(dd.getUTCMonth()+1).padStart(2,'0')+'-'+String(dd.getUTCDate()).padStart(2,'0'); return {ok:true,html:'<div class=big>'+s+'</div><div class=row>'+n+'个工作日后</div>'};",
-  test:{inputs:{d:"2026-10-16",n:3}, expect:"2026-10-21"}},
- {id:"sjleap", cat:"sjrq", icon:"🐸", name:"闰年判断", desc:"判断某年是不是闰年",
-  formula:"能被4整除但不能被100整除，或能被400整除",
-  inputs:[
-   {id:"y", label:"年份", def:"2024", min:1, max:9999}
-  ],
-  run:"var leap=(y%4===0&&y%100!==0)||y%400===0; return {ok:true,html:'<div class=big>'+y+'年 '+(leap?'是闰年（366天）':'是平年（365天）')+'</div>'};",
-  test:{inputs:{y:2024}, expect:"是闰年"}},
- {id:"sjweekday", cat:"sjrq", icon:"🗓️", name:"星期几查询", desc:"查某日期是星期几",
-  formula:"用 Date.getUTCDay() 查星期",
-  inputs:[
-   {id:"d", label:"日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}
-  ],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var w=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][new Date(t).getUTCDay()]; return {ok:true,html:'<div class=big>'+d+' 是 '+w+'</div>'};",
-  test:{inputs:{d:"2026-10-18"}, expect:"星期日"}},
  {id:"sjxingzuo", cat:"sjrq", icon:"♈", name:"星座查询", desc:"按出生月日查星座",
   formula:"按黄道十二宫日期区间划分",
   inputs:[
@@ -4158,20 +4032,6 @@ TOOLS.push(
   ],
   run:"var x=''; if((m==3&&day>=21)||(m==4&&day<=19))x='白羊座'; else if((m==4&&day>=20)||(m==5&&day<=20))x='金牛座'; else if((m==5&&day>=21)||(m==6&&day<=21))x='双子座'; else if((m==6&&day>=22)||(m==7&&day<=22))x='巨蟹座'; else if((m==7&&day>=23)||(m==8&&day<=22))x='狮子座'; else if((m==8&&day>=23)||(m==9&&day<=22))x='处女座'; else if((m==9&&day>=23)||(m==10&&day<=23))x='天秤座'; else if((m==10&&day>=24)||(m==11&&day<=22))x='天蝎座'; else if((m==11&&day>=23)||(m==12&&day<=21))x='射手座'; else if((m==12&&day>=22)||(m==1&&day<=19))x='摩羯座'; else if((m==1&&day>=20)||(m==2&&day<=18))x='水瓶座'; else x='双鱼座'; return {ok:true,html:'<div class=big>'+m+'月'+day+'日 是 '+x+'</div>'};",
   test:{inputs:{m:3,day:21}, expect:"白羊座"}},
- {id:"sjshengxiao", cat:"sjrq", icon:"🐎", name:"生肖查询", desc:"按出生年份查生肖",
-  formula:"生肖 = (年份 − 4) mod 12",
-  inputs:[
-   {id:"y", label:"出生年份", def:"2026", min:1900, max:2100}
-  ],
-  run:"if(Math.floor(y)!==y||!(y>=1582&&y<=9999)) return {ok:false,msg:'年份须为 1582–9999 的整数'}; var s=['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪'][(((y-4)%12)+12)%12]; return {ok:true,html:'<div class=big>'+y+'年 属'+s+'</div>'};",
-  test:{inputs:{y:2026}, expect:"属马"}},
- {id:"sjganzhi", cat:"sjrq", icon:"📜", name:"干支纪年", desc:"查某年的天干地支",
-  formula:"天干=(年−4)mod10，地支=(年−4)mod12",
-  inputs:[
-   {id:"y", label:"年份", def:"2026", min:1900, max:2100}
-  ],
-  run:"if(Math.floor(y)!==y||!(y>=1582&&y<=9999)) return {ok:false,msg:'年份须为 1582–9999 的整数'}; var tg=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'][(((y-4)%10)+10)%10]; var dz=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'][(((y-4)%12)+12)%12]; return {ok:true,html:'<div class=big>'+y+'年 是'+tg+dz+'年</div>'};",
-  test:{inputs:{y:2026}, expect:"丙午年"}},
  {id:"sjaddtime", cat:"sjrq", icon:"➕", name:"时间加减", desc:"几点几分加减N分钟",
   formula:"总分钟 ± N，再对1440取模",
   inputs:[
@@ -4189,54 +4049,10 @@ TOOLS.push(
   ],
   run:"var p=time.split(':'); var h=parseInt(p[0]),m=parseInt(p[1]); if(p.length!==2||isNaN(h)||isNaN(m)||h<0||h>23||m<0||m>59) return {ok:false,msg:'时间格式应为HH:mm'}; var tgt=h*60+m-8*60+parseInt(tz)*60; var off=0; while(tgt<0){tgt+=1440;off--;} while(tgt>=1440){tgt-=1440;off++;} var s=String(Math.floor(tgt/60)).padStart(2,'0')+':'+String(tgt%60).padStart(2,'0'); if(off!==0)s+='（'+(off>0?'+':'')+off+'天）'; return {ok:true,html:'<div class=big>'+s+'</div>'};",
   test:{inputs:{time:"12:00",tz:"0"}, expect:"04:00"}},
- {id:"sjts2date", cat:"sjrq", icon:"🔢", name:"时间戳转日期", desc:"Unix时间戳转成日期时间",
-  formula:"日期 = new Date(时间戳)，按UTC显示",
-  inputs:[
-   {id:"ts", label:"时间戳", def:"0", min:0},
-   {id:"unit", label:"单位", type:"select", options:[{v:"s",t:"秒"},{v:"ms",t:"毫秒"}], def:"s"}
-  ],
-  run:"var ms=unit==='s'?ts*1000:ts; var d=new Date(ms); if(isNaN(d.getTime())) return {ok:false,msg:'时间戳无效'}; function f2(n){return String(n).padStart(2,'0');} var s=d.getUTCFullYear()+'-'+f2(d.getUTCMonth()+1)+'-'+f2(d.getUTCDate())+' '+f2(d.getUTCHours())+':'+f2(d.getUTCMinutes())+':'+f2(d.getUTCSeconds()); return {ok:true,html:'<div class=big>'+s+'</div><div class=row>UTC时间</div>'};",
-  test:{inputs:{ts:0,unit:"s"}, expect:"1970-01-01 00:00:00"}}
+
 );
 
 TOOLS.push(
- {id:"sjdate2ts", cat:"sjrq", icon:"⏱️", name:"日期转时间戳", desc:"日期转成Unix时间戳",
-  formula:"时间戳 = Date.parse(日期) ÷ 1000（秒）",
-  inputs:[
-   {id:"d", label:"日期", type:"text", def:"1970-01-01", ph:"YYYY-MM-DD"},
-   {id:"unit", label:"单位", type:"select", options:[{v:"s",t:"秒"},{v:"ms",t:"毫秒"}], def:"s"}
-  ],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var out=unit==='s'?t/1000:t; return {ok:true,html:'<div class=big>'+out+' '+(unit==='s'?'秒':'毫秒')+'</div>'};",
-  test:{inputs:{d:"1970-01-01",unit:"s"}, expect:"0 秒"}},
- {id:"sjafterndays", cat:"sjrq", icon:"🔮", name:"N天后是几号", desc:"从某日期推算N天后的日期",
-  formula:"目标日期 = 起始日期 + N × 86400000",
-  inputs:[
-   {id:"d", label:"起始日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"},
-   {id:"n", label:"天数N（可为负数表示N天前）", def:"100"}
-  ],
-  run:"if(!(Math.abs(n)<=1000000)) return {ok:false,msg:'天数过大（上限 100 万天）'}; var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t+n*86400000); function f2(x){return String(x).padStart(2,'0');} var s=dd.getUTCFullYear()+'-'+f2(dd.getUTCMonth()+1)+'-'+f2(dd.getUTCDate()); return {ok:true,html:'<div class=big>'+s+'</div>'};",
-  test:{inputs:{d:"2026-10-18",n:100}, expect:"2027-01-26"}},
- {id:"sjquarter", cat:"sjrq", icon:"🗂️", name:"季度判断", desc:"查某月份属于第几季度",
-  formula:"Q1=1–3月，Q2=4–6月，Q3=7–9月，Q4=10–12月",
-  inputs:[
-   {id:"m", label:"月份", def:"10", min:1, max:12}
-  ],
-  run:"if(Math.floor(m)!==m||!(m>=1&&m<=12)) return {ok:false,msg:'月份须为 1–12 的整数'}; var q=Math.ceil(m/3); return {ok:true,html:'<div class=big>'+m+'月 是 第'+['一','二','三','四'][q-1]+'季度</div>'};",
-  test:{inputs:{m:10}, expect:"第四季度"}},
- {id:"sjyearprog", cat:"sjrq", icon:"📊", name:"一年进度", desc:"今年已经过去了百分之多少",
-  formula:"进度 = 当年第几天 ÷ 全年天数 × 100%",
-  inputs:[
-   {id:"d", label:"日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}
-  ],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t); var y=dd.getUTCFullYear(); var leap=(y%4===0&&y%100!==0)||y%400===0; var doy=Math.floor((t-Date.parse(y+'-01-01'))/86400000)+1; var pct=(doy/(leap?366:365)*100).toFixed(1); return {ok:true,html:'<div class=big>'+pct+'%</div><div class=row>'+y+'年已过去 '+doy+' 天</div>'};",
-  test:{inputs:{d:"2026-10-18"}, expect:"79.7"}},
- {id:"sjmonthleft", cat:"sjrq", icon:"📆", name:"本月剩余天数", desc:"本月还剩多少天",
-  formula:"剩余 = 当月总天数 − 今天日期",
-  inputs:[
-   {id:"d", label:"日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}
-  ],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t); var dim=new Date(Date.UTC(dd.getUTCFullYear(),dd.getUTCMonth()+1,0)).getUTCDate(); var left=dim-dd.getUTCDate(); return {ok:true,html:'<div class=big>剩余 '+left+' 天</div><div class=row>不含今天</div>'};",
-  test:{inputs:{d:"2026-10-18"}, expect:"剩余 13 天"}},
  {id:"sjduedate", cat:"sjrq", icon:"🤰", name:"预产期计算", desc:"按末次月经算预产期",
   formula:"预产期 = 末次月经第一天 + 280天",
   inputs:[
@@ -4275,29 +4091,6 @@ TOOLS.push(
   ],
   run:"var J=[['小寒',105],['大寒',120],['立春',204],['雨水',219],['惊蛰',305],['春分',320],['清明',404],['谷雨',420],['立夏',505],['小满',521],['芒种',606],['夏至',621],['小暑',707],['大暑',723],['立秋',807],['处暑',823],['白露',907],['秋分',923],['寒露',1008],['霜降',1023],['立冬',1107],['小雪',1122],['大雪',1207],['冬至',1222]]; var key=m*100+day,cur='冬至'; for(var i=0;i<J.length;i++){if(key>=J[i][1])cur=J[i][0];} return {ok:true,html:'<div class=big>'+m+'月'+day+'日 处于'+cur+'</div><div class=row>简化版，按大致日期划分</div>'};",
   test:{inputs:{m:3,day:21}, expect:"春分"}},
- {id:"sjmoon", cat:"sjrq", icon:"🌙", name:"月相估算", desc:"按日期估算月相",
-  formula:"以2000-01-06新月为基准，朔望月29.53天",
-  inputs:[
-   {id:"d", label:"日期", type:"text", def:"2000-01-06", ph:"YYYY-MM-DD"}
-  ],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var ref=Date.parse('2000-01-06'); var age=(((t-ref)/86400000)%29.530588853+29.530588853)%29.530588853; var names=['新月','娥眉月','上弦月','盈凸月','满月','亏凸月','下弦月','残月']; var idx=Math.floor(age/3.6913236)%8; return {ok:true,html:'<div class=big>'+names[idx]+'</div><div class=row>月龄约 '+age.toFixed(1)+' 天（估算）</div>'};",
-  test:{inputs:{d:"2000-01-06"}, expect:"新月"}},
- {id:"sjsectohms", cat:"sjrq", icon:"⏲️", name:"秒转时分秒", desc:"把秒数换算成几小时几分几秒",
-  formula:"小时=秒÷3600取整，余类推",
-  inputs:[
-   {id:"s", label:"秒数", def:"3661", min:0}
-  ],
-  run:"var h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=Math.floor(s%60); return {ok:true,html:'<div class=big>'+h+'小时 '+m+'分 '+ss+'秒</div>'};",
-  test:{inputs:{s:3661}, expect:"1小时 1分 1秒"}},
- {id:"sjhmstosec", cat:"sjrq", icon:"🔄", name:"时分秒转秒", desc:"把时分秒换算成总秒数",
-  formula:"总秒 = 时×3600 + 分×60 + 秒",
-  inputs:[
-   {id:"h", label:"小时", def:"1", min:0},
-   {id:"mi", label:"分钟", def:"1", min:0, max:59},
-   {id:"s", label:"秒", def:"1", min:0, max:59}
-  ],
-  run:"var t=h*3600+mi*60+s; return {ok:true,html:'<div class=big>'+t+' 秒</div>'};",
-  test:{inputs:{h:1,mi:1,s:1}, expect:"3661"}},
  {id:"sjbirthday", cat:"sjrq", icon:"🎁", name:"生日倒计时", desc:"距下个生日还有多少天",
   formula:"取基准日期之后最近的生日日期",
   inputs:[
@@ -4325,29 +4118,6 @@ TOOLS.push(
   ],
   run:"if(Math.floor(h)!==h||!(h>=0&&h<=23)) return {ok:false,msg:'小时须为 0–23 的整数'}; var names=['子时','丑时','寅时','卯时','辰时','巳时','午时','未时','申时','酉时','戌时','亥时']; var idx=Math.floor(((h+1)%24)/2); var s=idx*2-1<0?23:idx*2-1; var e=(idx*2+1)%24; return {ok:true,html:'<div class=big>'+h+'点 是 '+names[idx]+'</div><div class=row>'+s+':00–'+e+':00</div>'};",
   test:{inputs:{h:12}, expect:"午时"}},
- {id:"sjweeknum", cat:"sjrq", icon:"🔢", name:"一年第几周", desc:"查某日期是一年中的第几周",
-  formula:"周数 = ceil(当年天数 ÷ 7)（按自然周）",
-  inputs:[
-   {id:"d", label:"日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}
-  ],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var y=new Date(t).getUTCFullYear(); var doy=Math.floor((t-Date.parse(y+'-01-01'))/86400000)+1; var w=Math.ceil(doy/7); return {ok:true,html:'<div class=big>'+y+'年 第 '+w+' 周</div>'};",
-  test:{inputs:{d:"2026-10-18"}, expect:"第 42 周"}},
- {id:"sjweekendcount", cat:"sjrq", icon:"🛋️", name:"某月周末天数", desc:"查某个月有几个周六周日",
-  formula:"遍历当月每天，数周六周日",
-  inputs:[
-   {id:"y", label:"年份", def:"2026", min:1900, max:2100},
-   {id:"m", label:"月份", def:"10", min:1, max:12}
-  ],
-  run:"if(Math.floor(y)!==y||!(y>=1582&&y<=9999)) return {ok:false,msg:'年份须为 1582–9999 的整数'}; if(Math.floor(m)!==m||!(m>=1&&m<=12)) return {ok:false,msg:'月份须为 1–12 的整数'}; var dim=new Date(Date.UTC(y,m,0)).getUTCDate(); var n=0; for(var i=1;i<=dim;i++){var dow=new Date(Date.UTC(y,m-1,i)).getUTCDay(); if(dow===0||dow===6)n++;} return {ok:true,html:'<div class=big>'+y+'年'+m+'月 周末共 '+n+' 天</div>'};",
-  test:{inputs:{y:2026,m:10}, expect:"9 天"}},
- {id:"sjworkhours", cat:"sjrq", icon:"🏢", name:"某月法定工时", desc:"按工作日算某月应出勤小时",
-  formula:"工时 = (当月天数 − 周末天数) × 8",
-  inputs:[
-   {id:"y", label:"年份", def:"2026", min:1900, max:2100},
-   {id:"m", label:"月份", def:"10", min:1, max:12}
-  ],
-  run:"if(Math.floor(y)!==y||!(y>=1582&&y<=9999)) return {ok:false,msg:'年份须为 1582–9999 的整数'}; if(Math.floor(m)!==m||!(m>=1&&m<=12)) return {ok:false,msg:'月份须为 1–12 的整数'}; var dim=new Date(Date.UTC(y,m,0)).getUTCDate(); var we=0; for(var i=1;i<=dim;i++){var dow=new Date(Date.UTC(y,m-1,i)).getUTCDay(); if(dow===0||dow===6)we++;} var wd=dim-we; return {ok:true,html:'<div class=big>'+(wd*8)+' 小时</div><div class=row>'+y+'年'+m+'月工作日 '+wd+' 天（未扣法定节假日）</div>'};",
-  test:{inputs:{y:2026,m:10}, expect:"176 小时"}},
  {id:"sjagegroup", cat:"sjrq", icon:"👥", name:"年龄段判断", desc:"按年龄划分人群阶段",
   formula:"<6婴幼儿，6–12儿童，13–17青少年，18–35青年，36–59中年，≥60老年",
   inputs:[
@@ -4355,13 +4125,6 @@ TOOLS.push(
   ],
   run:"var g=age<6?'婴幼儿':age<=12?'儿童':age<=17?'青少年':age<=35?'青年':age<=59?'中年':'老年'; return {ok:true,html:'<div class=big>'+age+'岁：'+g+'</div>'};",
   test:{inputs:{age:25}, expect:"青年"}},
- {id:"sjdayofyear", cat:"sjrq", icon:"📍", name:"一年第几天", desc:"查某日期是一年中的第几天",
-  formula:"天数 = (日期 − 当年1月1日) ÷ 86400000 + 1",
-  inputs:[
-   {id:"d", label:"日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}
-  ],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var y=new Date(t).getUTCFullYear(); var doy=Math.floor((t-Date.parse(y+'-01-01'))/86400000)+1; return {ok:true,html:'<div class=big>'+y+'年 第 '+doy+' 天</div>'};",
-  test:{inputs:{d:"2026-10-18"}, expect:"第 291 天"}},
  {id:"sjnextweekday", cat:"sjrq", icon:"➡️", name:"下一个周几", desc:"从某日期起最近的周几是几号",
   formula:"往后找第一个目标星期（含当天）",
   inputs:[
@@ -4370,36 +4133,7 @@ TOOLS.push(
   ],
   run:"var t=Date.parse(ref); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dow=new Date(t).getUTCDay(); var delta=(parseInt(target)-dow+7)%7; var dd=new Date(t+delta*86400000); function f2(x){return String(x).padStart(2,'0');} var s=dd.getUTCFullYear()+'-'+f2(dd.getUTCMonth()+1)+'-'+f2(dd.getUTCDate()); return {ok:true,html:'<div class=big>'+s+'</div>'};",
   test:{inputs:{ref:"2026-10-18",target:"5"}, expect:"2026-10-23"}},
- {id:"sjmonthdays", cat:"sjrq", icon:"🗓️", name:"某月天数", desc:"查某年某月有多少天",
-  formula:"用 Date.UTC(年,月,0) 取上月最后一天",
-  inputs:[
-   {id:"y", label:"年份", def:"2024", min:1900, max:2100},
-   {id:"m", label:"月份", def:"2", min:1, max:12}
-  ],
-  run:"if(Math.floor(y)!==y||!(y>=1582&&y<=9999)) return {ok:false,msg:'年份须为 1582–9999 的整数'}; if(Math.floor(m)!==m||!(m>=1&&m<=12)) return {ok:false,msg:'月份须为 1–12 的整数'}; var dim=new Date(Date.UTC(y,m,0)).getUTCDate(); return {ok:true,html:'<div class=big>'+y+'年'+m+'月 有 '+dim+' 天</div>'};",
-  test:{inputs:{y:2024,m:2}, expect:"29 天"}},
- {id:"sjweekstartend", cat:"sjrq", icon:"↔️", name:"本周起止日期", desc:"查某日期所在周的周一起止",
-  formula:"周一起 = 日期 − ((星期几+6) mod 7)，周日 = 周一 + 6",
-  inputs:[
-   {id:"d", label:"日期", type:"text", def:"2026-10-18", ph:"YYYY-MM-DD"}
-  ],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dow=new Date(t).getUTCDay(); var mon=new Date(t-((dow+6)%7)*86400000), sun=new Date(t-((dow+6)%7)*86400000+6*86400000); function f(x){var z=new Date(x);return z.getUTCFullYear()+'-'+String(z.getUTCMonth()+1).padStart(2,'0')+'-'+String(z.getUTCDate()).padStart(2,'0');} return {ok:true,html:'<div class=big>'+f(mon)+' ~ '+f(sun)+'</div><div class=row>周一至周日</div>'};",
-  test:{inputs:{d:"2026-10-18"}, expect:"2026-10-12 ~ 2026-10-18"}},
- {id:"sjseason", cat:"sjrq", icon:"🍂", name:"季节判断", desc:"按月份判断季节（气象划分）",
-  formula:"3–5春，6–8夏，9–11秋，12/1/2冬",
-  inputs:[
-   {id:"m", label:"月份", def:"10", min:1, max:12}
-  ],
-  run:"var s=(m>=3&&m<=5)?'春季':(m>=6&&m<=8)?'夏季':(m>=9&&m<=11)?'秋季':'冬季'; return {ok:true,html:'<div class=big>'+m+'月 是 '+s+'</div>'};",
-  test:{inputs:{m:10}, expect:"秋季"}},
- {id:"sjxusui", cat:"sjrq", icon:"🧧", name:"虚岁计算", desc:"按年份算虚岁",
-  formula:"虚岁 = 当前年份 − 出生年份 + 1",
-  inputs:[
-   {id:"birthY", label:"出生年份", def:"2000", min:1900, max:2100},
-   {id:"nowY", label:"当前年份", def:"2026", min:1900, max:2100}
-  ],
-  run:"if(nowY<birthY) return {ok:false,msg:'当前年份不能早于出生年份'}; return {ok:true,html:'<div class=big>虚岁 '+(nowY-birthY+1)+' 岁</div>'};",
-  test:{inputs:{birthY:2000,nowY:2026}, expect:"虚岁 27 岁"}}
+
 );
 /* ===== WAVE-2D 物理换算（力学/热学/声光） ===== */
 CATS.push({id:"wl", name:"物理换算"});
