@@ -17,6 +17,11 @@
     .section-head{display:flex;justify-content:space-between;align-items:end;gap:16px;margin:34px 0 16px}.section-head h2{font:800 clamp(1.7rem,4vw,2.6rem)/1.1 'Noto Serif SC',serif;margin:0}.section-head p{color:var(--muted);margin:0}.articles{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:16px}.article-card{background:var(--paper);border:1px solid var(--line);overflow:hidden;cursor:pointer;text-align:left;color:inherit;padding:0;transition:transform .2s ease,box-shadow .2s ease}.article-card:hover{transform:translateY(-3px);box-shadow:var(--shadow)}.article-card:first-child{grid-row:span 2}.article-card img{width:100%;height:190px;object-fit:cover;display:block}.article-card:first-child img{height:310px}.article-copy{padding:20px}.article-copy small{color:var(--accent);font-weight:700}.article-copy h3{font:700 1.35rem/1.3 'Noto Serif SC',serif;margin:10px 0}.article-copy p{color:var(--muted);line-height:1.65;margin:0}.read-link{display:inline-flex;gap:8px;align-items:center;margin-top:18px;font-weight:700;color:var(--accent-2)}
     .quote-stage{padding:clamp(42px,8vw,86px) clamp(4px,3vw,34px) 36px;border-bottom:1px solid var(--line)}.quote-stage .eyebrow{margin-bottom:18px}.quote-stage blockquote{margin:0;max-width:980px;font:800 clamp(2.25rem,6vw,5.2rem)/1.2 'Noto Serif SC',serif;letter-spacing:-.045em}.quote-stage cite{display:block;margin-top:24px;color:var(--muted);font-style:normal;font-weight:600;font-size:1rem}.article-categories{display:grid;gap:38px}.article-category{border-top:1px solid var(--line);padding-top:20px}.article-category:first-child{border-top:0;padding-top:0}.category-head{display:flex;justify-content:space-between;align-items:end;gap:14px;margin-bottom:15px}.category-head h2{font:800 clamp(1.55rem,3vw,2.2rem)/1.15 'Noto Serif SC',serif;margin:0}.category-head span{color:var(--muted);font-size:.82rem}.topic-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .archive-list{display:grid;gap:10px}
+.archive-filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.archive-filters button{font:600 .85rem/1 inherit;padding:9px 18px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--muted);cursor:pointer;transition:all .2s ease}
+.archive-filters button:hover{border-color:var(--accent);color:var(--accent)}
+.archive-filters button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.archive-item[hidden]{display:none}
 .archive-item{display:flex;gap:16px;align-items:flex-start;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:16px 18px;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}
 .archive-item:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
 .archive-date{font:700 .82rem/1.5 ui-monospace,Menlo,Consolas,monospace;color:var(--accent);white-space:nowrap;padding-top:2px}
@@ -134,20 +139,21 @@
           <article class="topic-card" data-article="decide"><div class="article-visual thinking" role="img" aria-label="从问题分支到决策节点的插画"><svg viewBox="0 0 120 80"><circle cx="24" cy="40" r="8"/><circle cx="61" cy="21" r="8"/><circle cx="61" cy="59" r="8"/><circle cx="98" cy="40" r="8"/><path d="m32 37 21-13M32 43l21 13m16-32 21 13M69 56l21-13"/></svg></div><div class="topic-copy"><small>思考 · AI 整理 · 2026-10-19</small><h3>做决定前，先把问题写清楚</h3><p>目标、约束、选项、代价四行写下来，纠结少一半。</p></div></article>
         </div></section>
       </div>
-          <div class="section-head"><h2>文章存档</h2><p>全部文章按上线日期从新到旧 · 点任意一篇打开全文</p></div>
+          <div class="section-head"><h2>文章存档</h2><p>全部文章按上线日期从新到旧 · 点分类只看该类 · 点任意一篇打开全文</p></div>
+      <div class="archive-filters" role="group" aria-label="按分类筛选存档"><button type="button" class="active" data-filter="all">全部</button><button type="button" data-filter="tech">科技热点</button><button type="button" data-filter="learn">学习方法</button><button type="button" data-filter="reading">阅读</button><button type="button" data-filter="thinking">思维提升</button></div>
       <div class="archive-list">
-        <article class="archive-item" data-article="ai-prompt"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>别再说 AI 不好用：多数人只缺这三个提问习惯</h3><p>拆解普通人用 AI 效果差的三个根因——任务太大、背景太少、指望一步到位，每条都给改前改后的提问对照，适合把 AI 用在学习和日常事务里的人。</p><small>科技热点 · AI 整理</small></div></article>
-        <article class="archive-item" data-article="vps-buy"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>第一次买云服务器：看懂这 5 个参数就不被坑</h3><p>按「先定用途、再看参数」的顺序，分析 CPU、内存、带宽、流量、地域五项如何互相制约，并列出新手最常见的买错场景，适合准备自建网站或服务的人。</p><small>科技热点 · AI 整理</small></div></article>
-        <article class="archive-item" data-article="net-slow"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>网速慢、打不开？先分清这 4 个概念再排查</h3><p>把网络异常拆成带宽、延迟、丢包、DNS 四层逐层定位，给出每层的自查动作和判断标准，适合网站或代理访问出问题时先自己排查的人。</p><small>科技热点 · AI 整理</small></div></article>
-        <article class="archive-item" data-article="circuit-how"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>电路学不进去？先把这三件事做对</h3><p>针对电路课「听懂不会做」的症结，分析物理图像、动手画图、亲手推公式三件事各自补的是哪一环，并给出练习的先后顺序，适合电气专业低年级学生。</p><small>学习方法 · AI 整理</small></div></article>
-        <article class="archive-item" data-article="wrong-book"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>错题本别再抄答案了：记录“错在哪一步”</h3><p>复盘错题本失效的原因，提出「定位出错步骤—归因类型—一句话对策」的记录结构，说明回看时怎么用才能真正减少重复出错，适合刷题备考的人。</p><small>学习方法 · AI 整理</small></div></article>
-        <article class="archive-item" data-article="spaced"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>对抗遗忘最省力的方法：间隔复习</h3><p>讲解间隔复习背后的遗忘规律，给出 1-3-7-15 天节奏和主动回忆的具体做法，纸笔就能执行，适合需要长期记住知识点的学习者。</p><small>学习方法 · AI 整理</small></div></article>
-        <article class="archive-item" data-article="notes"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>读书笔记怎么做才不白做</h3><p>分析笔记白做的常见原因，提出摘录、问题、解释、行动四栏记录法，让笔记从抄书变成能回头用的思考记录，适合想把阅读变成产出的人。</p><small>阅读 · AI 整理</small></div></article>
-        <article class="archive-item" data-article="theme-read"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>主题阅读：让几本书互相回答你的问题</h3><p>介绍围绕一个问题选多本不同立场的书对读的方法，并给出比较表的维度设计，让几本书互相印证和反驳，适合想深入某个主题的人。</p><small>阅读 · AI 整理</small></div></article>
-        <article class="archive-item" data-article="one-action"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>读完一本书，只带走一个可验证的行动</h3><p>提出读完只带走一个可验证行动的原则，讲解 72 小时实验法怎么设计小验证、用真实结果检验是否真读懂，适合读得多却用不上的人。</p><small>阅读 · AI 整理</small></div></article>
-        <article class="archive-item" data-article="fact-view"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>先分清：这句话是事实，还是观点？</h3><p>把日常表达拆成事实、判断、情绪三层示范分析，说明三层混杂时讨论为什么容易跑偏，适合想提高信息辨别能力的人。</p><small>思考 · AI 整理</small></div></article>
-        <article class="archive-item" data-article="first-q"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>独立思考的第一步：找到那个不能再拆的事实</h3><p>从「多问一句凭什么」切入第一性原理，分析怎么把问题拆到不能再拆的事实层再往回推，适合遇到复杂问题不知从哪下手的人。</p><small>思考 · AI 整理</small></div></article>
-        <article class="archive-item" data-article="decide"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>做决定前，先把问题写清楚</h3><p>给出目标、约束、选项、代价的四行决策框架，分析为什么把问题写清楚本身就能消掉一半纠结，适合面临选择时反复犹豫的人。</p><small>思考 · AI 整理</small></div></article>
+        <article class="archive-item" data-article="ai-prompt" data-cat="tech"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>别再说 AI 不好用：多数人只缺这三个提问习惯</h3><p>拆解普通人用 AI 效果差的三个根因——任务太大、背景太少、指望一步到位，每条都给改前改后的提问对照，适合把 AI 用在学习和日常事务里的人。</p><small>科技热点 · AI 整理</small></div></article>
+        <article class="archive-item" data-article="vps-buy" data-cat="tech"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>第一次买云服务器：看懂这 5 个参数就不被坑</h3><p>按「先定用途、再看参数」的顺序，分析 CPU、内存、带宽、流量、地域五项如何互相制约，并列出新手最常见的买错场景，适合准备自建网站或服务的人。</p><small>科技热点 · AI 整理</small></div></article>
+        <article class="archive-item" data-article="net-slow" data-cat="tech"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>网速慢、打不开？先分清这 4 个概念再排查</h3><p>把网络异常拆成带宽、延迟、丢包、DNS 四层逐层定位，给出每层的自查动作和判断标准，适合网站或代理访问出问题时先自己排查的人。</p><small>科技热点 · AI 整理</small></div></article>
+        <article class="archive-item" data-article="circuit-how" data-cat="learn"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>电路学不进去？先把这三件事做对</h3><p>针对电路课「听懂不会做」的症结，分析物理图像、动手画图、亲手推公式三件事各自补的是哪一环，并给出练习的先后顺序，适合电气专业低年级学生。</p><small>学习方法 · AI 整理</small></div></article>
+        <article class="archive-item" data-article="wrong-book" data-cat="learn"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>错题本别再抄答案了：记录“错在哪一步”</h3><p>复盘错题本失效的原因，提出「定位出错步骤—归因类型—一句话对策」的记录结构，说明回看时怎么用才能真正减少重复出错，适合刷题备考的人。</p><small>学习方法 · AI 整理</small></div></article>
+        <article class="archive-item" data-article="spaced" data-cat="learn"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>对抗遗忘最省力的方法：间隔复习</h3><p>讲解间隔复习背后的遗忘规律，给出 1-3-7-15 天节奏和主动回忆的具体做法，纸笔就能执行，适合需要长期记住知识点的学习者。</p><small>学习方法 · AI 整理</small></div></article>
+        <article class="archive-item" data-article="notes" data-cat="reading"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>读书笔记怎么做才不白做</h3><p>分析笔记白做的常见原因，提出摘录、问题、解释、行动四栏记录法，让笔记从抄书变成能回头用的思考记录，适合想把阅读变成产出的人。</p><small>阅读 · AI 整理</small></div></article>
+        <article class="archive-item" data-article="theme-read" data-cat="reading"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>主题阅读：让几本书互相回答你的问题</h3><p>介绍围绕一个问题选多本不同立场的书对读的方法，并给出比较表的维度设计，让几本书互相印证和反驳，适合想深入某个主题的人。</p><small>阅读 · AI 整理</small></div></article>
+        <article class="archive-item" data-article="one-action" data-cat="reading"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>读完一本书，只带走一个可验证的行动</h3><p>提出读完只带走一个可验证行动的原则，讲解 72 小时实验法怎么设计小验证、用真实结果检验是否真读懂，适合读得多却用不上的人。</p><small>阅读 · AI 整理</small></div></article>
+        <article class="archive-item" data-article="fact-view" data-cat="thinking"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>先分清：这句话是事实，还是观点？</h3><p>把日常表达拆成事实、判断、情绪三层示范分析，说明三层混杂时讨论为什么容易跑偏，适合想提高信息辨别能力的人。</p><small>思考 · AI 整理</small></div></article>
+        <article class="archive-item" data-article="first-q" data-cat="thinking"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>独立思考的第一步：找到那个不能再拆的事实</h3><p>从「多问一句凭什么」切入第一性原理，分析怎么把问题拆到不能再拆的事实层再往回推，适合遇到复杂问题不知从哪下手的人。</p><small>思考 · AI 整理</small></div></article>
+        <article class="archive-item" data-article="decide" data-cat="thinking"><time class="archive-date" datetime="2026-10-19">2026-10-19</time><div class="archive-copy"><h3>做决定前，先把问题写清楚</h3><p>给出目标、约束、选项、代价的四行决策框架，分析为什么把问题写清楚本身就能消掉一半纠结，适合面临选择时反复犹豫的人。</p><small>思考 · AI 整理</small></div></article>
       </div>
     </section>
 
@@ -904,6 +910,18 @@ authForm.addEventListener('submit',async e=>{
 }
 function toast(msg,kind,duration){const t=document.getElementById('toast');t.textContent=msg;t.classList.toggle('warning',kind==='warning');t.classList.add('show');clearTimeout(timer);timer=setTimeout(()=>{t.classList.remove('show','warning')},duration||2200)}
 })();
+</script>
+<script>
+document.querySelectorAll('.archive-filters button').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('.archive-filters button').forEach(function(x){x.classList.remove('active')});
+    b.classList.add('active');
+    var f=b.getAttribute('data-filter');
+    document.querySelectorAll('.archive-item').forEach(function(it){
+      it.hidden=!(f==='all'||it.getAttribute('data-cat')===f);
+    });
+  });
+});
 </script>
 </body>
 <!-- deploy-test-20261017 -->
