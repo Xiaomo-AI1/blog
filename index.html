@@ -18789,6 +18789,141 @@ TOOLS.push(
   test:{"inputs": {"rr": 300, "dh": 2, "h0": 10, "bw": 500, "sig": 400, "qp": 1, "nn": 60}, "expect": "5.63"}}
 );
 
+/* ===== R3-MIX5 补位小批（12 工具：ys×2 / dwhs×3 / sjrq×1 / yqj×1 / hx×2 / wl×1 / dz×2） ===== */
+/* 通用口径：数值入参先 Number()；非法入参 {ok:false,msg}；输出不含 NaN/Infinity；循环先校验上界 */
+
+TOOLS.push(
+ {id:"ysharmony", cat:"ys", icon:"🎨", name:"配色方案生成", desc:"由基色按色相环角度生成互补/邻近/三色/分割互补/四色配色",
+  formula:"基色转 HSL 后按色相偏移取色（色相环角度为色彩设计通则）：互补 [0°,180°]、邻近 [−30°,0°,+30°]、三角色 [0°,120°,240°]、分割互补 [0°,150°,210°]、四色矩形 [0°,90°,180°,270°]；S、L 保持不变。与 yscolor（格式互转/混合模式）、ysrandom/yspastel（随机色）分工：本工具是按基色确定性生成和谐色组",
+  inputs:[
+   {id:"hex", label:"基色（HEX，可带 #，支持 3 位简写）", type:"text", def:"FF6600"},
+   {id:"scheme", label:"配色方案", type:"select", def:"comp", options:[{v:"comp",t:"互补色（2 色）"},{v:"analog",t:"邻近色（3 色）"},{v:"tri",t:"三角色（3 色）"},{v:"split",t:"分割互补（3 色）"},{v:"tetra",t:"四色矩形（4 色）"}]}
+  ],
+  run:"function P(s){s=String(s).trim().replace(/^#/,'');if(/^[0-9a-fA-F]{3}$/.test(s))s=s.charAt(0)+s.charAt(0)+s.charAt(1)+s.charAt(1)+s.charAt(2)+s.charAt(2);if(!/^[0-9a-fA-F]{6}$/.test(s))return null;return [parseInt(s.substr(0,2),16),parseInt(s.substr(2,2),16),parseInt(s.substr(4,2),16)];}function HX(r,g,b){function h(x){x=Math.max(0,Math.min(255,Math.round(x+1e-6)));var t=x.toString(16).toUpperCase();return t.length<2?'0'+t:t;}return '#'+h(r)+h(g)+h(b);}var rgb=P(hex);if(!rgb)return {ok:false,msg:'颜色须为 3 位或 6 位十六进制（如 FF6600 或 F60）'};var r=rgb[0]/255,g=rgb[1]/255,b=rgb[2]/255;var mx=Math.max(r,g,b),mn=Math.min(r,g,b),L=(mx+mn)/2,d=mx-mn;var S=d===0?0:(L>0.5?d/(2-mx-mn):d/(mx+mn));var H=0;if(d!==0){if(mx===r)H=((g-b)/d+(g<b?6:0))*60;else if(mx===g)H=((b-r)/d+2)*60;else H=((r-g)/d+4)*60;H=Math.round(H*10000)/10000;}function conv(hh){hh=((hh%360)+360)%360;var C=(1-Math.abs(2*L-1))*S;var X=C*(1-Math.abs(((hh/60)%2)-1));var m=L-C/2;var rr,gg,bb;if(hh<60){rr=C;gg=X;bb=0;}else if(hh<120){rr=X;gg=C;bb=0;}else if(hh<180){rr=0;gg=C;bb=X;}else if(hh<240){rr=0;gg=X;bb=C;}else if(hh<300){rr=X;gg=0;bb=C;}else{rr=C;gg=0;bb=X;}return HX((rr+m)*255,(gg+m)*255,(bb+m)*255);}var OFF={comp:[0,180],analog:[-30,0,30],tri:[0,120,240],split:[0,150,210],tetra:[0,90,180,270]};var NM={comp:'互补色',analog:'邻近色',tri:'三角色',split:'分割互补',tetra:'四色（矩形）'};var off=OFF[String(scheme)];if(!off)return {ok:false,msg:'请选择配色方案'};var cols=[];for(var i=0;i<off.length;i++)cols.push(conv(H+off[i]));var sw=cols.map(function(c){return '<span style=\"display:inline-block;width:14px;height:14px;background:'+c+';border:1px solid #999;vertical-align:-2px\"></span> '+c;}).join('　');return {ok:true,html:'<div class=\"big\">'+NM[String(scheme)]+'：'+cols.join(' · ')+'</div><div class=\"row\">基色 '+HX(rgb[0],rgb[1],rgb[2])+'（H '+H.toFixed(0)+'°，S '+(S*100).toFixed(0)+'%，L '+(L*100).toFixed(0)+'%），各色保持相同 S/L 仅转色相</div><div class=\"row\">'+sw+'</div>'};",
+  test:{inputs:{hex:"FF6600",scheme:"comp"}, expect:"#0099FF"}},
+ {id:"ysaddmix", cat:"ys", icon:"💡", name:"色光加色混合", desc:"两束色光按相对强度做加色混合（线性光物理口径/sRGB 直算口径）",
+  formula:"加色混合（光叠加）：线性口径先按 sRGB EOTF 解码到线性空间（c≤0.04045 时 c÷12.92，否则 ((c+0.055)÷1.055)^2.4），按强度加权平均后再编码回 sRGB；sRGB 直算口径则直接对 0~255 数值加权平均（显示近似，非物理）。与 yscolor 的正片叠底/滤色等混合模式分工：那些是图层混合模式，本工具是光源叠加",
+  inputs:[
+   {id:"hex1", label:"色光 1（HEX）", type:"text", def:"FF0000"},
+   {id:"w1", label:"色光 1 相对强度", def:"1"},
+   {id:"hex2", label:"色光 2（HEX）", type:"text", def:"00FF00"},
+   {id:"w2", label:"色光 2 相对强度", def:"1"},
+   {id:"space", label:"混合空间", type:"select", def:"linear", options:[{v:"linear",t:"线性光（物理加色）"},{v:"srgb",t:"sRGB 数值直算（近似）"}]}
+  ],
+  run:"function P(s){s=String(s).trim().replace(/^#/,'');if(/^[0-9a-fA-F]{3}$/.test(s))s=s.charAt(0)+s.charAt(0)+s.charAt(1)+s.charAt(1)+s.charAt(2)+s.charAt(2);if(!/^[0-9a-fA-F]{6}$/.test(s))return null;return [parseInt(s.substr(0,2),16),parseInt(s.substr(2,2),16),parseInt(s.substr(4,2),16)];}function HX(r,g,b){function h(x){x=Math.max(0,Math.min(255,Math.round(x)));var t=x.toString(16).toUpperCase();return t.length<2?'0'+t:t;}return '#'+h(r)+h(g)+h(b);}var c1=P(hex1),c2=P(hex2);if(!c1||!c2)return {ok:false,msg:'两束色光都须为 3 位或 6 位十六进制颜色'};var a=Number(w1),bb=Number(w2);if(!(a>=0)||!(bb>=0))return {ok:false,msg:'相对强度不能为负'};if(a+bb<=0)return {ok:false,msg:'两束色光强度不能同时为 0'};function lin(x){x=x/255;return x<=0.04045?x/12.92:Math.pow((x+0.055)/1.055,2.4);}function enc(x){var v=x<=0.0031308?12.92*x:1.055*Math.pow(x,1/2.4)-0.055;return v*255;}var out=[];for(var i=0;i<3;i++){if(String(space)==='srgb')out.push((a*c1[i]+bb*c2[i])/(a+bb));else out.push(enc((a*lin(c1[i])+bb*lin(c2[i]))/(a+bb)));}var res=HX(out[0],out[1],out[2]);return {ok:true,html:'<div class=\"big\">混合色光 '+res+'</div><div class=\"row\">'+HX(c1[0],c1[1],c1[2])+'（强度 '+a+'）＋ '+HX(c2[0],c2[1],c2[2])+'（强度 '+bb+'），'+(String(space)==='srgb'?'sRGB 数值直算口径':'线性光物理混合口径')+'</div><div class=\"row\">等强度红光＋绿光在线性口径下为较亮的黄（#BCBC00），直算口径为 #808000</div>'};",
+  test:{inputs:{hex1:"FF0000",w1:1,hex2:"00FF00",w2:1,space:"linear"}, expect:"#BCBC00"}},
+ {id:"dwbeaufort", cat:"dwhs", icon:"🌬️", name:"蒲福风级换算", desc:"风速（m/s、km/h、节）与蒲福风级互查，含各级风速范围与名称",
+  formula:"蒲福风级（WMO/中国气象局通用表，m/s 区间）：0 级 0.0~0.2、1 级 0.3~1.5、2 级 1.6~3.3、3 级 3.4~5.4、4 级 5.5~7.9、5 级 8.0~10.7、6 级 10.8~13.8、7 级 13.9~17.1、8 级 17.2~20.7、9 级 20.8~24.4、10 级 24.5~28.4、11 级 28.5~32.6、12 级 ≥32.7；名称依次为无风/软风/轻风/微风/和风/清风/强风/疾风/大风/烈风/狂风/暴风/台风。换算：1 m/s = 3.6 km/h，1 节 = 0.514444 m/s；由风级估中值风速可用经验式 v ≈ 0.836×B^1.5（m/s）",
+  inputs:[
+   {id:"mode", label:"换算方向", type:"select", def:"ms", options:[{v:"ms",t:"风速（m/s）→ 风级"},{v:"kmh",t:"风速（km/h）→ 风级"},{v:"kn",t:"风速（节 kn）→ 风级"},{v:"level",t:"风级 → 风速范围"}]},
+   {id:"value", label:"数值（风级模式填 0~12 整数）", def:"10"}
+  ],
+  run:"var LO=[0,0.3,1.6,3.4,5.5,8.0,10.8,13.9,17.2,20.8,24.5,28.5,32.7];var NM=['无风','软风','轻风','微风','和风','清风','强风','疾风','大风','烈风','狂风','暴风','台风'];function rng(l){return l<12?LO[l].toFixed(1)+'~'+(LO[l+1]-0.1).toFixed(1)+' m/s':'≥ 32.7 m/s';}var v=Number(value);if(!isFinite(v))return {ok:false,msg:'数值无效'};if(String(mode)==='level'){if(Math.floor(v)!==v||v<0||v>12)return {ok:false,msg:'风级须为 0~12 的整数'};var mid=0.836*Math.pow(v,1.5);return {ok:true,html:'<div class=\"big\">'+v+' 级 · '+NM[v]+'</div><div class=\"row\">风速范围 '+rng(v)+'（约 '+(LO[v]*3.6).toFixed(1)+'~'+(v<12?((LO[v+1]-0.1)*3.6).toFixed(1)+' km/h':' km/h 以上')+'）；经验中值风速 ≈ '+mid.toFixed(1)+' m/s（0.836×B^1.5）</div>'};}var ms=String(mode)==='kmh'?v/3.6:(String(mode)==='kn'?v*0.514444:v);if(!(ms>=0))return {ok:false,msg:'风速不能为负'};if(ms>200)return {ok:false,msg:'风速超出可换算范围（≤200 m/s）'};var lv=0;for(var i=0;i<13;i++){if(ms>=LO[i])lv=i;}return {ok:true,html:'<div class=\"big\">'+lv+' 级 · '+NM[lv]+'</div><div class=\"row\">'+ms.toFixed(2)+' m/s = '+(ms*3.6).toFixed(1)+' km/h = '+(ms/0.514444).toFixed(1)+' 节；该级范围 '+rng(lv)+'</div>'};",
+  test:{inputs:{mode:"ms",value:10}, expect:"5 级"}},
+ {id:"dwthread", cat:"dwhs", icon:"🔩", name:"螺纹节距与TPI换算", desc:"英制每英寸牙数 TPI 与节距互转，附公制粗牙节距与攻丝底孔查表",
+  formula:"节距 p（mm）= 25.4 ÷ TPI；TPI = 25.4 ÷ p。公制粗牙标准节距（GB/T 193）：M3 0.5、M4 0.7、M5 0.8、M6 1.0、M8 1.25、M10 1.5、M12 1.75、M16 2.0、M20 2.5 mm；攻丝底孔直径 ≈ 公称直径 − 节距。与 dwscrew（英制螺丝号→直径）、djscrew2（螺栓拧紧）分工：本工具只算牙距口径",
+  inputs:[
+   {id:"mode", label:"换算模式", type:"select", def:"tpi", options:[{v:"tpi",t:"TPI → 节距"},{v:"pitch",t:"节距 → TPI"},{v:"metric",t:"公制粗牙查表（节距+底孔）"}]},
+   {id:"tpi", label:"每英寸牙数 TPI", when:"mode=tpi", def:"20"},
+   {id:"pitch", label:"节距 p", unit:"mm", when:"mode=pitch", def:"1.5"},
+   {id:"size", label:"公制规格", type:"select", when:"mode=metric", def:"M10", options:[{v:"M3",t:"M3"},{v:"M4",t:"M4"},{v:"M5",t:"M5"},{v:"M6",t:"M6"},{v:"M8",t:"M8"},{v:"M10",t:"M10"},{v:"M12",t:"M12"},{v:"M16",t:"M16"},{v:"M20",t:"M20"}]}
+  ],
+  run:"function G(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\\.$/,'');return s;}if(String(mode)==='metric'){var TAB={'M3':[3,0.5],'M4':[4,0.7],'M5':[5,0.8],'M6':[6,1.0],'M8':[8,1.25],'M10':[10,1.5],'M12':[12,1.75],'M16':[16,2.0],'M20':[20,2.5]};var pr=TAB[String(size)];if(!pr)return {ok:false,msg:'请选择公制规格'};return {ok:true,html:'<div class=\"big\">'+size+' 粗牙节距 '+G(pr[1])+' mm</div><div class=\"row\">攻丝底孔 ≈ '+pr[0]+' − '+G(pr[1])+' = '+G(pr[0]-pr[1])+' mm；等效 TPI = 25.4 ÷ '+G(pr[1])+' = '+(25.4/pr[1]).toFixed(2)+'</div><div class=\"row\">细牙节距更小，须按图纸标注（如 M10×1.25）另行确认</div>'};}if(String(mode)==='tpi'){var t=Number(tpi);if(!(t>0)||t>10000)return {ok:false,msg:'TPI 须在 (0, 10000] 之间'};var p=25.4/t;return {ok:true,html:'<div class=\"big\">节距 p = '+p.toFixed(2)+' mm</div><div class=\"row\">p = 25.4 ÷ '+t+' = '+G(p)+' mm；导程（单线螺纹）与节距相同</div>'};}var pp=Number(pitch);if(!(pp>0)||pp>1000)return {ok:false,msg:'节距须在 (0, 1000] mm 之间'};var tt=25.4/pp;return {ok:true,html:'<div class=\"big\">TPI = '+tt.toFixed(2)+'</div><div class=\"row\">TPI = 25.4 ÷ '+pp+' = '+G(tt)+' 牙/英寸</div>'};",
+  test:{inputs:{mode:"tpi",tpi:20,pitch:1.5,size:"M10"}, expect:"1.27"}},
+ {id:"dwphotometry", cat:"dwhs", icon:"🔦", name:"光度学单位换算", desc:"光通量/发光强度/照度按立体角与距离换算（lm、cd、lx、sr）",
+  formula:"发光强度 I = Φ ÷ Ω（Φ 光通量 lm，Ω 立体角 sr）；锥形光束立体角 Ω = 2π(1 − cos(θ÷2))，θ 为光束锥顶全角，θ = 360° 时 Ω = 4π（全空间）；照度 E = I ÷ d²（点光源距离定律，d 为距离 m）。与 dgflux（由目标照度×面积反算灯具总光通量的照明设计口径）、dwunit 的照度单位小换算分工：本工具做光度量之间的几何换算",
+  inputs:[
+   {id:"mode", label:"换算模式", type:"select", def:"f2i", options:[{v:"f2i",t:"光通量 Φ＋锥角 → 发光强度 I"},{v:"i2f",t:"发光强度 I＋锥角 → 光通量 Φ"},{v:"illum",t:"发光强度 I＋距离 → 照度 E"},{v:"dist",t:"发光强度 I＋目标照度 E → 距离 d"}]},
+   {id:"phi", label:"光通量 Φ", unit:"lm", def:"1000", hint:"f2i 模式用"},
+   {id:"ci", label:"发光强度 I", unit:"cd", def:"100", hint:"i2f / illum / dist 模式用"},
+   {id:"angle", label:"光束锥顶全角 θ", unit:"°", def:"120", hint:"f2i / i2f 模式用，全向发光填 360"},
+   {id:"dist", label:"距离 d", unit:"m", def:"2", hint:"illum 模式用"},
+   {id:"lx", label:"目标照度 E", unit:"lx", def:"25", hint:"dist 模式用"}
+  ],
+  run:"function G(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\\.$/,'');return s;}function Om(a){return 2*Math.PI*(1-Math.cos(a*Math.PI/360));}var m=String(mode);if(m==='f2i'||m==='i2f'){var an=Number(angle);if(!(an>=0.01&&an<=360))return {ok:false,msg:'锥顶全角须在 [0.01°, 360°] 之间（过小时立体角数值下溢）'};var om=Om(an);if(!(om>0))return {ok:false,msg:'锥角过小，立体角无法计算'};if(m==='f2i'){var ph=Number(phi);if(!(ph>=0))return {ok:false,msg:'光通量不能为负'};var I=ph/om;return {ok:true,html:'<div class=\"big\">I = '+I.toFixed(2)+' cd</div><div class=\"row\">Ω = 2π(1−cos('+(an/2)+'°)) = '+G(om)+' sr；I = '+ph+' ÷ '+G(om)+' = '+G(I)+' cd（光束内均匀分布假设）</div>'};}var cc=Number(ci);if(!(cc>=0))return {ok:false,msg:'发光强度不能为负'};var PH=cc*om;return {ok:true,html:'<div class=\"big\">Φ = '+PH.toFixed(2)+' lm</div><div class=\"row\">Ω = '+G(om)+' sr；Φ = '+cc+' × '+G(om)+' = '+G(PH)+' lm</div>'};}if(m==='illum'){var c2=Number(ci),dd=Number(dist);if(!(c2>=0))return {ok:false,msg:'发光强度不能为负'};if(!(dd>0))return {ok:false,msg:'距离须大于 0'};var E=c2/(dd*dd);return {ok:true,html:'<div class=\"big\">E = '+E.toFixed(2)+' lx</div><div class=\"row\">E = I ÷ d² = '+c2+' ÷ '+dd+'² = '+G(E)+' lx（光线垂直入射口径）</div>'};}if(m==='dist'){var c3=Number(ci),ee=Number(lx);if(!(c3>=0))return {ok:false,msg:'发光强度不能为负'};if(!(ee>0))return {ok:false,msg:'目标照度须大于 0'};var d2=Math.sqrt(c3/ee);return {ok:true,html:'<div class=\"big\">d = '+d2.toFixed(2)+' m</div><div class=\"row\">d = √(I ÷ E) = √('+c3+' ÷ '+ee+') = '+G(d2)+' m</div>'};}return {ok:false,msg:'请选择换算模式'};",
+  test:{inputs:{mode:"f2i",phi:1000,ci:100,angle:120,dist:2,lx:25}, expect:"318.31"}},
+ {id:"sjera", cat:"sjrq", icon:"🏯", name:"纪年换算（年号/民国/佛历）", desc:"公历日期与日本年号、民国纪年、佛历互转（含改元边界日）",
+  formula:"日本年号按改元日分界：明治 1868-10-23 起、大正 1912-07-30 起、昭和 1926-12-25 起、平成 1989-01-08 起、令和 2019-05-01 起；年号年 = 公历年 − 元年 + 1。民国纪年 = 公历年 − 1911（1912 年为民国 1 年，此前为民国前）；佛历（泰国太阳历口径）= 公历年 + 543。与 sjganzhi（干支纪年）分工：本工具是近代纪年制度换算",
+  inputs:[
+   {id:"mode", label:"换算方向", type:"select", def:"g2e", options:[{v:"g2e",t:"公历日期 → 各纪年"},{v:"e2g",t:"纪年 → 公历年"}]},
+   {id:"date", label:"公历日期（YYYY-MM-DD）", type:"text", when:"mode=g2e", def:"2026-10-21"},
+   {id:"era", label:"纪年", type:"select", when:"mode=e2g", def:"reiwa", options:[{v:"reiwa",t:"令和"},{v:"heisei",t:"平成"},{v:"showa",t:"昭和"},{v:"taisho",t:"大正"},{v:"meiji",t:"明治"},{v:"minguo",t:"民国"},{v:"buddhist",t:"佛历"}]},
+   {id:"ey", label:"纪年年数", when:"mode=e2g", def:"8"}
+  ],
+  run:"function leap(y){return (y%4===0&&y%100!==0)||y%400===0;}function cmp(y,m,d,b){if(y!==b[0])return y-b[0];if(m!==b[1])return m-b[1];return d-b[2];}if(String(mode)==='e2g'){var TAB={reiwa:[2018,0,'令和'],heisei:[1988,31,'平成'],showa:[1925,64,'昭和'],taisho:[1911,15,'大正'],meiji:[1867,45,'明治'],minguo:[1911,0,'民国'],buddhist:[-543,0,'佛历']};var pr=TAB[String(era)];if(!pr)return {ok:false,msg:'请选择纪年'};var n=Number(ey);if(!isFinite(n)||Math.floor(n)!==n||n<1)return {ok:false,msg:'纪年年数须为不小于 1 的整数'};if(pr[1]>0&&n>pr[1])return {ok:false,msg:pr[2]+'只有 '+pr[1]+' 年（已改元），不存在 '+pr[2]+' '+n+' 年'};var g=pr[0]+n;if(g<1)return {ok:false,msg:'换算结果须为公元 1 年以后'};return {ok:true,html:'<div class=\"big\">'+pr[2]+' '+n+' 年 = 公历 '+g+' 年</div><div class=\"row\">'+(pr[1]>0?pr[2]+'共 '+pr[1]+' 年，'+g+' 年内发生改元，年内日期须按改元日分段看待':pr[2]+'尚在沿用或为连续纪年')+'</div>'};}var s=String(date).trim();var mt=/^(\\d{4})-(\\d{2})-(\\d{2})$/.exec(s);if(!mt)return {ok:false,msg:'日期格式须为 YYYY-MM-DD'};var y=+mt[1],mo=+mt[2],da=+mt[3];var DIM=[31,leap(y)?29:28,31,30,31,30,31,31,30,31,30,31];if(mo<1||mo>12||da<1||da>DIM[mo-1])return {ok:false,msg:'不是真实存在的日期（请检查月/日与闰年）'};var B=[[2019,5,1,'令和',2019],[1989,1,8,'平成',1989],[1926,12,25,'昭和',1926],[1912,7,30,'大正',1912],[1868,10,23,'明治',1868]];var jp='明治以前（无年号）';for(var i=0;i<B.length;i++){if(cmp(y,mo,da,B[i])>=0){jp=B[i][3]+' '+(y-B[i][4]+1)+' 年';break;}}var mg=y>=1912?('民国 '+(y-1911)+' 年'):('民国前 '+(1912-y)+' 年');return {ok:true,html:'<div class=\"big\">'+jp+' · '+mg+' · 佛历 '+(y+543)+' 年</div><div class=\"row\">公历 '+s+'；日本年号按改元日分界（如 1989-01-07 仍为昭和 64 年，01-08 起平成 1 年）</div>'};",
+  test:{inputs:{mode:"g2e",date:"2026-10-21",era:"reiwa",ey:8}, expect:"令和 8 年"}}
+);
+
+TOOLS.push(
+ {id:"yqcompass", cat:"yqj", icon:"🧭", name:"电子罗盘航向角", desc:"由磁力计双轴读数算航向角（含硬铁偏移校正与磁偏角修正）",
+  formula:"器件口径：先扣硬铁偏移 x = mx − ox、y = my − oy（静止转一圈采 min/max，偏移取 (max+min)÷2）；航向角 = atan2(y, x) 换算为度并归一到 0~360°，再加磁偏角（东偏为正、西偏为负，各地查地磁偏角表）。安装口径：磁力计 x 轴指向机头前方、y 轴指向右侧，模块水平放置；合磁场强度 |B| = √(x²+y²)，地磁场总量程约 25~65 µT，明显超出多为附近铁磁干扰或未校准。与 yqtilt（加速度计倾角）、yqgyro（陀螺仪修正）分工：本工具是磁航向",
+  inputs:[
+   {id:"mx", label:"磁力计 x 读数", unit:"µT", def:"30"},
+   {id:"my", label:"磁力计 y 读数", unit:"µT", def:"40"},
+   {id:"ox", label:"硬铁偏移 ox", unit:"µT", def:"0"},
+   {id:"oy", label:"硬铁偏移 oy", unit:"µT", def:"0"},
+   {id:"decl", label:"磁偏角（东偏正）", unit:"°", def:"0", hint:"中国境内多为西偏（负值），按当地地磁表填"}
+  ],
+  run:"var X=Number(mx),Y=Number(my),OX=Number(ox),OY=Number(oy),DC=Number(decl);if(!isFinite(X)||!isFinite(Y)||!isFinite(OX)||!isFinite(OY))return {ok:false,msg:'磁力计读数与偏移须为数值'};if(Math.abs(X)>1e6||Math.abs(Y)>1e6||Math.abs(OX)>1e6||Math.abs(OY)>1e6)return {ok:false,msg:'读数超出磁力计量程口径（±1e6 µT）'};if(!isFinite(DC)||DC<-60||DC>60)return {ok:false,msg:'磁偏角应在 −60°~+60° 之间'};var x=X-OX,y=Y-OY;if(x===0&&y===0)return {ok:false,msg:'校正后磁场为 0，无法定航向（请检查读数与偏移）'};var mag=Math.sqrt(x*x+y*y);if(mag>1e6)return {ok:false,msg:'校正后磁场强度异常偏大，请检查偏移量'};var h=Math.atan2(y,x)*180/Math.PI+DC;h=((h%360)+360)%360;var note=(mag>=25&&mag<=65)?'处于地磁场典型量程（25~65 µT）':'超出地磁场典型量程（25~65 µT），可能有铁磁干扰或未做椭圆校准';return {ok:true,html:'<div class=\"big\">航向角 '+h.toFixed(2)+'°</div><div class=\"row\">校正后分量 x = '+x+' µT，y = '+y+' µT，|B| = '+mag.toFixed(1)+' µT，'+note+'</div><div class=\"row\">航向以真北为 0°、顺时针计（已加磁偏角 '+DC+'°）；倾斜使用时须先用加速度计做倾斜补偿</div>'};",
+  test:{inputs:{mx:30,my:40,ox:0,oy:0,decl:0}, expect:"53.13"}},
+ {id:"hxbeer", cat:"hx", icon:"🔬", name:"比尔-朗伯定律（吸光度）", desc:"吸光度/透光率/浓度/摩尔吸光系数互算（分光光度法）",
+  formula:"A = ε·b·c（ε 摩尔吸光系数 L/(mol·cm)，b 光程 cm，c 浓度 mol/L）；透光率 T = 10^(−A)，A = −lg(T)。适用稀溶液、单色光口径；A 在 0.2~0.8 区间测量误差最小。全站分光光度基础公式此前无工具，本工具为新建",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"A", options:[{v:"A",t:"由 ε、b、c 算吸光度 A 与透光率"},{v:"C",t:"由 A、ε、b 反算浓度 c"},{v:"E",t:"由 A、b、c 反算摩尔吸光系数 ε"},{v:"A2T",t:"吸光度 A → 透光率 T"},{v:"T2A",t:"透光率 T → 吸光度 A"}]},
+   {id:"eps", label:"摩尔吸光系数 ε", unit:"L/(mol·cm)", def:"10000", hint:"A / C 模式用"},
+   {id:"b", label:"光程 b", unit:"cm", def:"1", hint:"A / C / E 模式用，常用比色皿 1 cm"},
+   {id:"c", label:"浓度 c", unit:"mol/L", def:"0.0001", hint:"A / E 模式用"},
+   {id:"aval", label:"吸光度 A", def:"1", hint:"C / E / A2T 模式用"},
+   {id:"tval", label:"透光率 T", unit:"%", def:"10", hint:"T2A 模式用"}
+  ],
+  run:"function G(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4){var p=x.toPrecision(4);if(p.indexOf('e')<0&&p.indexOf('.')>=0)p=p.replace(/0+$/,'').replace(/\\.$/,'');return p;}var s=x.toFixed(4);if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\\.$/,'');return s;}var m=String(mode);if(m==='A'){var e=Number(eps),bb=Number(b),cc=Number(c);if(!(e>0))return {ok:false,msg:'摩尔吸光系数 ε 须大于 0'};if(!(bb>0))return {ok:false,msg:'光程 b 须大于 0'};if(!(cc>=0))return {ok:false,msg:'浓度不能为负'};var A=e*bb*cc;var T=Math.pow(10,-A)*100;return {ok:true,html:'<div class=\"big\">吸光度 A = '+A.toFixed(3)+'</div><div class=\"row\">A = '+e+' × '+bb+' × '+cc+' = '+G(A)+'；透光率 T = 10^(−A) = '+T.toFixed(2)+'%</div>'+(A>2?'<div class=\"row\">A 大于 2 时杂散光误差明显，建议稀释后测（最佳区间 0.2~0.8）</div>':'')};}if(m==='C'){var e2=Number(eps),b2=Number(b),A2=Number(aval);if(!(e2>0))return {ok:false,msg:'摩尔吸光系数 ε 须大于 0'};if(!(b2>0))return {ok:false,msg:'光程 b 须大于 0'};if(!(A2>=0))return {ok:false,msg:'吸光度不能为负'};var c2=A2/(e2*b2);return {ok:true,html:'<div class=\"big\">浓度 c = '+G(c2)+' mol/L</div><div class=\"row\">c = A ÷ (ε·b) = '+A2+' ÷ ('+e2+' × '+b2+')</div>'};}if(m==='E'){var b3=Number(b),c3=Number(c),A3=Number(aval);if(!(b3>0))return {ok:false,msg:'光程 b 须大于 0'};if(!(c3>0))return {ok:false,msg:'反算 ε 时浓度须大于 0'};if(!(A3>=0))return {ok:false,msg:'吸光度不能为负'};var e3=A3/(b3*c3);return {ok:true,html:'<div class=\"big\">ε = '+G(e3)+' L/(mol·cm)</div><div class=\"row\">ε = A ÷ (b·c) = '+A3+' ÷ ('+b3+' × '+c3+')</div>'};}if(m==='A2T'){var A4=Number(aval);if(!(A4>=0&&A4<=10))return {ok:false,msg:'吸光度应在 0~10 之间'};var T4=Math.pow(10,-A4)*100;return {ok:true,html:'<div class=\"big\">透光率 T = '+T4.toFixed(2)+'%</div><div class=\"row\">T = 10^(−'+A4+') × 100%</div>'};}if(m==='T2A'){var T5=Number(tval);if(!(T5>0&&T5<=100))return {ok:false,msg:'透光率须在 (0%, 100%] 之间（T = 0 时吸光度为无穷大）'};var A5=-Math.log10(T5/100);return {ok:true,html:'<div class=\"big\">吸光度 A = '+A5.toFixed(3)+'</div><div class=\"row\">A = −lg('+(T5/100)+') = '+G(A5)+'</div>'};}return {ok:false,msg:'请选择计算模式'};",
+  test:{inputs:{mode:"A",eps:10000,b:1,c:0.0001,aval:1,tval:10}, expect:"A = 1.000"}},
+ {id:"hxserialdil", cat:"hx", icon:"🧪", name:"梯度稀释（倍比稀释）系列", desc:"按固定稀释倍数生成一列梯度浓度（等比稀释/倍比稀释）",
+  formula:"第 k 级浓度 Cₖ = C₀ ÷ DFᵏ（k = 0,1,…,n；DF 为每步稀释倍数）；配制：每级取上一级 1 份 + (DF − 1) 份稀释液。与 hxdilute（单次 C₁V₁ = C₂V₂ 稀释）分工：本工具生成整列梯度（如标准曲线系列、倍比稀释效价测定）",
+  inputs:[
+   {id:"C0", label:"初始浓度 C₀", def:"10"},
+   {id:"unit", label:"浓度单位（文本）", type:"text", def:"mg/L"},
+   {id:"DF", label:"每步稀释倍数 DF", def:"10", hint:"常用 10 倍、2 倍梯度"},
+   {id:"steps", label:"稀释步数 n（生成 n+1 个梯度）", def:"5", hint:"1~12 步"}
+  ],
+  run:"function G(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4){var p=x.toPrecision(4);if(p.indexOf('e')<0&&p.indexOf('.')>=0)p=p.replace(/0+$/,'').replace(/\\.$/,'');return p;}var s=x.toFixed(4);if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\\.$/,'');return s;}function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');}var c0=Number(C0),df=Number(DF),n=Number(steps);if(!(c0>0))return {ok:false,msg:'初始浓度须大于 0'};if(!(df>1&&df<=1e6))return {ok:false,msg:'稀释倍数须在 (1, 1e6] 之间（DF = 1 不构成稀释）'};if(!isFinite(n)||Math.floor(n)!==n||n<1||n>12)return {ok:false,msg:'稀释步数须为 1~12 的整数'};var u=esc(unit);var rows='';var last=0;for(var k=0;k<=n;k++){var v=c0/Math.pow(df,k);last=v;rows+='<div class=\"row\">第 '+k+' 级：'+G(v)+' '+u+'</div>';}return {ok:true,html:'<div class=\"big\">共 '+(n+1)+' 个梯度：'+G(c0)+' → '+G(last)+' '+u+'</div>'+rows+'<div class=\"row\">每级配制：取上一级 1 份 + '+G(df-1)+' 份稀释液（混匀后再取下一份）</div>'};",
+  test:{inputs:{C0:10,unit:"mg/L",DF:10,steps:5}, expect:"0.001"}},
+ {id:"wlelastic", cat:"wl", icon:"🪢", name:"弹性常数互转（E/G/K/ν）", desc:"各向同性线弹性常数互转：杨氏模量/剪切/体积模量/泊松比/拉梅常数",
+  formula:"各向同性线弹性（任意两个独立常数定全部）：G = E ÷ (2(1+ν))，K = E ÷ (3(1−2ν))，λ = Eν ÷ ((1+ν)(1−2ν))；反之 E = 9KG ÷ (3K+G)，ν = (3K−2G) ÷ (2(3K+G))，λ = K − 2G÷3。ν 须在 (−1, 0.5) 之间（ν→0.5 为不可压缩极限，分母趋零）。与 wlyoung（由拉伸试验 F/A 与 ΔL/L 求 E 的测量口径）分工：本工具是常数体系换算，常数口径见材料力学教材",
+  inputs:[
+   {id:"mode", label:"已知量", type:"select", def:"ey", options:[{v:"ey",t:"已知杨氏模量 E 与泊松比 ν"},{v:"gk",t:"已知剪切模量 G 与体积模量 K"}]},
+   {id:"E", label:"杨氏模量 E", unit:"GPa", when:"mode=ey", def:"200", hint:"钢约 200~210，铝约 69，铜约 110"},
+   {id:"nu", label:"泊松比 ν", when:"mode=ey", def:"0.3", hint:"钢约 0.30，橡胶约 0.49，软木约 0"},
+   {id:"G", label:"剪切模量 G", unit:"GPa", when:"mode=gk", def:"76.923077"},
+   {id:"K", label:"体积模量 K", unit:"GPa", when:"mode=gk", def:"166.666667"}
+  ],
+  run:"function F(x){return x.toFixed(2);}if(String(mode)==='ey'){var e=Number(E),v=Number(nu);if(!(e>0&&e<=1e6))return {ok:false,msg:'杨氏模量须在 (0, 1e6] GPa 之间'};if(!(v>-1&&v<0.5))return {ok:false,msg:'泊松比须在 (−1, 0.5) 之间（ν = 0.5 为不可压缩极限，K 发散）'};var G=e/(2*(1+v)),K=e/(3*(1-2*v)),lam=e*v/((1+v)*(1-2*v));return {ok:true,html:'<div class=\"big\">G = '+F(G)+' GPa，K = '+F(K)+' GPa</div><div class=\"row\">拉梅常数 λ = '+F(lam)+' GPa；G = E÷(2(1+ν))，K = E÷(3(1−2ν))，输入 E = '+e+' GPa、ν = '+v+'</div>'};}var g2=Number(G),k2=Number(K);if(!(g2>0&&g2<=1e6))return {ok:false,msg:'剪切模量须在 (0, 1e6] GPa 之间'};if(!(k2>0&&k2<=1e6))return {ok:false,msg:'体积模量须在 (0, 1e6] GPa 之间'};var E2=9*k2*g2/(3*k2+g2);var nu2=(3*k2-2*g2)/(2*(3*k2+g2));var lam2=k2-2*g2/3;return {ok:true,html:'<div class=\"big\">E = '+F(E2)+' GPa，ν = '+nu2.toFixed(4)+'</div><div class=\"row\">拉梅常数 λ = '+F(lam2)+' GPa；E = 9KG÷(3K+G)，ν = (3K−2G)÷(2(3K+G))</div>'};",
+  test:{inputs:{mode:"ey",E:200,nu:0.3,G:76.923077,K:166.666667}, expect:"76.92"}},
+ {id:"dzcmrr", cat:"dz", icon:"🎚️", name:"共模抑制比 CMRR 换算", desc:"CMRR 分贝/线性比互转，并估算共模输入引起的输出误差",
+  formula:"CMRR = 20·lg(Ad ÷ Acm)，线性比值 = 10^(CMRR_dB ÷ 20)；共模折合输入误差 = Vcm ÷ 线性比值，输出误差 = Ad × Vcm ÷ 线性比值。与 yqcommonmode（共模电感器件阻抗）、dzopamp2（失调预算）分工：本工具只算 CMRR 本体与共模误差。运放 CMRR 典型 60~120 dB",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"tolin", options:[{v:"tolin",t:"dB → 线性比值"},{v:"todb",t:"线性比值 → dB"},{v:"err",t:"共模输出误差估算"}]},
+   {id:"db", label:"CMRR", unit:"dB", when:"mode=tolin", def:"100"},
+   {id:"ratio", label:"线性比值 Ad/Acm", when:"mode=todb", def:"100000"},
+   {id:"db2", label:"CMRR", unit:"dB", when:"mode=err", def:"100"},
+   {id:"Ad", label:"差模增益 Ad（倍）", when:"mode=err", def:"1000"},
+   {id:"Vcm", label:"共模输入 Vcm", unit:"V", when:"mode=err", def:"1"}
+  ],
+  run:"function G(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4){var p=x.toPrecision(4);if(p.indexOf('e')<0&&p.indexOf('.')>=0)p=p.replace(/0+$/,'').replace(/\\.$/,'');return p;}var s=x.toFixed(4);if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\\.$/,'');return s;}function VU(v){var av=Math.abs(v);if(av>=1)return v.toFixed(4)+' V';if(av>=1e-3)return (v*1000).toFixed(2)+' mV';if(av>=1e-6)return (v*1e6).toFixed(2)+' µV';if(v===0)return '0 V';return v.toPrecision(4)+' V';}if(String(mode)==='tolin'){var d=Number(db);if(!(d>=0&&d<=200))return {ok:false,msg:'CMRR 应在 0~200 dB 之间'};var r=Math.pow(10,d/20);return {ok:true,html:'<div class=\"big\">线性比值 '+G(r)+'</div><div class=\"row\">比值 = 10^('+d+' ÷ 20)；即共模信号被抑制到差模等效的 '+G(1/r)+' 倍</div>'};}if(String(mode)==='todb'){var r2=Number(ratio);if(!(r2>0&&r2<=1e15))return {ok:false,msg:'线性比值须在 (0, 1e15] 之间'};var d2=20*Math.log10(r2);return {ok:true,html:'<div class=\"big\">CMRR = '+d2.toFixed(2)+' dB</div><div class=\"row\">CMRR = 20·lg('+r2+')；比值小于 1 时为负 dB（共模反而被放大）</div>'};}var d3=Number(db2),ad=Number(Ad),vc=Number(Vcm);if(!(d3>=0&&d3<=200))return {ok:false,msg:'CMRR 应在 0~200 dB 之间'};if(!(ad>0))return {ok:false,msg:'差模增益须大于 0'};if(!(vc>=0))return {ok:false,msg:'共模输入不能为负'};var r3=Math.pow(10,d3/20);var ein=vc/r3,eout=ad*ein;return {ok:true,html:'<div class=\"big\">输出共模误差 '+VU(eout)+'</div><div class=\"row\">折合输入误差 = '+vc+' ÷ '+G(r3)+' = '+VU(ein)+'；输出误差 = Ad × 输入误差 = '+ad+' × '+VU(ein)+'</div>'};",
+  test:{inputs:{mode:"tolin",db:100,ratio:100000,db2:100,Ad:1000,Vcm:1}, expect:"100000"}},
+ {id:"dzwavefactor", cat:"dz", icon:"〰️", name:"波形因数（波形/峰值/纹波）", desc:"常用波形的波形因数、峰值因数与整流纹波因数，及任意波形三值互算",
+  formula:"波形因数 kf = Vrms ÷ Vavg（Vavg 为全波整流平均值），峰值因数 kp = Vpk ÷ Vrms，整流纹波因数 r = √(kf² − 1)。解析值（教材口径）：正弦 kf = π÷(2√2) ≈ 1.1107、kp = √2 ≈ 1.4142、r ≈ 0.4834；半波正弦 kf = π÷2 ≈ 1.5708、kp = 2、r ≈ 1.2114；方波三者 1 / 1 / 0；三角波 kf = 2÷√3 ≈ 1.1547、kp = √3 ≈ 1.7321、r ≈ 0.5774。与 dzrms/dzsine（正弦峰值有效值数值换算）分工：本工具算波形形状因数",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"preset", options:[{v:"preset",t:"常用波形查表（解析值）"},{v:"custom",t:"由 Vpk / Vrms / Vavg 计算"}]},
+   {id:"wave", label:"波形", type:"select", when:"mode=preset", def:"sine", options:[{v:"sine",t:"正弦波"},{v:"half",t:"半波正弦"},{v:"square",t:"方波"},{v:"tri",t:"三角波"}]},
+   {id:"Vpk", label:"峰值 Vpk", unit:"V", when:"mode=custom", def:"10"},
+   {id:"Vrms", label:"有效值 Vrms", unit:"V", when:"mode=custom", def:"7.071"},
+   {id:"Vavg", label:"整流平均值 Vavg", unit:"V", when:"mode=custom", def:"6.366"}
+  ],
+  run:"if(String(mode)==='custom'){var p=Number(Vpk),r=Number(Vrms),a=Number(Vavg);if(!(p>0))return {ok:false,msg:'峰值须大于 0'};if(!(r>0))return {ok:false,msg:'有效值须大于 0'};if(!(a>0))return {ok:false,msg:'整流平均值须大于 0（为 0 时波形因数无定义）'};if(r>p*1.0001)return {ok:false,msg:'有效值不能大于峰值（物理上不可能）'};if(a>r*1.0001)return {ok:false,msg:'整流平均值不能大于有效值（kf 不应小于 1）'};var kf=r/a,kp=p/r,rr=Math.sqrt(Math.max(0,kf*kf-1));return {ok:true,html:'<div class=\"big\">kf = '+kf.toFixed(4)+'，kp = '+kp.toFixed(4)+'</div><div class=\"row\">纹波因数 r = √(kf²−1) = '+rr.toFixed(4)+'；kf = Vrms÷Vavg = '+r+'÷'+a+'，kp = Vpk÷Vrms = '+p+'÷'+r+'</div>'};}var TAB={sine:[Math.PI/(2*Math.SQRT2),Math.SQRT2],half:[Math.PI/2,2],square:[1,1],tri:[2/Math.sqrt(3),Math.sqrt(3)]};var NM={sine:'正弦波',half:'半波正弦',square:'方波',tri:'三角波'};var pr=TAB[String(wave)];if(!pr)return {ok:false,msg:'请选择波形'};var kf2=pr[0],kp2=pr[1],r2=Math.sqrt(Math.max(0,kf2*kf2-1));return {ok:true,html:'<div class=\"big\">'+NM[String(wave)]+'：kf = '+kf2.toFixed(4)+'，kp = '+kp2.toFixed(4)+'</div><div class=\"row\">整流纹波因数 r = '+r2.toFixed(4)+'（全波整流口径；方波整流后为直流，故 r = 0）</div>'};",
+  test:{inputs:{mode:"preset",wave:"sine",Vpk:10,Vrms:7.071,Vavg:6.366}, expect:"1.1107"}}
+);
+
 
 /* 数据驱动工具自动注册渲染器（必须在所有 TOOLS.push 之后、初始化之前执行） */
 TOOLS.forEach(function(t){ if(t.run&&!RENDER[t.id]){ RENDER[t.id]=function(tool){ renderDataTool(tool); }; } });
