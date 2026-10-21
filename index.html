@@ -7270,6 +7270,278 @@ TOOLS.push(
   test:{inputs:{base:"1.8", div:16, lead:5, rpm:300}, expect:"3200"}}
 );
 
+/* ===== R3 电子电路新增 25 工具（2026-10-21） ===== */
+TOOLS.push(
+ {id:"dzbuckrip", cat:"dz", icon:"🌀", name:"Buck 电感设计（纹波反算）", desc:"由允许纹波电流反算 Buck 电感量，或给定电感算纹波与峰值电流",
+  formula:"理想 Buck 占空比 D = Vout ÷ Vin；电感 L = (Vin − Vout) × D ÷ (ΔI × f)；给定 L 时纹波 ΔI = (Vin − Vout) × D ÷ (L × f)，峰值电流 Ipk = Iout + ΔI ÷ 2。CCM（连续导通）近似，未计电感直流电阻与二极管/开关压降",
+  inputs:[
+   {id:"mode", label:"计算分支", type:"select", def:"needL", options:[{v:"needL",t:"由纹波反算电感 L"},{v:"haveL",t:"给定 L 算纹波电流"}]},
+   {id:"vin", label:"输入电压 Vin", unit:"V", def:"12"},
+   {id:"vout", label:"输出电压 Vout", unit:"V", def:"5"},
+   {id:"fsw", label:"开关频率 f", unit:"kHz", def:"100"},
+   {id:"iout", label:"负载电流 Iout", unit:"A", def:"2"},
+   {id:"di", label:"允许纹波电流 ΔI", unit:"A", when:"mode=needL", def:"0.5", hint:"常用取 Iout 的 20%~40%"},
+   {id:"L", label:"电感量 L", unit:"µH", when:"mode=haveL", def:"100"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var vn=Number(vin),vo=Number(vout),ff=Number(fsw)*1000,io=Number(iout);if(!(vn>0)||!(vo>0))return {ok:false,msg:'输入/输出电压须大于 0'};if(vo>=vn)return {ok:false,msg:'Buck 要求 Vin > Vout，当前 Vout ≥ Vin 不成立'};if(!(ff>0))return {ok:false,msg:'开关频率须大于 0'};if(!(io>0))return {ok:false,msg:'负载电流须大于 0'};var D=vo/vn;if(String(mode)==='haveL'){var LL=Number(L);if(!(LL>0))return {ok:false,msg:'电感量须大于 0'};var dI=(vn-vo)*D/(LL*1e-6*ff);var ipk=io+dI/2,imn=io-dI/2;var h='<div class=\\\"big\\\">纹波电流 ΔI = '+F(dI)+' A</div><div class=\\\"row\\\">峰值电流 Ipk = '+F(ipk)+' A，谷值电流 '+F(imn)+' A；D = '+F(D)+'，纹波率 '+F(dI/io*100)+'%</div>';if(imn<0)h+='<div class=\\\"row\\\">⚠️ 谷值电流为负，电感电流已断续（DCM），以上为 CCM 公式近似</div>';return {ok:true,html:h};}var dd=Number(di);if(!(dd>0))return {ok:false,msg:'允许纹波电流须大于 0'};var Lr=(vn-vo)*D/(dd*ff);return {ok:true,html:'<div class=\\\"big\\\">所需电感 L = '+F(Lr*1e6)+' µH</div><div class=\\\"row\\\">占空比 D = Vout ÷ Vin = '+F(D)+'；峰值电流 = '+F(io+dd/2)+' A，选电感量不小于计算值、饱和电流大于峰值电流</div>'};",
+  test:{inputs:{mode:"needL",vin:12,vout:5,fsw:100,iout:2,di:0.5,L:100}, expect:"58.3333"}},
+ {id:"dzlcfilter", cat:"dz", icon:"🌊", name:"无源 LC 滤波参数", desc:"LC 低通的截止频率与特征阻抗，或由目标 fc 反算 L / C",
+  formula:"截止（谐振）频率 fc = 1 ÷ (2π√(L·C))；特征阻抗 Z0 = √(L ÷ C)；反算：C = 1 ÷ ((2πfc)²·L)，L = 1 ÷ ((2πfc)²·C)。无源 LC 低通口径，实际转折点受负载与源阻抗（即 Z0 匹配程度）影响",
+  inputs:[
+   {id:"mode", label:"计算分支", type:"select", def:"fc", options:[{v:"fc",t:"给 L、C 算 fc 与 Z0"},{v:"needC",t:"给 fc 与 L 求 C"},{v:"needL",t:"给 fc 与 C 求 L"}]},
+   {id:"L", label:"电感 L", unit:"µH", def:"100", hint:"needL 分支不用此项"},
+   {id:"C", label:"电容 C", unit:"µF", def:"10", hint:"needC 分支不用此项"},
+   {id:"fct", label:"目标截止频率 fc", unit:"kHz", def:"1", hint:"仅 needC / needL 分支使用"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var m=String(mode);if(m==='needC'||m==='needL'){var ft=Number(fct)*1000;if(!(ft>0))return {ok:false,msg:'目标截止频率须大于 0'};var w=2*Math.PI*ft;if(m==='needC'){var L1=Number(L)*1e-6;if(!(L1>0))return {ok:false,msg:'电感 L 须大于 0'};var C1=1/(w*w*L1);return {ok:true,html:'<div class=\\\"big\\\">所需电容 C = '+F(C1*1e6)+' µF</div><div class=\\\"row\\\">fc = '+F(ft)+' Hz，L = '+F(L1*1e6)+' µH；特征阻抗 Z0 = √(L/C) = '+F(Math.sqrt(L1/C1))+' Ω</div>'};}var C2=Number(C)*1e-6;if(!(C2>0))return {ok:false,msg:'电容 C 须大于 0'};var L2=1/(w*w*C2);return {ok:true,html:'<div class=\\\"big\\\">所需电感 L = '+F(L2*1000)+' mH</div><div class=\\\"row\\\">fc = '+F(ft)+' Hz，C = '+F(C2*1e6)+' µF；即 '+F(L2*1e6)+' µH，特征阻抗 Z0 = '+F(Math.sqrt(L2/C2))+' Ω</div>'};}var LL=Number(L)*1e-6,CC=Number(C)*1e-6;if(!(LL>0))return {ok:false,msg:'电感 L 须大于 0'};if(!(CC>0))return {ok:false,msg:'电容 C 须大于 0'};var fc=1/(2*Math.PI*Math.sqrt(LL*CC));var Z0=Math.sqrt(LL/CC);return {ok:true,html:'<div class=\\\"big\\\">截止频率 fc = '+F(fc)+' Hz</div><div class=\\\"row\\\">即 '+F(fc/1000)+' kHz；特征阻抗 Z0 = √(L/C) = '+F(Z0)+' Ω，源/负载接近 Z0 时滤波特性最接近设计值</div>'};",
+  test:{inputs:{mode:"fc",L:100,C:10,fct:1}, expect:"5032.9212"}},
+ {id:"dzmossw", cat:"dz", icon:"🔀", name:"MOSFET 开关损耗", desc:"电压电流交叠开关损耗 + 栅极驱动损耗（与导通损耗分开）",
+  formula:"开关（交叠）损耗 Psw = ½ × Vds × Id × (tr + tf) × f（开通/关断各一次交叠的三角近似）；栅极损耗 Pgate = Qg × Vg × f，由驱动电源提供；总开关相关损耗 = Psw + Pgate。导通损耗 I²×Rds(on) 不在此计（另有 MOSFET 导通损耗工具）",
+  inputs:[
+   {id:"v", label:"漏源电压 Vds", unit:"V", def:"48"},
+   {id:"i", label:"漏极电流 Id", unit:"A", def:"10"},
+   {id:"tr", label:"上升时间 tr", unit:"ns", def:"20"},
+   {id:"tf", label:"下降时间 tf", unit:"ns", def:"30"},
+   {id:"fsw", label:"开关频率 f", unit:"kHz", def:"100"},
+   {id:"qg", label:"栅极总电荷 Qg", unit:"nC", def:"50"},
+   {id:"vg", label:"驱动电压 Vg", unit:"V", def:"10"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var vv=Number(v),ii=Number(i),trr=Number(tr),tff=Number(tf),ff=Number(fsw)*1000,q=Number(qg),g=Number(vg);if(!(vv>0))return {ok:false,msg:'漏源电压须大于 0'};if(!(ii>=0))return {ok:false,msg:'漏极电流不能为负'};if(!(trr>=0)||!(tff>=0))return {ok:false,msg:'上升/下降时间不能为负'};if(!(ff>0))return {ok:false,msg:'开关频率须大于 0'};if(!(q>=0))return {ok:false,msg:'栅极电荷不能为负'};if(!(g>0))return {ok:false,msg:'驱动电压须大于 0'};var psw=0.5*vv*ii*(trr+tff)*1e-9*ff;var pg=q*1e-9*g*ff;var esw=0.5*vv*ii*(trr+tff)*1e-9;return {ok:true,html:'<div class=\\\"big\\\">开关相关总损耗 = '+F(psw+pg)+' W</div><div class=\\\"row\\\">交叠损耗 Psw = '+F(psw)+' W（每次开关能量 '+F(esw*1e6)+' µJ）；栅极损耗 Pgate = '+F(pg)+' W</div><div class=\\\"row\\\">未含导通损耗 I²×Rds(on) 与二极管反向恢复损耗，选散热时应叠加</div>'};",
+  test:{inputs:{v:48,i:10,tr:20,tf:30,fsw:100,qg:50,vg:10}, expect:"1.25"}},
+ {id:"dzgateres", cat:"dz", icon:"🚪", name:"栅极驱动电阻计算", desc:"由栅极电荷与目标开关时间反算驱动回路总电阻",
+  formula:"平均栅极电流 Ig = Qg ÷ t_target；驱动回路总电阻 Rg = (Vdrv − Vgp) ÷ Ig，Vgp 为米勒平台电压（查 MOSFET 输出特性/手册）。算得为回路总电阻，实际外串电阻 ≈ Rg − 驱动芯片内阻 − 栅极内阻",
+  inputs:[
+   {id:"qg", label:"栅极总电荷 Qg", unit:"nC", def:"50"},
+   {id:"t", label:"目标开关时间 t", unit:"ns", def:"50", hint:"希望的开通（或关断）过渡时间"},
+   {id:"vdrv", label:"驱动电压 Vdrv", unit:"V", def:"12"},
+   {id:"vgp", label:"米勒平台电压 Vgp", unit:"V", def:"5", hint:"查器件手册栅极电荷曲线的平台段"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var q=Number(qg),tt=Number(t),vd=Number(vdrv),vp=Number(vgp);if(!(q>0))return {ok:false,msg:'栅极电荷须大于 0'};if(!(tt>0))return {ok:false,msg:'目标开关时间须大于 0'};if(!(vd>0))return {ok:false,msg:'驱动电压须大于 0'};if(!(vp>=0))return {ok:false,msg:'米勒平台电压不能为负'};if(vd<=vp)return {ok:false,msg:'驱动电压须高于米勒平台电压（Vdrv ≤ Vgp 时平台期无驱动电流）'};var ig=q/tt;var rg=(vd-vp)/ig;return {ok:true,html:'<div class=\\\"big\\\">Rg = '+F(rg)+' Ω</div><div class=\\\"row\\\">平均栅极电流 Ig = Qg ÷ t = '+F(ig)+' A；Rg = ('+vd+' − '+vp+') ÷ '+F(ig)+' = '+F(rg)+' Ω（回路总电阻）</div><div class=\\\"row\\\">外串电阻 ≈ Rg − 驱动内阻 − 栅极内阻；Rg 太小会加剧振铃与 EMI</div>'};",
+  test:{inputs:{qg:50,t:50,vdrv:12,vgp:5}, expect:"Rg = 7"}},
+ {id:"dzopnoise", cat:"dz", icon:"📢", name:"运放电路噪声估算", desc:"运放电压噪声与电阻约翰逊噪声方和根合成，估算输出总噪声",
+  formula:"等效噪声带宽 ENBW = (π ÷ 2) × BW（一阶滚降口径）；运放输出噪声 = en × √ENBW × 闭环增益 G；电阻约翰逊噪声谱密度 = √(4kTR)，k = 1.380649e-23 J/K，按输入等效电阻、经同一增益与带宽折算到输出；两路不相关按方和根合成；峰峰值估算 ≈ 6.6 × RMS（高斯噪声常用系数）",
+  inputs:[
+   {id:"en", label:"运放电压噪声 en", unit:"nV/√Hz", def:"5"},
+   {id:"bw", label:"闭环带宽 BW", unit:"kHz", def:"100"},
+   {id:"g", label:"闭环增益 G", def:"10"},
+   {id:"rk", label:"输入等效电阻 R", unit:"kΩ", def:"10", hint:"源电阻与反馈网络等效到输入端的电阻"},
+   {id:"temp", label:"温度", unit:"℃", def:"25"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var e=Number(en),b=Number(bw)*1000,gn=Number(g),rr=Number(rk)*1000,tp=Number(temp);if(!(e>=0))return {ok:false,msg:'电压噪声不能为负'};if(!(b>0))return {ok:false,msg:'闭环带宽须大于 0'};if(!(gn>0))return {ok:false,msg:'闭环增益须大于 0'};if(!(rr>=0))return {ok:false,msg:'等效电阻不能为负'};if(!(tp>-273.15))return {ok:false,msg:'温度须高于绝对零度'};if(e===0&&rr===0)return {ok:false,msg:'噪声源全为 0，无可计算'};var T=tp+273.15;var enbw=Math.PI/2*b;var sq=Math.sqrt(enbw);var op=e*1e-9*sq*gn;var rd=Math.sqrt(4*1.380649e-23*T*rr);var rn=rd*sq*gn;var tot=Math.sqrt(op*op+rn*rn);return {ok:true,html:'<div class=\\\"big\\\">输出总噪声 ≈ '+F(tot*1e6)+' µVrms</div><div class=\\\"row\\\">运放贡献 '+F(op*1e6)+' µVrms；电阻约翰逊噪声谱密度 '+F(rd*1e9)+' nV/√Hz，贡献 '+F(rn*1e6)+' µVrms；ENBW = '+F(enbw/1000)+' kHz</div><div class=\\\"row\\\">峰峰值估算 ≈ '+F(tot*6.6*1e6)+' µVpp（×6.6）；未计运放电流噪声与 1/f 噪声，低频精密应用需另行评估</div>'};",
+  test:{inputs:{en:5,bw:100,g:10,rk:10,temp:25}, expect:"54.5812"}}
+);
+
+TOOLS.push(
+ {id:"dzslew", cat:"dz", icon:"📈", name:"运放压摆率校核", desc:"由信号频率与峰值幅度算所需压摆率并与运放 SR 判定",
+  formula:"正弦输出不失真所需压摆率 SR需求 = 2π × f × Vpk；给定运放 SR 时满功率带宽 fmax = SR ÷ (2π × Vpk)。SR需求 ≤ 运放 SR 才不产生压摆失真；工程上建议再留 20% 以上裕量",
+  inputs:[
+   {id:"f", label:"信号频率 f", unit:"kHz", def:"20"},
+   {id:"vpk", label:"输出峰值幅度 Vpk", unit:"V", def:"10"},
+   {id:"sr", label:"运放压摆率 SR", unit:"V/µs", def:"13", hint:"查运放手册，如 TL072 约 13，LM358 约 0.5"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var ff=Number(f)*1000,vp=Number(vpk),s=Number(sr);if(!(ff>0))return {ok:false,msg:'信号频率须大于 0'};if(!(vp>0))return {ok:false,msg:'峰值幅度须大于 0'};if(!(s>0))return {ok:false,msg:'运放压摆率须大于 0'};var need=2*Math.PI*ff*vp/1e6;var fmax=s*1e6/(2*Math.PI*vp);var ok=need<=s;return {ok:true,html:'<div class=\\\"big\\\">所需 SR = '+F(need)+' V/µs，'+(ok?'✅ 满足':'❌ 不满足')+'</div><div class=\\\"row\\\">运放 SR = '+s+' V/µs，裕量 ×'+F(s/need)+'；该运放在 Vpk = '+vp+' V 时满功率带宽 fmax = '+F(fmax/1000)+' kHz</div>'+(ok?'':'<div class=\\\"row\\\">应换更高 SR 的运放、降低输出幅度或降低信号频率</div>')};",
+  test:{inputs:{f:20,vpk:10,sr:13}, expect:"1.2566"}},
+ {id:"dzadcenob", cat:"dz", icon:"🔢", name:"ADC 有效位数 ENOB", desc:"SNR/SINAD 与有效位数互算",
+  formula:"ENOB = (SNR − 1.76) ÷ 6.02；反算理论 SNR = 6.02 × ENOB + 1.76（dB）。口径：以 SINAD 代入得到的是含失真的真实 ENOB（数据手册常用口径）；以纯 SNR 代入为理想信噪比口径。常数源于 N 位理想 ADC 量化 SNR = 6.02N + 1.76 dB",
+  inputs:[
+   {id:"mode", label:"计算分支", type:"select", def:"snr", options:[{v:"snr",t:"SNR / SINAD → ENOB"},{v:"enob",t:"ENOB → 理论 SNR"}]},
+   {id:"vdb", label:"SNR 或 SINAD", unit:"dB", when:"mode=snr", def:"74"},
+   {id:"venob", label:"有效位数 ENOB", unit:"位", when:"mode=enob", def:"12"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}if(String(mode)==='enob'){var e=Number(venob);if(!(e>0&&e<=32))return {ok:false,msg:'ENOB 应在 (0, 32] 位之间'};var sn=6.02*e+1.76;return {ok:true,html:'<div class=\\\"big\\\">理论 SNR = '+F(sn)+' dB</div><div class=\\\"row\\\">SNR = 6.02 × '+e+' + 1.76 = '+F(sn)+' dB（理想量化口径，实际 SINAD 会更低）</div>'};}var v=Number(vdb);if(!(v>1.76))return {ok:false,msg:'SNR/SINAD 须大于 1.76 dB，否则 ENOB ≤ 0 无意义'};var en=(v-1.76)/6.02;return {ok:true,html:'<div class=\\\"big\\\">ENOB = '+F(en)+' 位</div><div class=\\\"row\\\">ENOB = ('+v+' − 1.76) ÷ 6.02 = '+F(en)+' 位；标称 '+Math.ceil(en)+' 位 ADC 的理想 SNR 上限约 '+F(6.02*Math.ceil(en)+1.76)+' dB</div>'};",
+  test:{inputs:{mode:"snr",vdb:74,venob:12}, expect:"ENOB = 12"}},
+ {id:"dzcsa", cat:"dz", icon:"🔍", name:"电流检测放大参数", desc:"采样电阻 + 增益的输出电压、功耗、满量程电流与分辨率",
+  formula:"采样电压 Vsense = I × Rs；输出 Vout = I × Rs × G；采样电阻功耗 P = I² × Rs；满量程电流 Ifs = Vout满量程 ÷ (Rs × G)；电流分辨率（每 LSB）= Ifs ÷ 2^ADC位数",
+  inputs:[
+   {id:"i", label:"待测电流 I", unit:"A", def:"10"},
+   {id:"rs", label:"采样电阻 Rs", unit:"mΩ", def:"5"},
+   {id:"g", label:"放大增益 G", def:"20"},
+   {id:"vfs", label:"满量程输出电压", unit:"V", def:"3.3", hint:"ADC 参考电压或放大器输出摆幅上限"},
+   {id:"bits", label:"ADC 位数", def:"12"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var ii=Number(i),r=Number(rs)/1000,gn=Number(g),vf=Number(vfs),bt=Number(bits);if(!(ii>=0))return {ok:false,msg:'电流不能为负'};if(!(r>0))return {ok:false,msg:'采样电阻须大于 0'};if(!(gn>0))return {ok:false,msg:'增益须大于 0'};if(!(vf>0))return {ok:false,msg:'满量程电压须大于 0'};if(!(bt>=1&&bt<=32)||Math.floor(bt)!==bt)return {ok:false,msg:'ADC 位数须为 1~32 的整数'};var vs=ii*r;var vo=vs*gn;var p=ii*ii*r;var ifs=vf/(r*gn);var lsb=ifs/Math.pow(2,bt);var h='<div class=\\\"big\\\">Vout = '+F(vo)+' V</div><div class=\\\"row\\\">采样电压 '+F(vs*1000)+' mV × 增益 '+gn+'；Rs 功耗 '+F(p)+' W（选电阻额定功率留 2 倍以上裕量）</div><div class=\\\"row\\\">满量程电流 Ifs = '+F(ifs)+' A；'+bt+' 位 ADC 分辨率约 '+F(lsb*1000)+' mA/LSB</div>';if(vo>vf)h+='<div class=\\\"row\\\">⚠️ 当前电流输出已超满量程（'+F(vo)+' V > '+vf+' V），会削顶，应减小 Rs 或增益</div>';return {ok:true,html:h};",
+  test:{inputs:{i:10,rs:5,g:20,vfs:3.3,bits:12}, expect:"Vout = 1 V"}},
+ {id:"dztia", cat:"dz", icon:"💡", name:"跨阻放大器（光电检测）", desc:"光电流转电压幅度、补偿电容估算与 −3dB 带宽",
+  formula:"输出幅度 |Vout| = Ip × Rf（跨阻接法输出为反相，实际 Vout = −Ip×Rf，本工具显示幅度）；稳定补偿电容近似式 Cf ≈ √(Cpd ÷ (2π × Rf × GBP))，Cpd 为探测器结电容 + 运放输入电容之和，GBP 为运放增益带宽积；带宽 f = 1 ÷ (2π × Rf × Cf)。近似口径，实际按相位裕度与手册复核",
+  inputs:[
+   {id:"ip", label:"光电流 Ip", unit:"µA", def:"100"},
+   {id:"rf", label:"反馈电阻 Rf", unit:"kΩ", def:"10"},
+   {id:"cpd", label:"总输入电容 Cpd", unit:"pF", def:"20", hint:"光电二极管结电容 + 运放输入电容 + 杂散"},
+   {id:"gbp", label:"运放 GBP", unit:"MHz", def:"10"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var p=Number(ip)*1e-6,r=Number(rf)*1000,c=Number(cpd)*1e-12,gb=Number(gbp)*1e6;if(!(p>0))return {ok:false,msg:'光电流须大于 0'};if(!(r>0))return {ok:false,msg:'反馈电阻须大于 0'};if(!(c>0))return {ok:false,msg:'总输入电容须大于 0（无电容时补偿式不适用）'};if(!(gb>0))return {ok:false,msg:'运放 GBP 须大于 0'};var vo=p*r;var cf=Math.sqrt(c/(2*Math.PI*r*gb));var bw=1/(2*Math.PI*r*cf);return {ok:true,html:'<div class=\\\"big\\\">|Vout| = '+F(vo)+' V（实际输出反相）</div><div class=\\\"row\\\">补偿电容 Cf ≈ '+F(cf*1e12)+' pF；估算带宽 f ≈ '+F(bw/1e6)+' MHz</div><div class=\\\"row\\\">Cf 为 √(Cpd/(2π·Rf·GBP)) 近似式，取值后应实测阶跃响应有无过冲/振铃再微调</div>'};",
+  test:{inputs:{ip:100,rf:10,cpd:20,gbp:10}, expect:"5.6419"}},
+ {id:"dzrcosc", cat:"dz", icon:"🔔", name:"门电路 RC 振荡频率", desc:"施密特触发门电路 RC 振荡频率，或由目标频率反算电阻",
+  formula:"74HC14 等施密特触发门电路 RC 振荡常用近似 f ≈ 1 ÷ (2.2 × R × C)（系数随门限电压与电源电压变化，约 1.7~2.5，属工程近似口径）；反算 R = 1 ÷ (2.2 × f × C)",
+  inputs:[
+   {id:"mode", label:"计算分支", type:"select", def:"freq", options:[{v:"freq",t:"给 R、C 算频率"},{v:"needR",t:"给 f 与 C 求 R"}]},
+   {id:"r", label:"电阻 R", unit:"kΩ", when:"mode=freq", def:"10"},
+   {id:"c", label:"电容 C", unit:"nF", def:"10"},
+   {id:"ft", label:"目标频率 f", unit:"Hz", when:"mode=needR", def:"1000"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var cc=Number(c)*1e-9;if(!(cc>0))return {ok:false,msg:'电容 C 须大于 0'};if(String(mode)==='needR'){var f2=Number(ft);if(!(f2>0))return {ok:false,msg:'目标频率须大于 0'};var R2=1/(2.2*f2*cc);return {ok:true,html:'<div class=\\\"big\\\">所需电阻 R = '+F(R2/1000)+' kΩ</div><div class=\\\"row\\\">R = 1 ÷ (2.2 × '+f2+' × '+F(cc*1e9)+' nF) = '+F(R2)+' Ω；近似口径，实测频率可偏差 ±20%</div>'};}var rr=Number(r)*1000;if(!(rr>0))return {ok:false,msg:'电阻 R 须大于 0'};var fq=1/(2.2*rr*cc);return {ok:true,html:'<div class=\\\"big\\\">振荡频率 f ≈ '+F(fq)+' Hz</div><div class=\\\"row\\\">周期 T ≈ '+F(1000/fq)+' ms；系数 2.2 为 74HC14 常用近似，换门电路系列/电源电压时频率会漂移</div>'};",
+  test:{inputs:{mode:"freq",r:10,c:10,ft:1000}, expect:"4545.4545"}}
+);
+
+TOOLS.push(
+ {id:"dzwien", cat:"dz", icon:"🌉", name:"文氏桥振荡器", desc:"文氏桥振荡频率与起振增益条件校验",
+  formula:"振荡频率 f = 1 ÷ (2πRC)（两臂 R、C 相同口径）；选频网络在 f 处衰减为 1/3，故放大器增益须 ≥ 3 才能起振：同相增益 G = 1 + Rf ÷ R1 ≥ 3，即 Rf ≥ 2×R1（实际常取 2.05~2.2 倍并加稳幅）",
+  inputs:[
+   {id:"r", label:"选频电阻 R", unit:"kΩ", def:"10"},
+   {id:"c", label:"选频电容 C", unit:"nF", def:"10"},
+   {id:"r1", label:"增益下臂电阻 R1", unit:"kΩ", def:"10"},
+   {id:"rf", label:"反馈电阻 Rf", unit:"kΩ", def:"22"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var rr=Number(r)*1000,cc=Number(c)*1e-9,a=Number(r1)*1000,b=Number(rf)*1000;if(!(rr>0))return {ok:false,msg:'选频电阻须大于 0'};if(!(cc>0))return {ok:false,msg:'选频电容须大于 0'};if(!(a>0))return {ok:false,msg:'R1 须大于 0'};if(!(b>=0))return {ok:false,msg:'Rf 不能为负'};var fq=1/(2*Math.PI*rr*cc);var gn=1+b/a;var ok=gn>=3;return {ok:true,html:'<div class=\\\"big\\\">振荡频率 f = '+F(fq)+' Hz</div><div class=\\\"row\\\">放大器增益 G = 1 + Rf/R1 = '+F(gn)+'，起振条件 G ≥ 3：'+(ok?'✅ 满足，可起振':'❌ 不满足，不起振')+'；所需 Rf 最小 '+F(2*a/1000)+' kΩ（= 2×R1）</div><div class=\\\"row\\\">G 恰为 3 是临界，实际取 Rf ≈ 2.1×R1 并加二极管/灯泡稳幅，避免削顶失真</div>'};",
+  test:{inputs:{r:10,c:10,r1:10,rf:22}, expect:"1591.5494"}},
+ {id:"dzlcosc", cat:"dz", icon:"📻", name:"LC 振荡频率（考毕兹/哈特莱）", desc:"考毕兹电容三点式与哈特莱电感三点式的谐振频率",
+  formula:"f = 1 ÷ (2π√(L·C))；考毕兹（电容三点式）：Ceq = C1×C2 ÷ (C1 + C2)，L 为回路电感；哈特莱（电感三点式）：Leq = L1 + L2（未计互感口径），C 为回路电容",
+  inputs:[
+   {id:"topo", label:"振荡形式", type:"select", def:"colp", options:[{v:"colp",t:"考毕兹（电容三点式）"},{v:"hart",t:"哈特莱（电感三点式）"}]},
+   {id:"L", label:"回路电感 L", unit:"µH", when:"topo=colp", def:"10"},
+   {id:"c1", label:"分压电容 C1", unit:"pF", when:"topo=colp", def:"100"},
+   {id:"c2", label:"分压电容 C2", unit:"pF", when:"topo=colp", def:"100"},
+   {id:"l1", label:"电感 L1", unit:"µH", when:"topo=hart", def:"10"},
+   {id:"l2", label:"电感 L2", unit:"µH", when:"topo=hart", def:"10"},
+   {id:"ch", label:"回路电容 C", unit:"pF", when:"topo=hart", def:"100"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}if(String(topo)==='hart'){var a=Number(l1),b=Number(l2),cc=Number(ch);if(!(a>0)||!(b>0))return {ok:false,msg:'L1、L2 须大于 0'};if(!(cc>0))return {ok:false,msg:'回路电容须大于 0'};var le=(a+b)*1e-6;var fh=1/(2*Math.PI*Math.sqrt(le*cc*1e-12));return {ok:true,html:'<div class=\\\"big\\\">f = '+F(fh/1e6)+' MHz</div><div class=\\\"row\\\">Leq = L1 + L2 = '+F(a+b)+' µH（未计互感），C = '+cc+' pF；f = 1 ÷ (2π√(Leq·C))</div>'};}var ll=Number(L),x=Number(c1),y=Number(c2);if(!(ll>0))return {ok:false,msg:'回路电感须大于 0'};if(!(x>0)||!(y>0))return {ok:false,msg:'C1、C2 须大于 0'};var ce=x*y/(x+y);var fq=1/(2*Math.PI*Math.sqrt(ll*1e-6*ce*1e-12));return {ok:true,html:'<div class=\\\"big\\\">f = '+F(fq/1e6)+' MHz</div><div class=\\\"row\\\">Ceq = C1×C2 ÷ (C1+C2) = '+F(ce)+' pF，L = '+ll+' µH；f = 1 ÷ (2π√(L·Ceq))</div>'};",
+  test:{inputs:{topo:"colp",L:10,c1:100,c2:100,l1:10,l2:10,ch:100}, expect:"7.1176"}},
+ {id:"dzammod", cat:"dz", icon:"📡", name:"调幅（AM）信号参数", desc:"调制度、边带功率分配与调幅效率",
+  formula:"由包络：m = (Amax − Amin) ÷ (Amax + Amin)；载波功率 Pc，上下边带总功率 Pside = Pc × m² ÷ 2，总功率 P = Pc × (1 + m² ÷ 2)；调幅效率 η = (m² ÷ 2) ÷ (1 + m² ÷ 2)，m = 1 时最高 33.3%。m > 1 为过调制（失真），本工具拒绝",
+  inputs:[
+   {id:"mode", label:"已知量", type:"select", def:"fromV", options:[{v:"fromV",t:"包络 Amax / Amin"},{v:"fromM",t:"直接给调制度 m"}]},
+   {id:"amax", label:"包络最大值 Amax", unit:"V", when:"mode=fromV", def:"3"},
+   {id:"amin", label:"包络最小值 Amin", unit:"V", when:"mode=fromV", def:"1"},
+   {id:"m0", label:"调制度 m", when:"mode=fromM", def:"0.8"},
+   {id:"pc", label:"载波功率 Pc", unit:"W", def:"100"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var p=Number(pc);if(!(p>0))return {ok:false,msg:'载波功率须大于 0'};var m;if(String(mode)==='fromM'){m=Number(m0);if(!(m>=0))return {ok:false,msg:'调制度不能为负'};if(m>1)return {ok:false,msg:'调制度 m > 1 为过调制，包络失真，本工具不计算'};}else{var ax2=Number(amax),an=Number(amin);if(!(ax2>0))return {ok:false,msg:'Amax 须大于 0'};if(!(an>=0))return {ok:false,msg:'Amin 不能为负'};if(an>ax2)return {ok:false,msg:'Amin 不能大于 Amax'};m=(ax2-an)/(ax2+an);}var ps=p*m*m/2;var pt=p+ps;var eta=(m*m/2)/(1+m*m/2)*100;return {ok:true,html:'<div class=\\\"big\\\">调制度 m = '+F(m)+'</div><div class=\\\"row\\\">边带总功率 Pside = '+F(ps)+' W，信号总功率 '+F(pt)+' W（载波 '+p+' W）；调幅效率 η = '+F(eta)+'%</div><div class=\\\"row\\\">边带功率只占总功率的 '+F(eta)+'% 且载波不携带信息，是 AM 效率低的根源</div>'};",
+  test:{inputs:{mode:"fromV",amax:3,amin:1,m0:0.8,pc:100}, expect:"12.5"}},
+ {id:"dzfmbw", cat:"dz", icon:"🎤", name:"FM 调制带宽（Carson 公式）", desc:"由频偏与最高调制频率估算调频信号带宽与调制指数",
+  formula:"调制指数 β = Δf ÷ fm；Carson 公式：BW ≈ 2 × (Δf + fm)，约包含 98% 信号功率。β << 1 为窄带 FM，β >> 1 为宽带 FM",
+  inputs:[
+   {id:"df", label:"峰值频偏 Δf", unit:"kHz", def:"75"},
+   {id:"fm", label:"最高调制频率 fm", unit:"kHz", def:"15"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var d=Number(df),m=Number(fm);if(!(d>=0))return {ok:false,msg:'频偏不能为负'};if(!(m>0))return {ok:false,msg:'调制频率须大于 0（fm = 0 时 β 无定义）'};var beta=d/m;var bw=2*(d+m);return {ok:true,html:'<div class=\\\"big\\\">所需带宽 BW ≈ '+F(bw)+' kHz</div><div class=\\\"row\\\">调制指数 β = '+F(d)+' ÷ '+F(m)+' = '+F(beta)+'（'+(beta<0.5?'窄带 FM':beta>5?'宽带 FM':'中带宽')+'）；BW = 2 × (Δf + fm) 为 Carson 近似（98% 功率）</div>'};",
+  test:{inputs:{df:75,fm:15}, expect:"180"}},
+ {id:"dzalias", cat:"dz", icon:"🪞", name:"采样混叠频率", desc:"输入频率高于奈奎斯特频率时折叠到基带的混叠频率",
+  formula:"混叠频率 f_alias = |f − k·fs|（k 取使结果落入 [0, fs ÷ 2] 的整数），等价于先对 fs 取模再关于 fs ÷ 2 折叠；f < fs ÷ 2 时不混叠，f = fs ÷ 2 为临界（相位敏感）",
+  inputs:[
+   {id:"fin", label:"输入信号频率 f", unit:"kHz", def:"7"},
+   {id:"fs", label:"采样率 fs", unit:"kHz", def:"10"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var f2=Number(fin),s2=Number(fs);if(!(s2>0))return {ok:false,msg:'采样率须大于 0'};if(!(f2>=0))return {ok:false,msg:'输入频率不能为负'};var nyq=s2/2;var a=f2%s2;if(a>nyq)a=s2-a;var st=f2<nyq?'未发生混叠，采样后能真实还原':(f2===nyq?'临界：f 恰为奈奎斯特频率，采样结果对相位极敏感，工程上不可用':'⚠️ 已发生混叠：采样后无法与 '+F(a)+' kHz 的真实信号区分');return {ok:true,html:'<div class=\\\"big\\\">混叠频率 = '+F(a)+' kHz</div><div class=\\\"row\\\">奈奎斯特频率 fs/2 = '+F(nyq)+' kHz；'+st+'</div><div class=\\\"row\\\">抗混叠须在 ADC 前加模拟低通，并使 fs 高于信号最高频率的 2 倍（工程常取 2.5~5 倍）</div>'};",
+  test:{inputs:{fin:7,fs:10}, expect:"混叠频率 = 3 kHz"}}
+);
+
+TOOLS.push(
+ {id:"dzlpf1", cat:"dz", icon:"🧹", name:"一阶数字低通滤波系数", desc:"模拟 RC 截止频率与采样周期换算指数平滑系数 α，或反算等效 fc",
+  formula:"一阶低通离散式 y += α × (x − y)；RC = 1 ÷ (2πfc)，α = Δt ÷ (RC + Δt)（后向欧拉口径）；反算 RC = Δt × (1 − α) ÷ α，fc = 1 ÷ (2πRC)。α 越小滤波越强、响应越慢",
+  inputs:[
+   {id:"mode", label:"计算分支", type:"select", def:"alpha", options:[{v:"alpha",t:"给 fc 与 Δt 算 α"},{v:"fromalpha",t:"给 α 与 Δt 反算 fc"}]},
+   {id:"fc", label:"截止频率 fc", unit:"Hz", when:"mode=alpha", def:"100"},
+   {id:"dt", label:"采样周期 Δt", unit:"ms", def:"1"},
+   {id:"al", label:"滤波系数 α", when:"mode=fromalpha", def:"0.5", hint:"须在 (0,1) 之间"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var dtm=Number(dt);if(!(dtm>0))return {ok:false,msg:'采样周期须大于 0'};if(String(mode)==='fromalpha'){var a=Number(al);if(!(a>0))return {ok:false,msg:'α 须大于 0（α = 0 等于不更新输出）'};if(a>=1)return {ok:false,msg:'α 须小于 1（α = 1 时 RC = 0、等效 fc 无穷大）'};var rc=dtm*(1-a)/a;var f2=1000/(2*Math.PI*rc);return {ok:true,html:'<div class=\\\"big\\\">等效截止频率 fc = '+F(f2)+' Hz</div><div class=\\\"row\\\">RC = Δt × (1 − α) ÷ α = '+F(rc)+' ms；采样率 '+F(1000/dtm)+' Hz，α = '+a+'</div>'};}var f3=Number(fc);if(!(f3>0))return {ok:false,msg:'截止频率须大于 0'};var rc2=1000/(2*Math.PI*f3);var al2=dtm/(rc2+dtm);return {ok:true,html:'<div class=\\\"big\\\">滤波系数 α = '+F(al2)+'</div><div class=\\\"row\\\">等效 RC = '+F(rc2)+' ms，Δt = '+dtm+' ms；α = Δt ÷ (RC + Δt)，采样率 '+F(1000/dtm)+' Hz</div><div class=\\\"row\\\">若 fc 接近或超过采样率一半，该一阶近似与实际数字滤波响应偏差会变大</div>'};",
+  test:{inputs:{mode:"alpha",fc:100,dt:1,al:0.5}, expect:"0.3859"}},
+ {id:"dzuart", cat:"dz", icon:"💬", name:"UART 波特率误差", desc:"由晶振频率与分频值算实际波特率及相对目标误差",
+  formula:"实际波特率 = fosc ÷ 分频总数。×16 过采样口径：分频总数 = 16 × 分频寄存器值（如 51 单片机/多数 MCU 的 UART 时钟）；直接分频口径：实际 = fosc ÷ 分频值。误差 = (实际 − 目标) ÷ 目标 × 100%，一般 |误差| ≤ 2% 可可靠通信，收发双方误差合计不宜超约 4%",
+  inputs:[
+   {id:"mode", label:"分频口径", type:"select", def:"x16", options:[{v:"x16",t:"×16 过采样（分频值再 ×16）"},{v:"raw",t:"直接分频"}]},
+   {id:"fosc", label:"晶振/外设时钟", unit:"MHz", def:"11.0592"},
+   {id:"div", label:"分频值", def:"6"},
+   {id:"baud", label:"目标波特率", unit:"bps", def:"115200"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var fo=Number(fosc)*1e6,dv=Number(div),bd=Number(baud);if(!(fo>0))return {ok:false,msg:'时钟频率须大于 0'};if(!(dv>0))return {ok:false,msg:'分频值须大于 0'};if(!(bd>0))return {ok:false,msg:'目标波特率须大于 0'};var tot=String(mode)==='x16'?16*dv:dv;var act=fo/tot;var err=(act-bd)/bd*100;var ok=Math.abs(err)<=2;return {ok:true,html:'<div class=\\\"big\\\">实际波特率 = '+F(act)+' bps</div><div class=\\\"row\\\">误差 '+(err>=0?'+':'')+F(err)+'%（分频总数 '+F(tot)+'），'+(ok?'✅ 在 ±2% 内，通常可可靠通信':'❌ 超出 ±2%，误码风险高，应换晶振频率（如 11.0592 MHz）或调整分频')+'</div>'};",
+  test:{inputs:{mode:"x16",fosc:11.0592,div:6,baud:115200}, expect:"115200"}},
+ {id:"dzi2c", cat:"dz", icon:"🚌", name:"I2C 上拉电阻范围", desc:"由总线电容与速度等级算 I2C 上拉电阻上下限",
+  formula:"上限 Rpmax = tr ÷ (0.8473 × Cb)，tr 为上升时间上限：标准模式（100 kHz）1000 ns、快速模式（400 kHz）300 ns，Cb 为总线总电容；下限 Rpmin = (Vdd − 0.4) ÷ 3 mA（灌电流 3 mA 时 VOL ≤ 0.4 V 口径）。Rp 须落在 [Rpmin, Rpmax] 内",
+  inputs:[
+   {id:"spd", label:"速度等级", type:"select", def:"std", options:[{v:"std",t:"标准模式 100 kHz（tr ≤ 1000 ns）"},{v:"fast",t:"快速模式 400 kHz（tr ≤ 300 ns）"}]},
+   {id:"cb", label:"总线总电容 Cb", unit:"pF", def:"100", hint:"含走线、引脚与器件电容，上限 400 pF"},
+   {id:"vdd", label:"电源电压 Vdd", unit:"V", def:"3.3"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var c=Number(cb)*1e-12,vd=Number(vdd);if(!(c>0))return {ok:false,msg:'总线电容须大于 0'};if(!(vd>0.4))return {ok:false,msg:'电源电压须大于 0.4 V（下限公式口径）'};var tr=String(spd)==='fast'?300e-9:1000e-9;var rmax=tr/(0.8473*c);var rmin=(vd-0.4)/0.003;var bad=rmin>rmax;return {ok:true,html:'<div class=\\\"big\\\">Rpmax = '+F(rmax)+' Ω（'+F(rmax/1000)+' kΩ）</div><div class=\\\"row\\\">Rpmin = '+F(rmin)+' Ω（'+F(rmin/1000)+' kΩ）；上拉电阻应在 '+F(rmin)+' ~ '+F(rmax)+' Ω 之间取值，常靠近下限以保证上升沿</div>'+(bad?'<div class=\\\"row\\\">⚠️ Rpmin 已大于 Rpmax，无可行上拉电阻：应减小总线电容（缩短走线/减少器件）、降速或改用有源上拉/总线缓冲器</div>':'')};",
+  test:{inputs:{spd:"std",cb:100,vdd:3.3}, expect:"11802.1952"}},
+ {id:"dzterm", cat:"dz", icon:"🛑", name:"传输线端接计算", desc:"串联源端接电阻与并联终端电阻及其功耗",
+  formula:"串联源端接：Rs = Z0 − Rdrv（驱动输出内阻），装于驱动端；并联终端：Rt = Z0，装于接收端，其静态功耗 P = V² ÷ Rt（信号电平 V 口径）。两种端接按拓扑二选一或组合（戴维南）使用",
+  inputs:[
+   {id:"z0", label:"传输线特性阻抗 Z0", unit:"Ω", def:"50"},
+   {id:"rdrv", label:"驱动输出内阻 Rdrv", unit:"Ω", def:"10"},
+   {id:"v", label:"信号电平 V", unit:"V", def:"3.3"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var z=Number(z0),rd=Number(rdrv),vv=Number(v);if(!(z>0))return {ok:false,msg:'特性阻抗须大于 0'};if(!(rd>=0))return {ok:false,msg:'驱动内阻不能为负'};if(!(vv>0))return {ok:false,msg:'信号电平须大于 0'};if(rd>z)return {ok:false,msg:'驱动内阻大于 Z0，串联端接需 Rs 为负不可行；请改用并联终端或换低内阻驱动'};var rs=z-rd;var p=vv*vv/z;return {ok:true,html:'<div class=\\\"big\\\">串联端接 Rs = '+F(rs)+' Ω</div><div class=\\\"row\\\">Rs = Z0 − Rdrv = '+F(z)+' − '+F(rd)+'；并联终端方案 Rt = Z0 = '+F(z)+' Ω，终端功耗 P = V² ÷ Rt = '+F(p)+' W</div><div class=\\\"row\\\">串联端接无静态功耗但接收端须高阻；并联端接信号完整性好但持续耗电 '+F(p)+' W</div>'};",
+  test:{inputs:{z0:50,rdrv:10,v:3.3}, expect:"40"}},
+ {id:"dzxover", cat:"dz", icon:"🔊", name:"扬声器分频器元件", desc:"一阶与二阶 Butterworth 分频的电感电容取值（高通/低通）",
+  formula:"一阶：L = R ÷ (2πf)，C = 1 ÷ (2πf × R)；二阶 Butterworth：L = √2 × R ÷ (2πf)，C = 1 ÷ (√2 × 2πf × R)（Q = 0.707 口径）。R 为扬声器标称阻抗；低通：电感串联 + 电容并联；高通：电容串联 + 电感并联。实际阻抗随频率变化，结果为标称口径近似",
+  inputs:[
+   {id:"order", label:"阶数", type:"select", def:"1", options:[{v:"1",t:"一阶（6 dB/倍频程）"},{v:"2",t:"二阶 Butterworth（12 dB/倍频程）"}]},
+   {id:"type", label:"通道", type:"select", def:"lp", options:[{v:"lp",t:"低通（低音单元）"},{v:"hp",t:"高通（高音单元）"}]},
+   {id:"r", label:"扬声器阻抗 R", unit:"Ω", def:"8"},
+   {id:"f", label:"分频点 f", unit:"Hz", def:"2000"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var rr=Number(r),ff=Number(f);if(!(rr>0))return {ok:false,msg:'扬声器阻抗须大于 0'};if(!(ff>0))return {ok:false,msg:'分频点频率须大于 0'};var L,C;if(String(order)==='2'){L=Math.SQRT2*rr/(2*Math.PI*ff);C=1/(Math.SQRT2*2*Math.PI*ff*rr);}else{L=rr/(2*Math.PI*ff);C=1/(2*Math.PI*ff*rr);}var lay=String(type)==='lp'?'低通接法：电感与单元串联，电容与单元并联':'高通接法：电容与单元串联，电感与单元并联';return {ok:true,html:'<div class=\\\"big\\\">L = '+F(L*1000)+' mH，C = '+F(C*1e6)+' µF</div><div class=\\\"row\\\">'+(String(order)==='2'?'二阶 Butterworth':'一阶')+'，R = '+rr+' Ω，f = '+ff+' Hz；'+lay+'</div><div class=\\\"row\\\">电容选无极性（NP）电解或薄膜电容；扬声器阻抗非恒定，精确设计需按实测阻抗曲线</div>'};",
+  test:{inputs:{order:"1",type:"lp",r:8,f:2000}, expect:"0.6366"}}
+);
+
+TOOLS.push(
+ {id:"dzlinkbudget", cat:"dz", icon:"📶", name:"无线链路预算", desc:"自由空间损耗、接收功率与灵敏度裕量判定",
+  formula:"自由空间路损 FSPL(dB) = 32.44 + 20lg(f ÷ MHz) + 20lg(d ÷ km)；接收功率 Pr = Pt + Gt + Gr − FSPL − 余量（馈线/衰落余量等）；灵敏度裕量 = Pr − 接收灵敏度，大于 0 链路可用（工程上常要求 ≥ 10 dB）",
+  inputs:[
+   {id:"f", label:"频率 f", unit:"MHz", def:"2400"},
+   {id:"d", label:"距离 d", unit:"km", def:"1"},
+   {id:"pt", label:"发射功率 Pt", unit:"dBm", def:"20"},
+   {id:"gt", label:"发射天线增益 Gt", unit:"dBi", def:"2"},
+   {id:"gr", label:"接收天线增益 Gr", unit:"dBi", def:"2"},
+   {id:"marg", label:"其他余量/损耗", unit:"dB", def:"10", hint:"馈线损耗、衰落余量等合计"},
+   {id:"sens", label:"接收灵敏度", unit:"dBm", def:"-90"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var ff=Number(f),dd=Number(d),p=Number(pt),g1=Number(gt),g2=Number(gr),mg=Number(marg),sn=Number(sens);if(!(ff>0))return {ok:false,msg:'频率须大于 0'};if(!(dd>0))return {ok:false,msg:'距离须大于 0'};if(!isFinite(p)||!isFinite(g1)||!isFinite(g2)||!isFinite(sn))return {ok:false,msg:'功率/增益/灵敏度须为数值'};if(!(mg>=0))return {ok:false,msg:'余量不能为负'};var fspl=32.44+20*Math.log10(ff)+20*Math.log10(dd);var pr=p+g1+g2-fspl-mg;var head=pr-sn;return {ok:true,html:'<div class=\\\"big\\\">接收功率 Pr = '+F(pr)+' dBm</div><div class=\\\"row\\\">FSPL = 32.44 + 20lg('+ff+') + 20lg('+dd+') = '+F(fspl)+' dB；灵敏度裕量 = '+F(head)+' dB，'+(head>0?'✅ 高于灵敏度，链路可用':'❌ 低于接收灵敏度，链路不可用')+'</div>'+(head>0&&head<10?'<div class=\\\"row\\\">裕量不足 10 dB，雨衰/遮挡下易断链，建议提高增益或缩短距离</div>':'')};",
+  test:{inputs:{f:2400,d:1,pt:20,gt:2,gr:2,marg:10,sens:-90}, expect:"100.0442"}},
+ {id:"dzlmatch", cat:"dz", icon:"🎯", name:"L 型阻抗匹配网络", desc:"Rs < RL 时 L 型匹配的 Q、串并联电抗与元件值",
+  formula:"口径 Rs < RL：Q = √(RL ÷ Rs − 1)；串联电抗 Xs = Q × Rs，并联电抗 Xp = RL ÷ Q。串感+并容（低通型）或串容+并感（高通型）由用户选；L = X ÷ (2πf)，C = 1 ÷ (2πf × X)。RL ≤ Rs 时本拓扑不适用",
+  inputs:[
+   {id:"rs", label:"源阻抗 Rs", unit:"Ω", def:"50"},
+   {id:"rl", label:"负载阻抗 RL", unit:"Ω", def:"200"},
+   {id:"f", label:"工作频率 f", unit:"MHz", def:"100"},
+   {id:"elem", label:"网络形式", type:"select", def:"sl", options:[{v:"sl",t:"串联电感 + 并联电容"},{v:"sc",t:"串联电容 + 并联电感"}]}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var s=Number(rs),l=Number(rl),ff=Number(f)*1e6;if(!(s>0))return {ok:false,msg:'源阻抗须大于 0'};if(!(l>0))return {ok:false,msg:'负载阻抗须大于 0'};if(!(ff>0))return {ok:false,msg:'工作频率须大于 0'};if(l===s)return {ok:false,msg:'Rs = RL 已匹配，无需匹配网络'};if(l<s)return {ok:false,msg:'本工具口径为 Rs < RL；RL < Rs 时请交换源/负载角色后使用镜像拓扑'};var Q=Math.sqrt(l/s-1);var xs=Q*s;var xp=l/Q;var w=2*Math.PI*ff;if(String(elem)==='sl'){var L=xs/w;var C=1/(w*xp);return {ok:true,html:'<div class=\\\"big\\\">Q = '+F(Q)+'</div><div class=\\\"row\\\">串联电抗 Xs = '+F(xs)+' Ω → 串联电感 L = '+F(L*1e9)+' nH；并联电抗 Xp = '+F(xp)+' Ω → 并联电容 C = '+F(C*1e12)+' pF（f = '+F(ff/1e6)+' MHz）</div>'};}var C2=1/(w*xs);var L2=xp/w;return {ok:true,html:'<div class=\\\"big\\\">Q = '+F(Q)+'</div><div class=\\\"row\\\">串联电抗 Xs = '+F(xs)+' Ω → 串联电容 C = '+F(C2*1e12)+' pF；并联电抗 Xp = '+F(xp)+' Ω → 并联电感 L = '+F(L2*1e9)+' nH（f = '+F(ff/1e6)+' MHz）</div>'};",
+  test:{inputs:{rs:50,rl:200,f:100,elem:"sl"}, expect:"86.6025"}},
+ {id:"dzatten", cat:"dz", icon:"🔉", name:"π 型 / T 型衰减器设计", desc:"由衰减量与特性阻抗算 π 型、T 型衰减器电阻",
+  formula:"电压比 K = 10^(A ÷ 20)。T 型：串联臂（每侧）= Z0 × (K − 1) ÷ (K + 1)，并联臂 = 2 × Z0 × K ÷ (K² − 1)；π 型与之对偶：并联臂（每侧）= Z0 × (K + 1) ÷ (K − 1)，串联臂 = Z0 × (K² − 1) ÷ (2K)。A 须大于 0 dB",
+  inputs:[
+   {id:"topo", label:"网络形式", type:"select", def:"t", options:[{v:"t",t:"T 型"},{v:"pi",t:"π 型"}]},
+   {id:"a", label:"衰减量 A", unit:"dB", def:"10"},
+   {id:"z0", label:"特性阻抗 Z0", unit:"Ω", def:"50"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var av=Number(a),z=Number(z0);if(!(av>0))return {ok:false,msg:'衰减量须大于 0 dB（A = 0 时 K = 1，公式分母为 0）'};if(!(z>0))return {ok:false,msg:'特性阻抗须大于 0'};var K=Math.pow(10,av/20);if(String(topo)==='pi'){var shp=z*(K+1)/(K-1);var sep=z*(K*K-1)/(2*K);return {ok:true,html:'<div class=\\\"big\\\">π 型：并联臂 '+F(shp)+' Ω ×2，串联臂 '+F(sep)+' Ω</div><div class=\\\"row\\\">K = 10^('+av+' ÷ 20) = '+F(K)+'；并联臂 = Z0(K+1)/(K−1)，串联臂 = Z0(K²−1)/(2K)，Z0 = '+z+' Ω</div>'};}var set=z*(K-1)/(K+1);var sht=2*z*K/(K*K-1);return {ok:true,html:'<div class=\\\"big\\\">T 型：串联臂 '+F(set)+' Ω ×2，并联臂 '+F(sht)+' Ω</div><div class=\\\"row\\\">K = 10^('+av+' ÷ 20) = '+F(K)+'；串联臂 = Z0(K−1)/(K+1)，并联臂 = 2Z0K/(K²−1)，Z0 = '+z+' Ω</div>'};",
+  test:{inputs:{topo:"t",a:10,z0:50}, expect:"25.9747"}},
+ {id:"dzqwave", cat:"dz", icon:"📏", name:"四分之一波长变换器", desc:"λ/4 阻抗变换段的特性阻抗与物理长度",
+  formula:"四分之一波长变换段特性阻抗 Z0 = √(Zin × ZL)；物理长度 = λ ÷ 4 = v ÷ (4f)，v = c ÷ √εr，c 取 3×10⁸ m/s；εr 为填充介质相对介电常数（微带线应取有效介电常数 εeff，为工程近似口径）",
+  inputs:[
+   {id:"zin", label:"输入侧阻抗 Zin", unit:"Ω", def:"50"},
+   {id:"zl", label:"负载阻抗 ZL", unit:"Ω", def:"100"},
+   {id:"f", label:"中心频率 f", unit:"MHz", def:"300"},
+   {id:"er", label:"相对介电常数 εr", def:"1", hint:"空气 1，FR4 约 4.4（微带取 εeff 约 3.3）"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var a=Number(zin),b=Number(zl),ff=Number(f)*1e6,e=Number(er);if(!(a>0))return {ok:false,msg:'输入侧阻抗须大于 0'};if(!(b>0))return {ok:false,msg:'负载阻抗须大于 0'};if(!(ff>0))return {ok:false,msg:'中心频率须大于 0'};if(!(e>=1))return {ok:false,msg:'εr 不能小于 1'};var z=Math.sqrt(a*b);var len=3e8/Math.sqrt(e)/(4*ff);return {ok:true,html:'<div class=\\\"big\\\">Z0 = '+F(z)+' Ω，长度 λ/4 = '+F(len*100)+' cm</div><div class=\\\"row\\\">Z0 = √('+a+' × '+b+')；介质中波速 v = c ÷ √'+e+'，长度 = '+F(len*1000)+' mm；仅在中心频率处精确匹配，带宽有限</div>'};",
+  test:{inputs:{zin:50,zl:100,f:300,er:1}, expect:"70.7107"}},
+ {id:"dzcoax", cat:"dz", icon:"🧵", name:"同轴电缆参数", desc:"同轴线特性阻抗、单位长度电容/电容与速度系数",
+  formula:"Z0 = (138 ÷ √εr) × lg(D ÷ d)（lg 为以 10 为底，D 外导体内径、d 内导体外径）；单位长度电容 C = 55.63 × εr ÷ ln(D ÷ d) pF/m；单位长度电感 L ≈ 200 × ln(D ÷ d) nH/m；速度系数 = 1 ÷ √εr。εr：聚乙烯 PE 2.25、PTFE 2.1、发泡聚乙烯约 1.5",
+  inputs:[
+   {id:"D", label:"外导体内径 D", unit:"mm", def:"9"},
+   {id:"d", label:"内导体外径 d", unit:"mm", def:"3"},
+   {id:"er", label:"绝缘介质 εr", type:"select", def:"pe", options:[{v:"pe",t:"聚乙烯 PE 2.25"},{v:"ptfe",t:"PTFE 2.1"},{v:"foam",t:"发泡聚乙烯 1.5"},{v:"cust",t:"自定义"}]},
+   {id:"erc", label:"自定义 εr", when:"er=cust", def:"2.25"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var DD=Number(D),dd=Number(d);if(!(dd>0))return {ok:false,msg:'内导体外径须大于 0'};if(!(DD>dd))return {ok:false,msg:'外导体内径 D 须大于内导体外径 d'};var M={pe:2.25,ptfe:2.1,foam:1.5};var e=M[String(er)]!==undefined?M[String(er)]:Number(erc);if(!(e>=1))return {ok:false,msg:'εr 不能小于 1'};var ratio=DD/dd;var z=138/Math.sqrt(e)*Math.log10(ratio);var cap=55.63*e/Math.log(ratio);var ind=200*Math.log(ratio);var vf=1/Math.sqrt(e);return {ok:true,html:'<div class=\\\"big\\\">Z0 = '+F(z)+' Ω</div><div class=\\\"row\\\">D/d = '+F(ratio)+'，εr = '+e+'；单位长度电容 '+F(cap)+' pF/m，电感 '+F(ind)+' nH/m，速度系数 '+F(vf)+'（波速 '+F(vf*100)+'% 光速）</div>'};",
+  test:{inputs:{D:9,d:3,er:"pe",erc:2.25}, expect:"43.8952"}}
+);
+
 
 /* 数据驱动工具自动注册渲染器（必须在所有 TOOLS.push 之后、初始化之前执行） */
 TOOLS.forEach(function(t){ if(t.run&&!RENDER[t.id]){ RENDER[t.id]=function(tool){ renderDataTool(tool); }; } });
