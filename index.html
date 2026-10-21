@@ -639,9 +639,9 @@ TOOLS.push(
   run:"var vs=Number(vs),vf=Number(vf),ifa=Number(ifma)/1000; if(!(ifa>0)) return {ok:false,msg:\'工作电流须大于0\'}; if(vs<=vf) return {ok:false,msg:'电源电压须大于LED压降'}; var R=(vs-vf)/ifa,Pw=(vs-vf)*ifa; return {ok:true,html:'<div class=\"big\">R = '+R.toFixed(0)+' Ω</div><div class=\"row\">电阻功耗 '+Pw.toFixed(3)+' W，选1/4W以上</div>'};",
   test:{inputs:{vs:5,vf:2,ifma:20}, expect:"150"}},
  {id:"dgfuse", cat:"dgjs", icon:"🧨", name:"熔断器选型", desc:"按负载类型选熔体额定电流",
-  formula:"电机负载按2倍额定电流；照明/电阻负载按1.1倍",
+  formula:"电机负载按2倍额定电流；照明/电阻负载按1.1倍；得出计算需求后向上取常用标称档（2/4/6/10/16/20/25/32/40/50/63/80/100/125/160/200/250/315/400/500/630/800/1000/1250 A）",
   inputs:[{id:"i", label:"负载额定电流", unit:"A", def:"10", min:0.1},{id:"kind", label:"负载类型", type:"select", options:[{v:"motor",t:"电机负载"},{v:"light",t:"照明/电阻负载"}]}],
-  run:"var i=Number(i); if(!(i>0)) return {ok:false,msg:'电流必须大于0'}; var rec=kind=='motor'?2*i:1.1*i; return {ok:true,html:'<div class=\"big\">选 '+rec.toFixed(0)+' A 熔体</div><div class=\"row\">'+(kind=='motor'?'电机启动电流大，按2倍额定电流':'按1.1倍额定电流')+'</div>'};",
+  run:"var i=Number(i); if(!(i>0)) return {ok:false,msg:'电流必须大于0'}; var rec=kind=='motor'?2*i:1.1*i; var STD=[2,4,6,10,16,20,25,32,40,50,63,80,100,125,160,200,250,315,400,500,630,800,1000,1250]; var std=0; for(var k=0;k<STD.length;k++){ if(STD[k]>=rec){ std=STD[k]; break; } } var note=kind=='motor'?'电机启动电流大，按2倍额定电流':'按1.1倍额定电流'; if(!std) return {ok:true,html:'<div class=\"big\">计算需求 '+rec.toFixed(0)+' A</div><div class=\"row\">'+note+'</div><div class=\"row\">已超出常用标称档（最大 1250 A），请按厂家样本选型或采用多根并联方案</div>'}; return {ok:true,html:'<div class=\"big\">推荐 '+std+' A 熔体（标称档）</div><div class=\"row\">计算需求 '+rec.toFixed(1)+' A：'+note+'，向上取常用标称档</div><div class=\"row\">常用标称档 A：2/4/6/10/16/20/25/32/40/50/63/80/100/125/160/200/250/315/400/500/630/800/1000/1250</div>'};",
   test:{inputs:{i:10,kind:"motor"}, expect:"20"}},
  {id:"dgrcd", cat:"dgjs", icon:"🛡️", name:"漏保动作电流选择", desc:"按用途选漏电保护器动作电流",
   formula:"查表：人身保护≤30mA；干线100mA；防火300mA",
@@ -2778,7 +2778,7 @@ TOOLS.push(
    {id:"mu", label:"均值 μ", def:"90"},
    {id:"sigma", label:"标准差 σ", def:"10", min:0}
   ],
-  run:"var sg=Number(sigma);if(!(sg>0))return {ok:false,msg:'标准差须大于 0'};var z=(Number(x)-Number(mu))/sg;function Phi(zz){var t=1/(1+0.2316419*Math.abs(zz));var d=0.3989422804014327*Math.exp(-zz*zz/2);var pr=d*t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));return zz>0?1-pr:pr;}var F=Phi(z);return {ok:true,html:'<div class=\"big\">z = '+z.toFixed(3)+' · Φ(z) = '+F.toFixed(4)+'</div><div class=\"row\">P(X≤x)='+F.toFixed(4)+'；落在 μ±|x−μ| 内的概率 = '+(2*Phi(Math.abs(z))-1).toFixed(4)+'</div>'};",
+  run:"var sg=Number(sigma);if(!(sg>0))return {ok:false,msg:'标准差须大于 0'};var z=(Number(x)-Number(mu))/sg;function Phi(zz){var t=1/(1+0.2316419*Math.abs(zz));var d=0.3989422804014327*Math.exp(-zz*zz/2);var pr=d*t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));return zz>0?1-pr:pr;}var F=Phi(z);return {ok:true,html:'<div class=\"big\">z = '+z.toFixed(3)+' · Φ(z) = '+F.toFixed(4)+'</div><div class=\"row\">P(X≤x)='+F.toFixed(4)+'；落在 μ±|x−μ| 内的概率 = '+Math.max(0,2*Phi(Math.abs(z))-1).toFixed(4)+'</div>'};",
   test:{inputs:{"x": 90, "mu": 90, "sigma": 10}, expect:"0.5000"}},
  {id:"wlcarnot", cat:"wl", icon:"♨️", name:"卡诺热机效率", desc:"两热源温度下的理论最高效率",
   formula:"卡诺效率 η = 1 − T_c/T_h（温度须用开尔文）",
@@ -5430,7 +5430,7 @@ TOOLS.push(
    {id:"fn", label:"函数", type:"select", options:[{v:"sin",t:"sin 正弦"},{v:"cos",t:"cos 余弦"},{v:"tan",t:"tan 正切"}], def:"sin"},
    {id:"deg", label:"角度（度）", def:"30"}
   ],
-  run:"var r=deg*Math.PI/180, v=fn==='sin'?Math.sin(r):fn==='cos'?Math.cos(r):Math.tan(r); if(!isFinite(v)) return {ok:false,msg:'该角度下函数值无定义'}; return {ok:true,html:'<div class=\"big\">'+fn+'('+deg+'°)='+v.toFixed(6)+'</div>'};",
+  run:"var dm=((Number(deg)%180)+180)%180; if(fn==='tan'&&Math.abs(dm-90)<1e-9) return {ok:false,msg:'tan 在 90°+k·180° 处无定义（趋于无穷大）'}; var r=deg*Math.PI/180, v=fn==='sin'?Math.sin(r):fn==='cos'?Math.cos(r):Math.tan(r); if(!isFinite(v)) return {ok:false,msg:'该角度下函数值无定义'}; return {ok:true,html:'<div class=\"big\">'+fn+'('+deg+'°)='+v.toFixed(6)+'</div>'};",
   test:{inputs:{fn:"sin",deg:30}, expect:"sin(30°)=0.500000"}},
  {id:"sxatrig", cat:"sx", icon:"∠", name:"反三角函数求角度", desc:"已知三角函数值求对应角度",
   formula:"θ=arcsin(x)×180/π（arccos、arctan 同理）",
@@ -6504,6 +6504,248 @@ TOOLS.push(
   ],
   run:"var aa=Number(a),bb=Number(b),cc=Number(c);if(!isFinite(aa)||!isFinite(bb)||!isFinite(cc))return {ok:false,msg:'系数须为数值'};if(aa===0)return {ok:false,msg:'a 不能为 0，否则不是二次函数'};function F(t){if(t===0)return '0';var ax=Math.abs(t);if(ax>=1e7||ax<1e-4)return t.toPrecision(4);var s=t.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var h=-bb/(2*aa),kv=(4*aa*cc-bb*bb)/(4*aa);var dl=bb*bb-4*aa*cc;var pp=1/(4*aa);var roots;if(dl>0){var sq=Math.sqrt(dl);roots='两个实根 x₁ = '+F((-bb-sq)/(2*aa))+'，x₂ = '+F((-bb+sq)/(2*aa));}else if(dl===0){roots='重根 x = '+F(-bb/(2*aa));}else{roots='无实根（与 x 轴无交点）';}return {ok:true,html:'<div class=\"big\">顶点 ('+F(h)+', '+F(kv)+')</div><div class=\"row\">开口'+(aa>0?'向上':'向下')+'，对称轴 x = '+F(h)+'；Δ = '+F(dl)+'，'+roots+'</div><div class=\"row\">焦点 ('+F(h)+', '+F(kv+pp)+')，准线 y = '+F(kv-pp)+'；与 y 轴交点 (0, '+F(cc)+')</div>'};",
   test:{inputs:{a:1,b:-4,c:3}, expect:"(2, -1)"}}
+);
+
+/* ===== R3 电工计算新增 25 工具（2026-10-21） ===== */
+TOOLS.push(
+ {id:"dgflux", cat:"dgjs", icon:"💡", name:"目标照度所需光通量", desc:"由目标照度与面积反算所需总光通量，可选按单灯流明算灯具盏数", formula:"Φ = E × A ÷ (CU × MF)；E 目标照度 lx，A 面积 m²，CU 利用系数（灯具/房间综合，常用 0.4~0.8），MF 维护系数（常用 0.7~0.85）；选「算盏数」时盏数 N = 向上取整(Φ ÷ 单灯光通量)。流明法（平均照度法）常用口径", inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"flux", options:[
+    {v:"flux", t:"只算总光通量"},
+    {v:"lamp", t:"算光通量 + 灯具盏数"}
+  ]},
+   {id:"E", label:"目标照度 E", unit:"lx", def:"300", hint:"办公室 300~500，教室 300，走廊 50~100"},
+   {id:"A", label:"房间面积 A", unit:"m²", def:"20"},
+   {id:"CU", label:"利用系数 CU", def:"0.6", hint:"0~1，查灯具利用系数表，常用 0.4~0.8"},
+   {id:"MF", label:"维护系数 MF", def:"0.8", hint:"0~1，清洁环境 0.8，污染环境 0.7"},
+   {id:"lum", label:"单灯光通量", unit:"lm", when:"mode=lamp", def:"3000"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var EE=Number(E),AA=Number(A),cu=Number(CU),mf=Number(MF);if(!(EE>0))return {ok:false,msg:'目标照度须大于 0'};if(!(AA>0))return {ok:false,msg:'面积须大于 0'};if(!(cu>0&&cu<=1))return {ok:false,msg:'利用系数应在 (0,1] 之间'};if(!(mf>0&&mf<=1))return {ok:false,msg:'维护系数应在 (0,1] 之间'};var phi=EE*AA/(cu*mf);var h='<div class=\\\"big\\\">所需总光通量 Φ = '+F(phi)+' lm</div><div class=\\\"row\\\">Φ = '+EE+' × '+AA+' ÷ ('+cu+' × '+mf+') = '+F(phi)+' lm</div>';if(String(mode)==='lamp'){var lm=Number(lum);if(!(lm>0))return {ok:false,msg:'单灯光通量须大于 0'};var nn=Math.ceil(phi/lm-1e-9);h+='<div class=\\\"big\\\">需要灯具 '+nn+' 盏</div><div class=\\\"row\\\">单灯 '+lm+' lm，'+F(phi)+' ÷ '+lm+' = '+F(phi/lm)+'，向上取整 '+nn+' 盏</div>';}return {ok:true,html:h};", test:{inputs:{mode:"flux", E:300, A:20, CU:0.6, MF:0.8, lum:3000}, expect:"12500"}},
+ {id:"dgcablecorr", cat:"dgjs", icon:"🌡️", name:"电缆载流量校正", desc:"基准载流量按温度、并列、土壤三项系数连乘校正", formula:"校正后载流量 Iz = 基准载流量 × K温度 × K并列 × K土壤。温度系数为空气中铜芯 XLPE 绝缘近似国标表（GB/T 16895 系列载流量校正表口径）：30℃ 1.00、35℃ 0.94、40℃ 0.87、45℃ 0.79、50℃ 0.71（基准环境 30℃）；并列系数为多回路并列敷设近似值；土壤系数按土壤热阻率近似（直埋时用，空气敷设取 1.00）", inputs:[
+   {id:"Ib", label:"基准载流量", unit:"A", def:"100", hint:"查载流量表得到的 30℃ 基准值"},
+   {id:"temp", label:"环境温度系数", type:"select", def:"1", options:[
+    {v:"1", t:"30℃ ×1.00"},
+    {v:"0.94", t:"35℃ ×0.94"},
+    {v:"0.87", t:"40℃ ×0.87"},
+    {v:"0.79", t:"45℃ ×0.79"},
+    {v:"0.71", t:"50℃ ×0.71"}
+  ]},
+   {id:"par", label:"并列敷设系数", type:"select", def:"1", options:[
+    {v:"1", t:"单回路 ×1.00"},
+    {v:"0.85", t:"2 回路并列 ×0.85"},
+    {v:"0.78", t:"3 回路并列 ×0.78"},
+    {v:"0.72", t:"4 回路并列 ×0.72"}
+  ]},
+   {id:"soil", label:"土壤热阻系数", type:"select", def:"1", options:[
+    {v:"1", t:"空气敷设 / 热阻 1.0 ×1.00"},
+    {v:"0.93", t:"土壤热阻 1.5 K·m/W ×0.93"},
+    {v:"0.87", t:"土壤热阻 2.0 K·m/W ×0.87"},
+    {v:"0.81", t:"土壤热阻 2.5 K·m/W ×0.81"}
+  ]}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var ib=Number(Ib),kt=Number(temp),kp=Number(par),ks=Number(soil);if(!(ib>0))return {ok:false,msg:'基准载流量须大于 0'};if(!(kt>0)||!(kp>0)||!(ks>0))return {ok:false,msg:'校正系数无效'};var iz=ib*kt*kp*ks;return {ok:true,html:'<div class=\\\"big\\\">校正后载流量 Iz = '+F(iz)+' A</div><div class=\\\"row\\\">'+ib+' × '+kt+'（温度）× '+kp+'（并列）× '+ks+'（土壤）= '+F(iz)+' A，综合系数 '+F(kt*kp*ks)+'</div><div class=\\\"row\\\">选电缆时 Iz 应不小于线路计算电流，并另行校验电压降与短路热稳定</div>'};", test:{inputs:{Ib:100, temp:"1", par:"1", soil:"1"}, expect:"100"}},
+ {id:"dgpartrans", cat:"dgjs", icon:"⚖️", name:"变压器并列负荷分配", desc:"两台变压器并列运行时按容量与短路阻抗分配负荷", formula:"并列负荷分配：Sᵢ = S总 × (Sᵢ额定 ÷ ukᵢ%) ÷ Σ(Sⱼ ÷ ukⱼ%)；短路阻抗 uk% 小的变压器分担更多负荷；负载率 = 分配负荷 ÷ 额定容量，任一台负载率超 100% 即过载，并列条件（接线组别相同、变比相同、uk% 相差不宜超 10%）另行核对", inputs:[
+   {id:"St", label:"总负荷 S总", unit:"kVA", def:"1000"},
+   {id:"S1", label:"1# 变压器额定容量", unit:"kVA", def:"500"},
+   {id:"uk1", label:"1# 短路阻抗 uk", unit:"%", def:"4"},
+   {id:"S2", label:"2# 变压器额定容量", unit:"kVA", def:"500"},
+   {id:"uk2", label:"2# 短路阻抗 uk", unit:"%", def:"5"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var st=Number(St),s1=Number(S1),u1=Number(uk1),s2=Number(S2),u2=Number(uk2);if(!(st>0))return {ok:false,msg:'总负荷须大于 0'};if(!(s1>0)||!(s2>0))return {ok:false,msg:'额定容量须大于 0'};if(!(u1>0)||!(u2>0))return {ok:false,msg:'短路阻抗 uk% 须大于 0'};var w1=s1/u1,w2=s2/u2,ws=w1+w2;var l1=st*w1/ws,l2=st*w2/ws;var r1=l1/s1*100,r2=l2/s2*100;var warn=(r1>100||r2>100)?'<div class=\\\"row\\\">⚠️ 有变压器负载率超过 100%，已过载，应减负荷或调整运行方式</div>':'<div class=\\\"row\\\">两台负载率均未超 100%</div>';return {ok:true,html:'<div class=\\\"big\\\">1# 分配 '+F(l1)+' kVA（负载率 '+F(r1)+'%）</div><div class=\\\"row\\\">2# 分配 '+F(l2)+' kVA（负载率 '+F(r2)+'%）；两台合计 '+F(l1+l2)+' kVA</div>'+warn};", test:{inputs:{St:1000, S1:500, uk1:4, S2:500, uk2:5}, expect:"555.5556"}},
+ {id:"dgcompstep", cat:"dgjs", icon:"🧩", name:"补偿电容分组投切", desc:"总补偿容量按每级容量分组，算级数与实际补偿量", formula:"级数 n = 向上取整(总需补偿量 Q总 ÷ 每级容量 Q级)；实际补偿量 = n × Q级；过补偿量 = 实际补偿量 − Q总。分组越细调节越平滑，常用每级 10~30 kvar", inputs:[
+   {id:"Qt", label:"总需补偿量 Q总", unit:"kvar", def:"100"},
+   {id:"Qs", label:"每级容量 Q级", unit:"kvar", def:"15"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var qt=Number(Qt),qs=Number(Qs);if(!(qt>0))return {ok:false,msg:'总需补偿量须大于 0'};if(!(qs>0))return {ok:false,msg:'每级容量须大于 0'};var n=Math.ceil(qt/qs-1e-9);var act=n*qs;var over=act-qt;return {ok:true,html:'<div class=\\\"big\\\">共需 '+n+' 级，实际补偿 '+F(act)+' kvar</div><div class=\\\"row\\\">'+F(qt)+' ÷ '+F(qs)+' = '+F(qt/qs)+'，向上取整 '+n+' 级；过补偿 '+F(over)+' kvar'+(over===0?'（恰好整除，无过补）':'')+'</div><div class=\\\"row\\\">控制器按无功需求逐级投切，末级投入后应复核功率因数不超前</div>'};", test:{inputs:{Qt:100, Qs:15}, expect:"105"}},
+ {id:"dgthd", cat:"dgjs", icon:"📊", name:"谐波畸变率 THDi", desc:"由基波与 3/5/7/11/13 次谐波电流算电流总谐波畸变率与总 RMS 电流", formula:"THDi = √(I₃² + I₅² + I₇² + I₁₁² + I₁₃²) ÷ I₁ × 100%；总 RMS 电流 Irms = √(I₁² + ΣIₕ²)。GB/T 14549 对谐波电流有允许值要求，THDi 仅反映畸变程度", inputs:[
+   {id:"I1", label:"基波电流 I₁", unit:"A", def:"100"},
+   {id:"I3", label:"3 次谐波 I₃", unit:"A", def:"20"},
+   {id:"I5", label:"5 次谐波 I₅", unit:"A", def:"10"},
+   {id:"I7", label:"7 次谐波 I₇", unit:"A", def:"0"},
+   {id:"I11", label:"11 次谐波 I₁₁", unit:"A", def:"0"},
+   {id:"I13", label:"13 次谐波 I₁₃", unit:"A", def:"0"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var a=[Number(I1),Number(I3),Number(I5),Number(I7),Number(I11),Number(I13)];for(var i=0;i<6;i++){if(!(a[i]>=0))return {ok:false,msg:'各次电流不能为负'};}if(!(a[0]>0))return {ok:false,msg:'基波电流须大于 0（THDi 以基波为基准）'};var sh=0,st2=a[0]*a[0];for(i=1;i<6;i++){sh+=a[i]*a[i];st2+=a[i]*a[i];}var thd=Math.sqrt(sh)/a[0]*100;var rms=Math.sqrt(st2);return {ok:true,html:'<div class=\\\"big\\\">THDi = '+F(thd)+' %</div><div class=\\\"row\\\">总 RMS 电流 Irms = '+F(rms)+' A（基波 '+a[0]+' A，谐波合成 '+F(Math.sqrt(sh))+' A）</div><div class=\\\"row\\\">THDi 超过约 30% 时应评估滤波/选型影响，并对照 GB/T 14549 限值</div>'};", test:{inputs:{I1:100, I3:20, I5:10, I7:0, I11:0, I13:0}, expect:"22.3607"}},
+ {id:"dgtriplen", cat:"dgjs", icon:"3️⃣", name:"三次谐波零线电流", desc:"单相非线性负载下估算零线电流（三相四线制三次谐波叠加）", formula:"三次类谐波（3/9/15 次）在三相四线制零线中同相叠加：I_N ≈ 3 × √(I₃² + I₉² + I₁₅²)，其中 Iₕ = 相电流 × 该次谐波占比；基波与 5/7 次在零线中基本抵消。零线电流可超过相线电流，零线截面不得随意减小（近似估算口径）", inputs:[
+   {id:"Iph", label:"相电流（基波）", unit:"A", def:"100"},
+   {id:"p3", label:"3 次谐波占比", unit:"%", def:"20"},
+   {id:"p9", label:"9 次谐波占比", unit:"%", def:"0"},
+   {id:"p15", label:"15 次谐波占比", unit:"%", def:"0"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var ip=Number(Iph),a3=Number(p3),a9=Number(p9),a15=Number(p15);if(!(ip>0))return {ok:false,msg:'相电流须大于 0'};var ps=[a3,a9,a15];for(var i=0;i<3;i++){if(!(ps[i]>=0&&ps[i]<=100))return {ok:false,msg:'谐波占比应在 0~100% 之间'};}var h3=ip*a3/100,h9=ip*a9/100,h15=ip*a15/100;var iN=3*Math.sqrt(h3*h3+h9*h9+h15*h15);var ratio=ip>0?iN/ip*100:0;var note=iN>ip?'<div class=\\\"row\\\">⚠️ 零线电流已超过相电流，零线应按不低于相线截面选取并校验载流量</div>':'<div class=\\\"row\\\">零线电流为相电流的 '+F(ratio)+'%</div>';return {ok:true,html:'<div class=\\\"big\\\">零线电流 I_N ≈ '+F(iN)+' A</div><div class=\\\"row\\\">I₃ = '+F(h3)+' A，I₉ = '+F(h9)+' A，I₁₅ = '+F(h15)+' A，零线 = 3 × 三次类合成 '+F(Math.sqrt(h3*h3+h9*h9+h15*h15))+' A</div>'+note};", test:{inputs:{Iph:100, p3:20, p9:0, p15:0}, expect:"60"}},
+ {id:"dggridgnd", cat:"dgjs", icon:"🌐", name:"接地网接地电阻", desc:"用 Laurent 公式估算地网接地电阻", formula:"Laurent 公式：R = ρ ÷ (4r) + ρ ÷ L总，其中 r = √(A ÷ π) 为等值圆形地网半径，A 为地网面积（m²），L总 为接地导体总长度（m，含水平与垂直接地体近似），ρ 为土壤电阻率（Ω·m）。简化估算口径，实测为准", inputs:[
+   {id:"rho", label:"土壤电阻率 ρ", unit:"Ω·m", def:"100", hint:"黏土约 50~100，砂土 200~500，岩石更高"},
+   {id:"A", label:"地网面积 A", unit:"m²", def:"400"},
+   {id:"L", label:"接地导体总长 L总", unit:"m", def:"800"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var ro=Number(rho),aa=Number(A),ll=Number(L);if(!(ro>0))return {ok:false,msg:'土壤电阻率须大于 0'};if(!(aa>0))return {ok:false,msg:'地网面积须大于 0'};if(!(ll>0))return {ok:false,msg:'导体总长须大于 0'};var rr=Math.sqrt(aa/Math.PI);var R=ro/(4*rr)+ro/ll;return {ok:true,html:'<div class=\\\"big\\\">接地电阻 R ≈ '+F(R)+' Ω</div><div class=\\\"row\\\">等值半径 r = '+F(rr)+' m；ρ/(4r) = '+F(ro/(4*rr))+' Ω，ρ/L = '+F(ro/ll)+' Ω</div><div class=\\\"row\\\">Laurent 简化估算，未计季节系数与导体间屏蔽效应，竣工后应实测</div>'};", test:{inputs:{rho:100, A:400, L:800}, expect:"2.3406"}},
+ {id:"dgmeter", cat:"dgjs", icon:"🔢", name:"综合电量倍率", desc:"CT 变比 × PT 变比算综合倍率，读数差换算实际电量", formula:"倍率 = CT 变比 × PT 变比，CT 变比 = CT 一次电流 ÷ 二次电流，PT 变比 = PT 一次电压 ÷ 二次电压；实际电量 = 电表读数差 × 倍率。无 PT 时 PT 变比填 1:1（如 380/380）；直通表倍率为 1", inputs:[
+   {id:"ctp", label:"CT 一次电流", unit:"A", def:"200"},
+   {id:"cts", label:"CT 二次电流", unit:"A", def:"5"},
+   {id:"ptp", label:"PT 一次电压", unit:"V", def:"10000"},
+   {id:"pts", label:"PT 二次电压", unit:"V", def:"100"},
+   {id:"diff", label:"电表读数差", unit:"kWh", def:"25"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var a=Number(ctp),b=Number(cts),c=Number(ptp),d=Number(pts),df=Number(diff);if(!(a>0)||!(b>0))return {ok:false,msg:'CT 一次/二次电流须大于 0'};if(!(c>0)||!(d>0))return {ok:false,msg:'PT 一次/二次电压须大于 0'};if(!(df>=0))return {ok:false,msg:'读数差不能为负'};var kct=a/b,kpt=c/d,mult=kct*kpt,real=df*mult;return {ok:true,html:'<div class=\\\"big\\\">综合倍率 '+F(mult)+'，实际电量 '+F(real)+' kWh</div><div class=\\\"row\\\">CT 变比 '+F(kct)+'（'+a+'/'+b+'）× PT 变比 '+F(kpt)+'（'+c+'/'+d+'）= '+F(mult)+'；读数差 '+df+' kWh × '+F(mult)+' = '+F(real)+' kWh</div>'};", test:{inputs:{ctp:200, cts:5, ptp:10000, pts:100, diff:25}, expect:"100000"}},
+ {id:"dgpfadj", cat:"dgjs", icon:"💰", name:"力调电费调整", desc:"按月度功率因数与考核标准档估算力调电费奖惩比例与金额", formula:"简化常用表（以标准 0.90 为例）：cosφ 高于标准时，每升高 0.01 减收 0.15%，最多减收 0.75%；低于标准时，从标准降至 0.65 段每降 0.01 增收 0.5%，低于 0.65 后每降 0.01 增收 1%。标准 0.85 / 0.95 档按同一规则平移（奖励段与 0.5% 罚段、1% 罚段的界限随标准平移）。调整金额 = 电费基数（不含基本电费口径由当地规定）× 调整率。本工具为简化估算，实际以当地力调电费办法查表为准", inputs:[
+   {id:"std", label:"考核标准", type:"select", def:"0.90", options:[
+    {v:"0.85", t:"0.85"},
+    {v:"0.90", t:"0.90"},
+    {v:"0.95", t:"0.95"}
+  ]},
+   {id:"cos", label:"月度实际功率因数 cosφ", def:"0.85"},
+   {id:"base", label:"电费基数", unit:"元", def:"10000", hint:"按当地口径填参与力调的电费金额"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var s=Number(std),cs=Number(cos),bs=Number(base);if(!(cs>0&&cs<=1))return {ok:false,msg:'功率因数应在 (0,1] 之间'};if(!(bs>=0))return {ok:false,msg:'电费基数不能为负'};var adj;if(cs>=s){adj=-Math.min((cs-s)*100*0.15,0.75);}else{var lo=s-0.25;if(cs>=lo){adj=(s-cs)*100*0.5;}else{adj=(s-lo)*100*0.5+(lo-cs)*100*1;}}var amt=bs*adj/100;var txt=adj>0?'增收（罚款）':adj<0?'减收（奖励）':'不奖不罚';return {ok:true,html:'<div class=\\\"big\\\">调整率 '+(adj>0?'+':'')+F(adj)+'%，'+txt+' '+F(Math.abs(amt))+' 元</div><div class=\\\"row\\\">标准 '+s+'，实际 cosφ = '+cs+'，电费基数 '+bs+' 元 × '+(adj>0?'+':'')+F(adj)+'% = '+(amt>=0?'+':'−')+F(Math.abs(amt))+' 元</div><div class=\\\"row\\\">简化常用表估算，实际执行以当地力调电费查对表为准</div>'};", test:{inputs:{std:"0.90", cos:0.85, base:10000}, expect:"+2.5%"}},
+ {id:"dgbasic", cat:"dgjs", icon:"🧾", name:"基本电费（容量/需量）", desc:"按变压器容量与按最大需量两种口径算月基本电费并对比", formula:"按容量：月基本电费 = 变压器容量（kVA）× 容量电价（元/kVA·月）；按需量：月基本电费 = 最大需量（kW）× 需量电价（元/kW·月）。本工具为两口径直接对比的简化计算；实际执行中需量口径常有最低限（如不低于容量的 40%）与需量核定规则，以当地电价文件为准", inputs:[
+   {id:"cap", label:"变压器容量", unit:"kVA", def:"1000"},
+   {id:"pcap", label:"容量电价", unit:"元/kVA·月", def:"30"},
+   {id:"dem", label:"最大需量", unit:"kW", def:"700"},
+   {id:"pdem", label:"需量电价", unit:"元/kW·月", def:"40"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var cp=Number(cap),pp=Number(pcap),dm=Number(dem),pd=Number(pdem);if(!(cp>0))return {ok:false,msg:'变压器容量须大于 0'};if(!(dm>=0))return {ok:false,msg:'最大需量不能为负'};if(!(pp>=0)||!(pd>=0))return {ok:false,msg:'电价不能为负'};var fc=cp*pp,fd=dm*pd;var cheap=fc<fd?'按容量更省':fd<fc?'按需量更省':'两口径相同';return {ok:true,html:'<div class=\\\"big\\\">按容量 '+fc.toFixed(2)+' 元/月 · 按需量 '+fd.toFixed(2)+' 元/月</div><div class=\\\"row\\\">'+cheap+'，月差 '+F(Math.abs(fc-fd))+' 元（年差约 '+F(Math.abs(fc-fd)*12)+' 元）</div><div class=\\\"row\\\">负荷率越高（需量/容量比越大）按需量越不利；实际计费规则与最低需量限制以当地文件为准</div>'};", test:{inputs:{cap:1000, pcap:30, dem:700, pdem:40}, expect:"28000.00"}},
+ {id:"dgtou", cat:"dgjs", icon:"🕐", name:"分时电费（峰平谷）", desc:"峰/平/谷三时段电量与电价算总电费、平均电价与占比", formula:"总电费 = Σ(各时段电量 × 各时段电价)；平均电价 = 总电费 ÷ 总电量；电量占比与电费占比分别按时段汇总。时段划分与电价以当地分时电价政策为准", inputs:[
+   {id:"Ep", label:"峰段电量", unit:"kWh", def:"1000"},
+   {id:"Pp", label:"峰段电价", unit:"元/kWh", def:"1.0"},
+   {id:"Ef", label:"平段电量", unit:"kWh", def:"2000"},
+   {id:"Pf", label:"平段电价", unit:"元/kWh", def:"0.6"},
+   {id:"Ev", label:"谷段电量", unit:"kWh", def:"1000"},
+   {id:"Pv", label:"谷段电价", unit:"元/kWh", def:"0.3"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var ep=Number(Ep),pp=Number(Pp),ef=Number(Ef),pf=Number(Pf),ev=Number(Ev),pv=Number(Pv);var xs=[ep,pp,ef,pf,ev,pv];for(var i=0;i<6;i++){if(!(xs[i]>=0))return {ok:false,msg:'电量与电价不能为负'};}var te=ep+ef+ev;if(!(te>0))return {ok:false,msg:'总电量须大于 0'};var fp=ep*pp,ff=ef*pf,fv=ev*pv,tf=fp+ff+fv;var avg=tf/te;return {ok:true,html:'<div class=\\\"big\\\">总电费 '+tf.toFixed(2)+' 元，平均电价 '+F(avg)+' 元/kWh</div><div class=\\\"row\\\">总电量 '+F(te)+' kWh；峰 '+fp.toFixed(2)+' 元（电量 '+F(ep/te*100)+'%）· 平 '+ff.toFixed(2)+' 元（电量 '+F(ef/te*100)+'%）· 谷 '+fv.toFixed(2)+' 元（电量 '+F(ev/te*100)+'%）</div><div class=\\\"row\\\">把可转移负荷挪到谷段可直接降低平均电价</div>'};", test:{inputs:{Ep:1000, Pp:1, Ef:2000, Pf:0.6, Ev:1000, Pv:0.3}, expect:"2500.00"}},
+ {id:"dgpvstr", cat:"dgjs", icon:"🔆", name:"光伏组串块数设计", desc:"按低温修正开路电压与逆变器参数算每串最大/最小组件块数", formula:"低温修正开路电压 Voc' = Voc × (1 + β × (25 − Tmin))，β 为开路电压温度系数绝对值（%/℃，组件手册常为负值，本工具填绝对值）；每串最大块数 Nmax = 向下取整(逆变器最大输入电压 ÷ Voc')；每串最小块数 Nmin = 向上取整(MPPT 电压下限 ÷ 组件工作电压 Vmp)（Vmp 近似口径，未计高温衰减，设计时应另留裕量核对 MPPT 上限）", inputs:[
+   {id:"Voc", label:"组件开路电压 Voc", unit:"V", def:"41"},
+   {id:"Vmp", label:"组件工作电压 Vmp", unit:"V", def:"34"},
+   {id:"beta", label:"Voc 温度系数绝对值 β", unit:"%/℃", def:"0.30", hint:"查组件手册，如 −0.30%/℃ 填 0.30"},
+   {id:"Tmin", label:"极端最低温度 Tmin", unit:"℃", def:"-10"},
+   {id:"Vmax", label:"逆变器最大输入电压", unit:"V", def:"1000"},
+   {id:"Vlo", label:"MPPT 电压下限", unit:"V", def:"200"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var voc=Number(Voc),vmp=Number(Vmp),bt=Number(beta),tm=Number(Tmin),vmx=Number(Vmax),vlo=Number(Vlo);if(!(voc>0))return {ok:false,msg:'Voc 须大于 0'};if(!(vmp>0))return {ok:false,msg:'Vmp 须大于 0'};if(!(bt>=0&&bt<=2))return {ok:false,msg:'温度系数绝对值应在 0~2 %/℃ 之间'};if(!(tm>=-60&&tm<=60))return {ok:false,msg:'最低温度超出合理范围'};if(!(vmx>0)||!(vlo>0))return {ok:false,msg:'逆变器电压参数须大于 0'};var voc2=voc*(1+bt/100*(25-tm));var nmax=Math.floor(vmx/voc2+1e-9);if(nmax<1)return {ok:false,msg:'单块组件低温 Voc 已超过逆变器最大输入电压，参数不匹配'};var nmin=Math.ceil(vlo/vmp-1e-9);return {ok:true,html:'<div class=\\\"big\\\">每串 '+nmin+' ~ '+nmax+' 块</div><div class=\\\"row\\\">低温修正 Voc′ = '+F(voc2)+' V（'+tm+'℃）；Nmax = ⌊'+vmx+' ÷ '+F(voc2)+'⌋ = '+nmax+'，Nmin = ⌈'+vlo+' ÷ '+vmp+'⌉ = '+nmin+'</div><div class=\\\"row\\\">Nmin 为 Vmp 近似口径，正式设计应按高温 Vmp 与 MPPT 范围复核</div>'};", test:{inputs:{Voc:41, Vmp:34, beta:0.3, Tmin:-10, Vmax:1000, Vlo:200}, expect:"45.305"}},
+ {id:"dgheat", cat:"dgjs", icon:"🔥", name:"加热功率计算", desc:"水或空气升温所需加热功率（含效率折算）", formula:"热量 Q = m × c × ΔT；加热功率 P = Q ÷ 时间 ÷ 效率 η。水：c = 4.186 kJ/(kg·℃)，质量直接输入 kg；空气：按体积计算，密度 1.293 kg/m³、c = 1.005 kJ/(kg·℃)。P 为计入效率后的电加热输入功率", inputs:[
+   {id:"mode", label:"加热介质", type:"select", def:"water", options:[
+    {v:"water", t:"水（按质量）"},
+    {v:"air", t:"空气（按体积）"}
+  ]},
+   {id:"m", label:"水的质量 m", unit:"kg", when:"mode=water", def:"100"},
+   {id:"vol", label:"空气体积 V", unit:"m³", when:"mode=air", def:"50"},
+   {id:"dT", label:"温升 ΔT", unit:"℃", def:"40"},
+   {id:"t", label:"加热时间 t", unit:"min", def:"60"},
+   {id:"eff", label:"加热效率 η", unit:"%", def:"100"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var dt=Number(dT),tt=Number(t),ef=Number(eff);if(!(dt>0))return {ok:false,msg:'温升须大于 0'};if(!(tt>0))return {ok:false,msg:'加热时间须大于 0'};if(!(ef>0&&ef<=100))return {ok:false,msg:'效率应在 (0,100%] 之间'};var mass,c;if(String(mode)==='air'){var vv=Number(vol);if(!(vv>0))return {ok:false,msg:'空气体积须大于 0'};mass=vv*1.293;c=1.005;}else{var mm=Number(m);if(!(mm>0))return {ok:false,msg:'水的质量须大于 0'};mass=mm;c=4.186;}var Q=mass*c*dt;var pth=Q/(tt*60);var pin=pth/(ef/100);return {ok:true,html:'<div class=\\\"big\\\">所需加热功率 P ≈ '+F(pin)+' kW</div><div class=\\\"row\\\">热量 Q = '+F(mass)+' kg × '+c+' × '+dt+'℃ = '+F(Q)+' kJ；净热功率 '+F(pth)+' kW，按效率 '+ef+'% 折算输入功率 '+F(pin)+' kW</div><div class=\\\"row\\\">未计散热损失与容器吸热，选加热器时建议再留 10%~20% 裕量</div>'};", test:{inputs:{mode:"water", m:100, vol:50, dT:40, t:60, eff:100}, expect:"4.6511"}},
+ {id:"dgspd", cat:"dgjs", icon:"⚡", name:"SPD 选型参考", desc:"按防雷分区与线路类型给出电涌保护器类型与参数参考档", formula:"查表型工具，依据 GB 50057《建筑物防雷设计规范》与 GB/T 18802 常用配置：LPZ0→LPZ1 界面用 T1 型（I 类试验，10/350 μs）SPD，Iimp ≥ 12.5 kA/极；LPZ1→LPZ2 用 T2 型（II 类试验，8/20 μs），In ≥ 20 kA、Imax 40 kA 级；LPZ2 以内设备端用 T3 型（III 类复合波），Uoc 10 kV 级。各极 Up 应低于被保护设备耐压，Uc 按系统电压选取（如 220/380V 系统常用 Uc 275V 级）。信号线路按 D1/C2 类试验等级配置。本表为常用参考，实际工程按防雷类别与风险评估确定", inputs:[
+   {id:"cat2", label:"线路类型", type:"select", def:"power", options:[
+    {v:"power", t:"电源线路"},
+    {v:"signal", t:"信号线路"}
+  ]},
+   {id:"zone", label:"安装位置（防雷分区界面）", type:"select", def:"z01", options:[
+    {v:"z01", t:"LPZ0 → LPZ1（总配电进线）"},
+    {v:"z12", t:"LPZ1 → LPZ2（分配电）"},
+    {v:"z23", t:"LPZ2 以内（设备端）"}
+  ]}
+ ], run:"var z=String(zone),c=String(cat2);var T={power:{z01:'T1 型（I 类试验，10/350μs 波形），Iimp ≥ 12.5 kA/极，Up ≤ 2.5 kV',z12:'T2 型（II 类试验，8/20μs 波形），In ≥ 20 kA，Imax 40 kA 级，Up ≤ 1.8 kV',z23:'T3 型（III 类试验，复合波），Uoc 10 kV 级，Up ≤ 1.2 kV，就近装于设备端'},signal:{z01:'D1 类（高能量试验）+ C2 类组合，进线端先泄放 10/350 部分雷电流',z12:'C2 类（8/20μs），按信号电平选 Uc 与插入损耗',z23:'C1/C2 类精细保护，Uc 略高于信号最高工作电压，核对接口速率与插损'}};var row=(T[c]||T.power)[z];if(!row)return {ok:false,msg:'分区参数无效'};return {ok:true,html:'<div class=\\\"big\\\">推荐：'+row.split('，')[0]+'</div><div class=\\\"row\\\">'+row+'</div><div class=\\\"row\\\">依据 GB 50057 / GB/T 18802 常用配置；电源 SPD 的 Uc 按系统电压选取（220/380V 系统常用 275V 级），后备保护与引线长度（总长宜 ≤ 0.5 m）另行按厂家手册配置</div>'};", test:{inputs:{cat2:"power", zone:"z01"}, expect:"12.5"}},
+ {id:"dglineik", cat:"dgjs", icon:"💥", name:"线路末端短路电流", desc:"按电源参数与线路阻抗估算末端三相/单相短路电流", formula:"电源侧阻抗：按短路容量 Xs = U² ÷ Sk；按变压器 Zt ≈ uk% × U² ÷ S变压器（近似取为电抗）。线路电阻 R = ρL ÷ S（ρ：铜 0.0175、铝 0.0285 Ω·mm²/m），线路电抗 X ≈ 0.08 Ω/km × L。三相短路 Ik3 = U ÷ (√3 × √((R)² + (Xs + X)²))；单相短路（相-中性回路近似）Ik1 = (U ÷ √3) ÷ √((2R)² + (Xs + 2X)²)。简化估算口径，精确计算按 GB/T 15544 / IEC 60909 并计电阻温度修正", inputs:[
+   {id:"src", label:"电源参数来源", type:"select", def:"trans", options:[
+    {v:"trans", t:"变压器容量 + uk%"},
+    {v:"sk", t:"电源短路容量 Sk"}
+  ]},
+   {id:"Str", label:"变压器容量", unit:"kVA", when:"src=trans", def:"1000"},
+   {id:"uk", label:"变压器 uk", unit:"%", when:"src=trans", def:"5"},
+   {id:"Sk", label:"短路容量 Sk", unit:"MVA", when:"src=sk", def:"100"},
+   {id:"U", label:"线电压 U", unit:"V", def:"400"},
+   {id:"L", label:"线路长度 L", unit:"km", def:"0.1"},
+   {id:"S", label:"导线截面 S", unit:"mm²", def:"95"},
+   {id:"mat", label:"导线材质", type:"select", def:"cu", options:[
+    {v:"cu", t:"铜 ρ=0.0175"},
+    {v:"al", t:"铝 ρ=0.0285"}
+  ]}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var Uu=Number(U),Ll=Number(L),Ss=Number(S);if(!(Uu>0))return {ok:false,msg:'电压须大于 0'};if(!(Ll>=0))return {ok:false,msg:'线路长度不能为负'};if(!(Ss>0))return {ok:false,msg:'导线截面须大于 0'};var xs;if(String(src)==='sk'){var sk=Number(Sk);if(!(sk>0))return {ok:false,msg:'短路容量须大于 0'};xs=Uu*Uu/(sk*1e6);}else{var st2=Number(Str),uk2=Number(uk);if(!(st2>0))return {ok:false,msg:'变压器容量须大于 0'};if(!(uk2>0))return {ok:false,msg:'uk% 须大于 0'};xs=uk2/100*Uu*Uu/(st2*1000);}var rho=String(mat)==='al'?0.0285:0.0175;var R=rho*(Ll*1000)/Ss;var X=0.08*Ll;var z3=Math.sqrt(R*R+(xs+X)*(xs+X));var ik3=Uu/(Math.sqrt(3)*z3);var z1=Math.sqrt(4*R*R+(xs+2*X)*(xs+2*X));var ik1=(Uu/Math.sqrt(3))/z1;return {ok:true,html:'<div class=\\\"big\\\">末端三相短路 Ik3 ≈ '+F(ik3/1000)+' kA</div><div class=\\\"row\\\">单相短路 Ik1 ≈ '+F(ik1/1000)+' kA（'+F(ik1)+' A）</div><div class=\\\"row\\\">电源阻抗 '+F(xs)+' Ω，线路 R = '+F(R)+' Ω、X = '+F(X)+' Ω；Ik1 用于校验保护电器灵敏度</div>'};", test:{inputs:{src:"trans", Str:1000, uk:5, Sk:100, U:400, L:0.1, S:95, mat:"cu"}, expect:"9.465"}},
+ {id:"dgcompcur", cat:"dgjs", icon:"🔋", name:"补偿电容工作电流", desc:"三相/单相补偿电容器的工作电流与过载校核提示", formula:"三相（三角形/星形总容量口径）：In = Qc ÷ (√3 × U线)；单相：In = Qc ÷ U。电容器回路电流含谐波与过电压放大，GB/T 12747 允许长期过电流 1.3 倍额定电流，开关/熔断器/导线常按 1.5 倍左右额定电流配置（以厂家与设计为准）", inputs:[
+   {id:"ph", label:"接线", type:"select", def:"3", options:[
+    {v:"3", t:"三相"},
+    {v:"1", t:"单相"}
+  ]},
+   {id:"Qc", label:"补偿容量 Qc", unit:"kvar", def:"30"},
+   {id:"U", label:"电压 U", unit:"V", def:"400", hint:"三相填线电压，单相填相电压"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var q=Number(Qc),u=Number(U);if(!(q>0))return {ok:false,msg:'补偿容量须大于 0'};if(!(u>0))return {ok:false,msg:'电压须大于 0'};var three=String(ph)==='3';var cur=three?q*1000/(Math.sqrt(3)*u):q*1000/u;return {ok:true,html:'<div class=\\\"big\\\">电容工作电流 In ≈ '+F(cur)+' A</div><div class=\\\"row\\\">'+(three?'三相 In = Qc ÷ (√3 × U)':'单相 In = Qc ÷ U')+'；1.3 倍允许过电流 ≈ '+F(cur*1.3)+' A，开关与导线建议不低于约 1.5 × In = '+F(cur*1.5)+' A 配置</div>'};", test:{inputs:{ph:"3", Qc:30, U:400}, expect:"43.3013"}},
+ {id:"dgeconsec", cat:"dgjs", icon:"📏", name:"电缆经济截面", desc:"按经济电流密度查表算经济截面并向上取标称截面", formula:"经济截面 Sec = 计算电流 I ÷ 经济电流密度 Jec。Jec 查表（GB 50217 常用表，年最大负荷利用小时 Tmax）：铜芯 — Tmax ≤3000h 取 2.5、3000~5000h 取 2.25、>5000h 取 2.0 A/mm²；铝芯 — 1.65 / 1.35 / 1.15 A/mm²。算得截面向上取标称序列 1.5~300 mm²；经济截面还须与载流量、电压降、热稳定校验取大者", inputs:[
+   {id:"I", label:"线路计算电流 I", unit:"A", def:"100"},
+   {id:"mat", label:"导体材质", type:"select", def:"cu", options:[
+    {v:"cu", t:"铜芯"},
+    {v:"al", t:"铝芯"}
+  ]},
+   {id:"hrs", label:"年最大负荷利用小时", type:"select", def:"h3", options:[
+    {v:"h3", t:"≤3000 h"},
+    {v:"h5", t:"3000~5000 h"},
+    {v:"h7", t:">5000 h"}
+  ]}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var ii=Number(I);if(!(ii>0))return {ok:false,msg:'计算电流须大于 0'};var J={cu:{h3:2.5,h5:2.25,h7:2.0},al:{h3:1.65,h5:1.35,h7:1.15}};var j=(J[String(mat)]||J.cu)[String(hrs)];if(!j)return {ok:false,msg:'查表参数无效'};var sec=ii/j;var STD=[1.5,2.5,4,6,10,16,25,35,50,70,95,120,150,185,240,300];var rec=null;for(var k=0;k<STD.length;k++){if(STD[k]>=sec-1e-9){rec=STD[k];break;}}var big=rec===null?'<div class=\\\"row\\\">算得经济截面 '+F(sec)+' mm² 超出常用标称序列（最大 300），应分回路或查大截面表</div>':'<div class=\\\"big\\\">推荐标称截面 '+rec+' mm²</div>';return {ok:true,html:'<div class=\\\"big\\\">经济截面 Sec ≈ '+F(sec)+' mm²</div><div class=\\\"row\\\">Jec = '+j+' A/mm²，Sec = '+ii+' ÷ '+j+' = '+F(sec)+' mm²</div>'+big+'<div class=\\\"row\\\">最终截面取经济截面、载流量、电压降、热稳定四者校验的大者</div>'};", test:{inputs:{I:100, mat:"cu", hrs:"h3"}, expect:"50"}},
+ {id:"dgbusbar", cat:"dgjs", icon:"🔥", name:"母线热稳定校验", desc:"由短路电流与持续时间算最小热稳定截面并判定现有截面", formula:"绝热近似：Smin = Ik × √t ÷ C；Ik 为短路电流（A），t 为短路持续时间（s）；热稳定系数 C 常用值：铜 171、铝 87（A·s^½/mm²，与绝缘/温度限值有关，此为常用近似档）。现有截面 ≥ Smin 为合格，裕度 = 现有截面 ÷ Smin", inputs:[
+   {id:"Ik", label:"短路电流 Ik", unit:"kA", def:"20"},
+   {id:"t", label:"短路持续时间 t", unit:"s", def:"1"},
+   {id:"mat", label:"母线材质", type:"select", def:"cu", options:[
+    {v:"cu", t:"铜 C=171"},
+    {v:"al", t:"铝 C=87"}
+  ]},
+   {id:"Sa", label:"现有母线截面", unit:"mm²", def:"120"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var ik=Number(Ik),tt=Number(t),sa=Number(Sa);if(!(ik>0))return {ok:false,msg:'短路电流须大于 0'};if(!(tt>0))return {ok:false,msg:'持续时间须大于 0'};if(!(sa>0))return {ok:false,msg:'现有截面须大于 0'};var C=String(mat)==='al'?87:171;var smin=ik*1000*Math.sqrt(tt)/C;var mg=sa/smin;var ok=sa>=smin-1e-9;return {ok:true,html:'<div class=\\\"big\\\">Smin = '+F(smin)+' mm²，'+(ok?'✅ 合格':'❌ 不合格')+'</div><div class=\\\"row\\\">现有截面 '+sa+' mm²，裕度 ×'+F(mg)+'（C = '+C+'，Ik = '+ik+' kA，t = '+tt+' s）</div>'+(ok?'':'<div class=\\\"row\\\">应加大母线截面至不小于 '+F(smin)+' mm² 或缩短保护动作时间</div>')};", test:{inputs:{Ik:20, t:1, mat:"cu", Sa:120}, expect:"116.9591"}},
+ {id:"dgbkset", cat:"dgjs", icon:"🎛️", name:"断路器保护整定", desc:"长延时/短延时/瞬时整定值计算并校验瞬时灵敏度", formula:"长延时整定 IL = 断路器额定电流 In × 长延时倍数（常 0.8~1.0）；短延时 IS = In × 短延时倍数（常 3~10，带短延时躲启动电流）；瞬时 II = In × 瞬时倍数（常 5~15）。灵敏度校验：末端最小短路电流 Ikmin ÷ II ≥ 1.5 为合格（常用要求）", inputs:[
+   {id:"In", label:"断路器额定电流 In", unit:"A", def:"100"},
+   {id:"kL", label:"长延时倍数", type:"select", def:"0.9", options:[
+    {v:"0.8", t:"0.8"},
+    {v:"0.85", t:"0.85"},
+    {v:"0.9", t:"0.9"},
+    {v:"0.95", t:"0.95"},
+    {v:"1", t:"1.0"}
+  ]},
+   {id:"kS", label:"短延时倍数（×In）", def:"5"},
+   {id:"kI", label:"瞬时倍数（×In）", def:"10"},
+   {id:"Ikmin", label:"末端最小短路电流 Ikmin", unit:"A", def:"2000"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var inn=Number(In),kl=Number(kL),ks=Number(kS),ki=Number(kI),ikm=Number(Ikmin);if(!(inn>0))return {ok:false,msg:'额定电流须大于 0'};if(!(ks>0)||!(ki>0))return {ok:false,msg:'短延时/瞬时倍数须大于 0'};if(!(ikm>0))return {ok:false,msg:'末端最小短路电流须大于 0'};var IL=inn*kl,IS=inn*ks,II=inn*ki;var sen=ikm/II;var ok=sen>=1.5;return {ok:true,html:'<div class=\\\"big\\\">瞬时整定 II = '+F(II)+' A，灵敏度 '+F(sen)+' '+(ok?'✅ ≥1.5 合格':'❌ <1.5 不合格')+'</div><div class=\\\"row\\\">长延时 IL = '+F(IL)+' A（'+inn+' × '+kl+'）；短延时 IS = '+F(IS)+' A（×'+ks+'）；瞬时 II = '+F(II)+' A（×'+ki+'）</div>'+(ok?'':'<div class=\\\"row\\\">灵敏度不足：可降低瞬时倍数、改用短延时保护或加大线路截面提高 Ikmin</div>')};", test:{inputs:{In:100, kL:"0.9", kS:5, kI:10, Ikmin:2000}, expect:"灵敏度 2"}},
+ {id:"dgctburden", cat:"dgjs", icon:"🧲", name:"CT 二次负荷校验", desc:"二次线阻抗加表计负荷算总 VA 并与 CT 额定负荷比较", formula:"二次导线电阻 R = ρ × 2L ÷ S（往返双线；ρ 铜 0.0175、铝 0.0285 Ω·mm²/m，L 为单程长度）；导线负荷 = I₂² × R（VA）；总负荷 = 导线负荷 + 表计/继电器负荷（VA，同功率因数近似相加）；总阻抗 Z = 总负荷 ÷ I₂²。总负荷不应超过 CT 额定二次负荷（对应准确级），工程上常控制在 25%~100% 额定负荷区间", inputs:[
+   {id:"L", label:"二次线单程长度 L", unit:"m", def:"20"},
+   {id:"S", label:"二次线截面 S", unit:"mm²", def:"2.5"},
+   {id:"mat", label:"导线材质", type:"select", def:"cu", options:[
+    {v:"cu", t:"铜 ρ=0.0175"},
+    {v:"al", t:"铝 ρ=0.0285"}
+  ]},
+   {id:"I2", label:"二次额定电流", type:"select", def:"5", options:[
+    {v:"5", t:"5 A"},
+    {v:"1", t:"1 A"}
+  ]},
+   {id:"va", label:"表计等负荷", unit:"VA", def:"5"},
+   {id:"varated", label:"CT 额定二次负荷", unit:"VA", def:"15"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var ll=Number(L),ss=Number(S),i2=Number(I2),va2=Number(va),vr=Number(varated);if(!(ll>=0))return {ok:false,msg:'长度不能为负'};if(!(ss>0))return {ok:false,msg:'截面须大于 0'};if(!(va2>=0))return {ok:false,msg:'表计负荷不能为负'};if(!(vr>0))return {ok:false,msg:'额定负荷须大于 0'};var rho=String(mat)==='al'?0.0285:0.0175;var R=rho*2*ll/ss;var wva=i2*i2*R;var tot=wva+va2;var Z=tot/(i2*i2);var pct=tot/vr*100;var ok=tot<=vr;return {ok:true,html:'<div class=\\\"big\\\">总二次负荷 '+F(tot)+' VA，'+(ok?'✅ 未超额定':'❌ 超过额定负荷')+'</div><div class=\\\"row\\\">导线电阻 '+F(R)+' Ω → 导线负荷 '+F(wva)+' VA + 表计 '+va2+' VA = '+F(tot)+' VA，占额定 '+vr+' VA 的 '+F(pct)+'%；等效总阻抗 '+F(Z)+' Ω</div>'+(ok?'':'<div class=\\\"row\\\">可加大二次线截面、改用 1A 二次或选更大额定负荷的 CT</div>')};", test:{inputs:{L:20, S:2.5, mat:"cu", I2:"5", va:5, varated:15}, expect:"12"}},
+ {id:"dgupsback", cat:"dgjs", icon:"🔌", name:"UPS 后备时间", desc:"恒功率法估算 UPS 电池后备时间", formula:"恒功率法近似：电池组总能量 E = 单节电压 × 单节容量 × 串联节数 × 并联组数（Wh）；后备时间 t = E × 逆变效率 × 放电系数 ÷ 负载功率。放电系数为铅酸电池在该放电率下可用容量占比的近似（默认 0.85，大电流放电时更低）；锂电可取更高。估算口径，实际以电池放电曲线/恒功率放电表为准", inputs:[
+   {id:"Vc", label:"单节电压", unit:"V", def:"12"},
+   {id:"Ah", label:"单节容量", unit:"Ah", def:"100"},
+   {id:"ns", label:"串联节数", def:"4"},
+   {id:"np", label:"并联组数", def:"1"},
+   {id:"eff", label:"逆变效率", unit:"%", def:"90"},
+   {id:"kd", label:"放电系数", def:"0.85", hint:"铅酸近似 0.7~0.9，锂电 0.9~0.95"},
+   {id:"P", label:"负载功率", unit:"W", def:"1000"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var vc=Number(Vc),ah=Number(Ah),ns2=Number(ns),np2=Number(np),ef=Number(eff),kd2=Number(kd),pp=Number(P);if(!(vc>0)||!(ah>0))return {ok:false,msg:'单节电压/容量须大于 0'};if(!(ns2>=1)||Math.floor(ns2)!==ns2||!(np2>=1)||Math.floor(np2)!==np2)return {ok:false,msg:'串并联节数须为正整数'};if(!(ef>0&&ef<=100))return {ok:false,msg:'逆变效率应在 (0,100%] 之间'};if(!(kd2>0&&kd2<=1))return {ok:false,msg:'放电系数应在 (0,1] 之间'};if(!(pp>0))return {ok:false,msg:'负载功率须大于 0'};var E=vc*ah*ns2*np2;var t=E*(ef/100)*kd2/pp;return {ok:true,html:'<div class=\\\"big\\\">后备时间 t ≈ '+F(t)+' h（约 '+F(t*60)+' min）</div><div class=\\\"row\\\">电池组 '+F(vc*ns2)+' V / '+F(ah*np2)+' Ah，总能量 '+F(E)+' Wh × 效率 '+ef+'% × 放电系数 '+kd2+' ÷ 负载 '+pp+' W</div><div class=\\\"row\\\">恒功率法近似估算，电池老化与低温会明显缩短实际时间</div>'};", test:{inputs:{Vc:12, Ah:100, ns:4, np:1, eff:90, kd:0.85, P:1000}, expect:"3.672"}},
+ {id:"dggen", cat:"dgjs", icon:"⛽", name:"柴油发电机容量估算", desc:"按负荷同时系数与最大电机启动校核估算发电机容量并取机组档位", formula:"运行容量 S运行 = 负荷总功率 × 同时系数 ÷ 功率因数；启动校核（启动 kVA 法）：最大电机额定 kVA = 电机功率 ÷ 0.8，启动倍数 — 直接启动 6 倍、星三角 2 倍、软启动 3 倍、变频 1.5 倍；S启动 = 电机启动 kVA +（总功率 − 电机功率）× 同时系数 ÷ 功率因数。取 S运行 与 S启动 大者，向上取常见机组档位 10/20/30/50/75/100/150/200/300/400/500/750/1000 kVA。系数法简化估算，重要负荷应按厂家启动压降校核", inputs:[
+   {id:"Pt", label:"负荷总功率", unit:"kW", def:"100"},
+   {id:"ksim", label:"同时系数", def:"0.8"},
+   {id:"pf", label:"负荷功率因数", def:"0.8"},
+   {id:"Pm", label:"最大单台电机功率", unit:"kW", def:"30", hint:"无电机填 0"},
+   {id:"start", label:"电机启动方式", type:"select", def:"direct", options:[
+    {v:"direct", t:"直接启动 ×6"},
+    {v:"yd", t:"星三角启动 ×2"},
+    {v:"soft", t:"软启动 ×3"},
+    {v:"vfd", t:"变频启动 ×1.5"}
+  ]}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var pt=Number(Pt),ks=Number(ksim),pf2=Number(pf),pm=Number(Pm);if(!(pt>0))return {ok:false,msg:'负荷总功率须大于 0'};if(!(ks>0&&ks<=1))return {ok:false,msg:'同时系数应在 (0,1] 之间'};if(!(pf2>0&&pf2<=1))return {ok:false,msg:'功率因数应在 (0,1] 之间'};if(!(pm>=0))return {ok:false,msg:'电机功率不能为负'};if(pm>pt)return {ok:false,msg:'最大单台电机功率不能大于负荷总功率'};var KF={direct:6,yd:2,soft:3,vfd:1.5};var kf=KF[String(start)];if(!kf)return {ok:false,msg:'启动方式无效'};var srun=pt*ks/pf2;var sstart=pm>0?(pm/0.8)*kf+(pt-pm)*ks/pf2:0;var need=Math.max(srun,sstart);var STD=[10,20,30,50,75,100,150,200,300,400,500,750,1000];var rec=null;for(var i=0;i<STD.length;i++){if(STD[i]>=need-1e-9){rec=STD[i];break;}}var big=rec===null?'<div class=\\\"row\\\">所需 '+F(need)+' kVA 超出常用档位序列（最大 1000 kVA），应选更大机组或并机</div>':'<div class=\\\"big\\\">推荐机组 '+rec+' kVA</div>';return {ok:true,html:'<div class=\\\"big\\\">所需容量 ≈ '+F(need)+' kVA</div><div class=\\\"row\\\">运行口径 '+F(srun)+' kVA'+(pm>0?'；启动校核口径 '+F(sstart)+' kVA（电机 '+pm+' kW，启动倍数 '+kf+'）':'（无电机启动校核）')+'，取大者 '+F(need)+' kVA</div>'+big};", test:{inputs:{Pt:100, ksim:0.8, pf:0.8, Pm:30, start:"direct"}, expect:"300"}},
+ {id:"dgweld", cat:"dgjs", icon:"🧑‍🏭", name:"电焊机暂载率换算", desc:"铭牌容量/电流按暂载率换算为 100% 连续制等效值", formula:"暂载率（负载持续率）换算：S₁₀₀ = S铭牌 × √(ED ÷ 100)；等效连续电流 I₁₀₀ = I工作 × √(ED ÷ 100)。ED 为铭牌暂载率（如 60%）。换算用于按连续制选电缆与开关（焊机供电设计常用口径）", inputs:[
+   {id:"mode", label:"换算对象", type:"select", def:"cap", options:[
+    {v:"cap", t:"铭牌容量 → 100% 连续容量"},
+    {v:"cur", t:"工作电流 → 等效连续电流"}
+  ]},
+   {id:"S", label:"铭牌容量 S", unit:"kVA", when:"mode=cap", def:"20"},
+   {id:"Iw", label:"工作电流 I", unit:"A", when:"mode=cur", def:"200"},
+   {id:"ED", label:"暂载率 ED", unit:"%", def:"60"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var ed=Number(ED);if(!(ed>0&&ed<=100))return {ok:false,msg:'暂载率应在 (0,100%] 之间'};var f=Math.sqrt(ed/100);if(String(mode)==='cur'){var iw=Number(Iw);if(!(iw>0))return {ok:false,msg:'工作电流须大于 0'};return {ok:true,html:'<div class=\\\"big\\\">等效连续电流 I₁₀₀ = '+F(iw*f)+' A</div><div class=\\\"row\\\">'+iw+' A × √('+ed+'%) = '+F(iw*f)+' A，按此选供电电缆与开关</div>'};}var ss=Number(S);if(!(ss>0))return {ok:false,msg:'铭牌容量须大于 0'};return {ok:true,html:'<div class=\\\"big\\\">100% 连续容量 S₁₀₀ = '+F(ss*f)+' kVA</div><div class=\\\"row\\\">'+ss+' kVA × √('+ed+'%) = '+F(ss*f)+' kVA（暂载率 '+ed+'%）</div>'};", test:{inputs:{mode:"cap", S:20, Iw:200, ED:60}, expect:"15.4919"}},
+ {id:"dgtray", cat:"dgjs", icon:"🪜", name:"电缆桥架填充计算", desc:"按桥架截面与填充率上限算可敷设电缆根数", formula:"可用截面积 = 桥架宽 × 桥架高 × 填充率上限（动力电缆 40%、控制电缆 50%，GB 50303 / 常用设计口径）；单根电缆截面积 = π × 外径² ÷ 4；可敷设根数 = 向下取整(可用截面积 ÷ 单根截面积)。电缆外径大于桥架高度时无法敷设", inputs:[
+   {id:"W", label:"桥架宽度 W", unit:"mm", def:"200"},
+   {id:"H", label:"桥架高度 H", unit:"mm", def:"100"},
+   {id:"kind", label:"电缆类型", type:"select", def:"power", options:[
+    {v:"power", t:"动力电缆（填充率 ≤40%）"},
+    {v:"ctrl", t:"控制电缆（填充率 ≤50%）"}
+  ]},
+   {id:"d", label:"电缆外径 d", unit:"mm", def:"10"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var w=Number(W),h=Number(H),dd=Number(d);if(!(w>0)||!(h>0))return {ok:false,msg:'桥架宽高须大于 0'};if(!(dd>0))return {ok:false,msg:'电缆外径须大于 0'};if(dd>h)return {ok:false,msg:'电缆外径大于桥架高度，无法敷设'};var fill=String(kind)==='ctrl'?0.5:0.4;var usable=w*h*fill;var ca=Math.PI*dd*dd/4;var n=Math.floor(usable/ca+1e-9);return {ok:true,html:'<div class=\\\"big\\\">可敷设约 '+n+' 根</div><div class=\\\"row\\\">可用截面积 '+F(usable)+' mm²（'+w+' × '+h+' × '+(fill*100)+'%），单根电缆截面积 '+F(ca)+' mm²，'+F(usable)+' ÷ '+F(ca)+' 向下取整 '+n+' 根</div><div class=\\\"row\\\">根数法为截面积近似，成束敷设还应校验载流量修正与散热</div>'};", test:{inputs:{W:200, H:100, kind:"power", d:10}, expect:"101"}},
+ {id:"dgtwowatt", cat:"dgjs", icon:"✌️", name:"两表法测三相功率", desc:"两瓦特表读数算三相总有功、无功与功率因数", formula:"两表法（三相三线制）：P = P₁ + P₂；Q = √3 × (P₁ − P₂)（var）；S = √(P² + Q²)；cosφ = P ÷ S，tanφ = Q ÷ P。P₂ 为负时总功率为两表读数代数和（小读数反偏应取负）；Q > 0 为感性（滞后），Q < 0 为容性（超前）", inputs:[
+   {id:"P1", label:"瓦特表 1 读数 P₁", unit:"W", def:"300", hint:"可为负值（反偏取负）"},
+   {id:"P2", label:"瓦特表 2 读数 P₂", unit:"W", def:"100", hint:"可为负值（反偏取负）"}
+ ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var p1=Number(P1),p2=Number(P2);if(!isFinite(p1)||!isFinite(p2))return {ok:false,msg:'两表读数须为数值'};var P=p1+p2;var Q=Math.sqrt(3)*(p1-p2);var S=Math.sqrt(P*P+Q*Q);if(S===0)return {ok:false,msg:'两表读数均为 0，无功率可算'};var cos=P/S;var ph=Q>0?'感性（电流滞后）':Q<0?'容性（电流超前）':'纯阻性';return {ok:true,html:'<div class=\\\"big\\\">总有功 P = '+F(P)+' W</div><div class=\\\"row\\\">无功 Q = '+F(Q)+' var，视在 S = '+F(S)+' VA，cosφ = '+F(cos)+'（'+ph+'）</div><div class=\\\"row\\\">P = P₁ + P₂ = '+p1+' + '+p2+'；Q = √3 × (P₁ − P₂)</div>'};", test:{inputs:{P1:300, P2:100}, expect:"346.4102"}}
 );
 
 
