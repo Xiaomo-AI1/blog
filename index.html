@@ -3686,10 +3686,10 @@ TOOLS.push(
   run:"var pl=(now-buy)*qty,r=buy>0?(now-buy)/buy*100:0;return {ok:true,html:'<div class=\"big\">盈亏 '+pl.toFixed(2)+' 元</div><div class=\"row\">收益率 '+r.toFixed(2)+'%</div>'};",
   test:{inputs:{buy:10,qty:1000,now:11}, expect:"盈亏 1000.00"}},
  {id:"jrstockfee", cat:"jr", icon:"🧾", name:"股票交易费用", desc:"买卖一次的佣金印花税过户费",
-  formula:"总费用 = 买入佣金 + 卖出佣金 + 卖出印花税0.05% + 过户费",
+  formula:"总费用 = 买入佣金 + 卖出佣金（各按佣金率、不足5元按5元，金额为0不收） + 卖出印花税0.05% + 过户费0.001%（双向）",
   inputs:[{id:"buyamt", label:"买入金额", unit:"元", def:"100000", min:0},{id:"sellamt", label:"卖出金额", unit:"元", def:"120000", min:0},{id:"rate", label:"佣金率", unit:"%", def:"0.025", min:0}],
-  run:"var cr=rate/100,cb=Math.max(buyamt*cr,5),cs=Math.max(sellamt*cr,5),st=sellamt*0.0005,gh=2,tot=cb+cs+st+gh;return {ok:true,html:'<div class=\"big\">总费用 '+tot.toFixed(2)+' 元</div><div class=\"row\">买入佣金 '+cb.toFixed(2)+' + 卖出佣金 '+cs.toFixed(2)+' + 印花税 '+st.toFixed(2)+' + 过户费 '+gh.toFixed(2)+'</div>'};",
-  test:{inputs:{buyamt:100000,sellamt:120000,rate:0.025}, expect:"总费用 117.00"}},
+  run:"var cr=rate/100,cb=buyamt>0?Math.max(buyamt*cr,5):0,cs=sellamt>0?Math.max(sellamt*cr,5):0,st=sellamt*0.0005,gh=(buyamt+sellamt)*0.00001,tot=cb+cs+st+gh;return {ok:true,html:'<div class=\"big\">总费用 '+tot.toFixed(2)+' 元</div><div class=\"row\">买入佣金 '+cb.toFixed(2)+' + 卖出佣金 '+cs.toFixed(2)+' + 印花税 '+st.toFixed(2)+' + 过户费 '+gh.toFixed(2)+'</div>'};",
+  test:{inputs:{buyamt:100000,sellamt:120000,rate:0.025}, expect:"总费用 117.20"}},
  {id:"jrfund", cat:"jr", icon:"📊", name:"基金定投终值", desc:"每月定投算到期终值",
   formula:"终值 = 每月金额 × [((1+i)^N − 1)/i]，i=年化/12",
   inputs:[{id:"m", label:"每月定投", unit:"元", def:"1000", min:0},{id:"r", label:"年化收益", unit:"%", def:"6"},{id:"n", label:"定投年数", unit:"年", def:"3", min:0}],
@@ -3716,10 +3716,10 @@ TOOLS.push(
   run:"var c=Number(cur)*amt;return {ok:true,html:'<div class=\"big\">≈ '+c.toFixed(2)+' 元人民币</div><div class=\"row\">汇率 '+cur+'（手动汇率，仅供参考）</div>'};",
   test:{inputs:{cur:"7.2",amt:100}, expect:"720.00"}},
  {id:"jrccard", cat:"jr", icon:"💳", name:"分期真实年化", desc:"信用卡分期费率换算真实年化",
-  formula:"真实年化 ≈ 每期费率 × 期数 × 24/(期数+1)",
+  formula:"按 IRR 精确求解：每月还款 = 本金÷期数 + 本金×每期费率，解现值=本金得月 IRR，年化 = 月 IRR×12（央行年化利率披露口径）；另附有效年化 (1+月IRR)^12−1。总手续费 = 本金×每期费率×期数",
   inputs:[{id:"amt", label:"分期金额", unit:"元", def:"10000", min:0},{id:"n", label:"期数", def:"12", min:1},{id:"r", label:"每期费率", unit:"%", def:"0.6", min:0}],
-  run:"if(n+1<=0)return {ok:false,msg:'期数须大于0'};var real=r/100*n*24/(n+1)*100;return {ok:true,html:'<div class=\"big\">真实年化约 '+real.toFixed(2)+'%</div><div class=\"row\">总手续费 '+(amt*r/100*n).toFixed(2)+' 元</div>'};",
-  test:{inputs:{amt:10000,n:12,r:0.6}, expect:"13.29%"}},
+  run:"if(!(amt>0))return {ok:false,msg:'分期金额须大于 0'};var nn=Math.floor(Number(n));if(!(nn>=1)||nn>600)return {ok:false,msg:'期数须为 1~600 的整数'};var rr=Number(r);if(!(rr>=0))return {ok:false,msg:'每期费率不能为负'};var fee=amt*rr/100*nn;if(rr===0)return {ok:true,html:'<div class=\\\"big\\\">真实年化 0.00%</div><div class=\\\"row\\\">每期费率为 0，无手续费</div>'};var pmt=amt/nn+amt*rr/100;var lo=0,hi=1;for(var k=0;k<200;k++){var mid=(lo+hi)/2;var pv=pmt*(1-Math.pow(1+mid,-nn))/mid;if(pv>amt)lo=mid;else hi=mid;}var im=(lo+hi)/2;var nom=im*12*100;var eff=(Math.pow(1+im,12)-1)*100;return {ok:true,html:'<div class=\\\"big\\\">真实年化 '+nom.toFixed(2)+'%</div><div class=\\\"row\\\">每月还款 '+pmt.toFixed(2)+' 元，总手续费 '+fee.toFixed(2)+' 元；有效年化 '+eff.toFixed(2)+'%</div>'};",
+  test:{inputs:{amt:10000,n:12,r:0.6}, expect:"13.03%"}},
  {id:"jrminpay", cat:"jr", icon:"🏦", name:"最低还款利息", desc:"还最低后剩余部分利息估算",
   formula:"利息 ≈ 未还金额 × 0.05% × 30天",
   inputs:[{id:"bill", label:"账单金额", unit:"元", def:"10000", min:0},{id:"paid", label:"已还金额", unit:"元", def:"1000", min:0}],
@@ -3770,11 +3770,11 @@ TOOLS.push(
   inputs:[{id:"p", label:"本金", unit:"元", def:"10000", min:0},{id:"r", label:"年利率", unit:"%", def:"5"},{id:"n", label:"年数", unit:"年", def:"3", min:0}],
   run:"var fv=p*(1+r/100*n);return {ok:true,html:'<div class=\"big\">终值 '+fv.toFixed(2)+' 元</div><div class=\"row\">利息 '+(fv-p).toFixed(2)+' 元</div>'};",
   test:{inputs:{p:10000,r:5,n:3}, expect:"11500.00"}},
- {id:"jrbond", cat:"jr", icon:"📜", name:"债券到期收益", desc:"简化公式估算持有到期年化",
-  formula:"YTM ≈ (年利息 + (面值−买入价)/年数) / 买入价",
+ {id:"jrbond", cat:"jr", icon:"📜", name:"债券到期收益", desc:"数值求解持有到期年化",
+  formula:"买入价 = Σ 年利息/(1+YTM)^t + 面值/(1+YTM)^n，二分法数值求解 YTM",
   inputs:[{id:"face", label:"面值", unit:"元", def:"100", min:0},{id:"coupon", label:"票面利率", unit:"%", def:"5", min:0},{id:"price", label:"买入价", unit:"元", def:"95", min:0},{id:"n", label:"剩余年数", unit:"年", def:"5", min:0}],
-  run:"if(price<=0||n<=0)return {ok:false,msg:'价格和年数须大于0'};var y=(face*coupon/100+(face-price)/n)/price*100;return {ok:true,html:'<div class=\"big\">到期收益约 '+y.toFixed(2)+'%</div><div class=\"row\">简化公式估算，仅供参考</div>'};",
-  test:{inputs:{face:100,coupon:5,price:95,n:5}, expect:"6.32%"}},
+  run:"if(price<=0||n<=0)return {ok:false,msg:'价格和年数须大于0'};var C=face*coupon/100;var pv=function(y){if(Math.abs(y)<1e-12)return C*n+face;var v=Math.pow(1+y,-n);return C*(1-v)/y+face*v;};var lo=-0.999999,hi=1;while(pv(hi)>price&&hi<1e7)hi*=4;for(var it=0;it<200;it++){var mid=(lo+hi)/2;if(pv(mid)>price)lo=mid;else hi=mid;}var y=(lo+hi)/2*100;return {ok:true,html:'<div class=\"big\">到期收益约 '+y.toFixed(2)+'%</div><div class=\"row\">二分法数值求解：买入价 = 未来票息与面值的折现和</div>'};",
+  test:{inputs:{face:100,coupon:5,price:95,n:5}, expect:"6.19%"}},
  {id:"jrpe", cat:"jr", icon:"📊", name:"市盈率PE", desc:"股价除以每股收益",
   formula:"PE = 股价 / 每股收益EPS",
   inputs:[{id:"price", label:"股价", unit:"元", def:"20", min:0},{id:"eps", label:"每股收益", unit:"元", def:"1"}],
@@ -7945,6 +7945,270 @@ TOOLS.push(
    {id:"rhof", label:"流体密度 ρf", unit:"kg/m³", def:"1000"},
    {id:"eta", label:"流体黏度 η", unit:"Pa·s", def:"0.001", hint:"水约 0.001"}
  ], run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e6||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);while(s.indexOf('.')>=0&&s.charAt(s.length-1)==='0')s=s.substring(0,s.length-1);if(s.charAt(s.length-1)==='.')s=s.substring(0,s.length-1);return s;}var rr=Number(r),rp=Number(rhop),rf=Number(rhof),et=Number(eta);if(!(rr>0))return {ok:false,msg:'颗粒半径须大于 0'};if(!(rp>0)||!(rf>0))return {ok:false,msg:'密度须大于 0'};if(!(et>0))return {ok:false,msg:'黏度须大于 0'};var rm=rr*1e-6;var v=2*rm*rm*(rp-rf)*9.8/(9*et);var Re=rf*Math.abs(v)*2*rm/et;var note=Re<1?'Re < 1，斯托克斯定律适用':'⚠️ Re ≥ 1，超出斯托克斯适用范围，结果仅供参考';return {ok:true,html:'<div class=\"big\">沉降速度 v = '+F(v*1000)+' mm/s</div><div class=\"row\">v = '+v.toPrecision(4)+' m/s'+(v<0?'（负号表示上浮）':v===0?'（与流体等密度，悬浮）':'')+'；Re = '+F(Re)+'，'+note+'</div>'};", test:{inputs:{r:10,rhop:2500,rhof:1000,eta:0.001}, expect:"0.3267"}}
+);
+
+/* ===== R3 化学计算新增 25 工具（2026-10-21，cat=hx） ===== */
+TOOLS.push(
+ {id:"hxnernst2", cat:"hx", icon:"🔋", name:"能斯特方程（通用温度式）", desc:"任意温度下电极电势随反应商变化，含 25℃ 简化式分支",
+  formula:"25℃ 分支：E = E° − (0.0592/n)·lgQ；通用分支：E = E° − (RT/nF)·lnQ，R = 8.314 J/(mol·K)，F = 96485 C/mol。区别于已有 hxnernst（仅 25℃、且入参为 lg 口径固定式），本工具可输入任意温度走通用式",
+  inputs:[
+   {id:"mode", label:"计算分支", def:"c25", type:"select", options:[{v:"c25",t:"25℃ 简化式（0.0592 V）"},{v:"gen",t:"通用式（输入温度）"}]},
+   {id:"e0", label:"标准电极电势 E°", unit:"V", def:"1.10"},
+   {id:"n", label:"转移电子数 n", def:"2", hint:"须为正整数，常见 1、2、3"},
+   {id:"q", label:"反应商 Q", def:"0.01", hint:"Q = 产物活度积 ÷ 反应物活度积，须大于 0"},
+   {id:"T", label:"温度 T", unit:"K", def:"298.15", when:"mode=gen"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var E0=Number(e0),nn=Number(n),QQ=Number(q);if(!isFinite(E0)||E0<-10||E0>10)return {ok:false,msg:'标准电极电势应在 −10~10 V 之间'};if(!(nn>=1&&nn<=12)||Math.floor(nn)!==nn)return {ok:false,msg:'转移电子数须为 1~12 的整数'};if(!(QQ>0)||QQ>1e30)return {ok:false,msg:'反应商 Q 须大于 0（且不超过 1e30）'};var E,note;if(String(mode)==='gen'){var TT=Number(T);if(!(TT>0)||TT>5000)return {ok:false,msg:'温度须大于 0 K（且不超过 5000 K）'};E=E0-8.314*TT/(nn*96485)*Math.log(QQ);note='通用式：RT/(nF) = '+(8.314*TT/(nn*96485)).toPrecision(4)+' V，lnQ = '+Math.log(QQ).toFixed(4);}else{E=E0-0.0592/nn*Math.log10(QQ);note='25℃ 简化式：lgQ = '+Math.log10(QQ).toFixed(4)+'；Q = 1 时 E = E°';}return {ok:true,html:'<div class=\"big\">E = '+E.toFixed(4)+' V</div><div class=\"row\">'+note+'</div><div class=\"row\">Q '+(QQ<1?'小于 1，电势高于 E°':QQ>1?'大于 1，电势低于 E°':'等于 1，电势恰为 E°')+'</div>'};",
+  test:{inputs:{mode:"c25", e0:1.1, n:2, q:0.01, T:298.15}, expect:"1.1592"}},
+ {id:"hxcell", cat:"hx", icon:"⚡", name:"原电池电动势与自由能", desc:"由正负极标准电极电势算 E°池、ΔG° 与平衡常数 K",
+  formula:"E°池 = E°(正极/还原) − E°(负极/还原)（两极均按还原电势输入）；ΔG° = −nFE°池，F = 96485 C/mol；lgK = nE°池 ÷ 0.0592（25℃）。E°池 > 0 时电池反应自发",
+  inputs:[
+   {id:"ec", label:"正极标准电极电势 E°正", unit:"V", def:"0.34", hint:"还原电势，如 Cu²⁺/Cu 为 +0.34"},
+   {id:"ea", label:"负极标准电极电势 E°负", unit:"V", def:"-0.76", hint:"还原电势，如 Zn²⁺/Zn 为 −0.76"},
+   {id:"n", label:"转移电子数 n", def:"2", hint:"须为正整数"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var EC=Number(ec),EA=Number(ea),nn=Number(n);if(!isFinite(EC)||!isFinite(EA)||EC<-10||EC>10||EA<-10||EA>10)return {ok:false,msg:'电极电势应在 −10~10 V 之间'};if(!(nn>=1&&nn<=12)||Math.floor(nn)!==nn)return {ok:false,msg:'转移电子数须为 1~12 的整数'};var E=EC-EA;var dG=-nn*96485*E/1000;var lgK=nn*E/0.0592;var Ks=lgK>300?'大于 10^300（近乎完全反应）':lgK<-300?'小于 10^-300（近乎不反应）':'K ≈ '+Math.pow(10,lgK-Math.floor(lgK)).toFixed(2)+'×10^'+Math.floor(lgK);return {ok:true,html:'<div class=\"big\">E°池 = '+E.toFixed(4)+' V，ΔG° = '+dG.toFixed(2)+' kJ/mol</div><div class=\"row\">lgK = '+lgK.toFixed(2)+'，'+Ks+'</div><div class=\"row\">'+(E>0?'E°池 > 0：作原电池可自发放电':E<0?'E°池 < 0：该方向不自发，逆向才是原电池方向':'E°池 = 0：处于平衡')+'</div>'};",
+  test:{inputs:{ec:0.34, ea:-0.76, n:2}, expect:"-212.27"}},
+ {id:"hxelectrolysis", cat:"hx", icon:"🔌", name:"电解定量与电流效率", desc:"法拉第定律算电解析出量，含电量、电子物质的量与电流效率",
+  formula:"Q = I·t；m理论 = Q·M ÷ (n·F)，F = 96485 C/mol；m实际 = m理论 × 电流效率 η。区别于已有 hxfaraday/hxelectro（仅理论析出量），本工具含电流效率与电量/电子量明细；时间输入分钟，自动换算秒",
+  inputs:[
+   {id:"I", label:"电流 I", unit:"A", def:"2"},
+   {id:"t", label:"通电时间 t", unit:"min", def:"60"},
+   {id:"M", label:"析出物摩尔质量 M", unit:"g/mol", def:"63.55"},
+   {id:"n", label:"每摩尔产物得失电子数 n", def:"2", hint:"如 Cu²⁺ 得电子 n = 2，Al³⁺ 为 3"},
+   {id:"eta", label:"电流效率 η", unit:"%", def:"90", hint:"实际析出 ÷ 理论析出，副反应会使其小于 100%"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var II=Number(I),tt=Number(t),MM=Number(M),nn=Number(n),ee=Number(eta);if(!(II>0)||II>1e5)return {ok:false,msg:'电流须大于 0（且不超过 1e5 A）'};if(!(tt>0)||tt>1e6)return {ok:false,msg:'通电时间须大于 0（且不超过 1e6 min）'};if(!(MM>0))return {ok:false,msg:'摩尔质量须大于 0'};if(!(nn>=1&&nn<=12)||Math.floor(nn)!==nn)return {ok:false,msg:'电子数须为 1~12 的整数'};if(!(ee>0&&ee<=100))return {ok:false,msg:'电流效率应在 (0,100]% 之间'};var Q=II*tt*60;var ne=Q/96485;var mth=Q*MM/(nn*96485);var ma=mth*ee/100;if(!isFinite(ma))return {ok:false,msg:'结果超出可表示范围，请减小入参'};return {ok:true,html:'<div class=\"big\">实际析出 m = '+ma.toFixed(3)+' g</div><div class=\"row\">通过电量 Q = '+F(Q)+' C，相当于 '+ne.toPrecision(4)+' mol 电子；理论析出 '+mth.toFixed(3)+' g × 效率 '+ee+'% = '+ma.toFixed(3)+' g</div>'};",
+  test:{inputs:{I:2, t:60, M:63.55, n:2, eta:90}, expect:"2.134"}},
+ {id:"hxhenderson", cat:"hx", icon:"🧴", name:"缓冲溶液配制比（反算）", desc:"由目标 pH 与 pKa 反算共轭酸/盐的摩尔比与各自用量",
+  formula:"Henderson–Hasselbalch 反算口径：[盐]/[酸] = 10^(pH−pKa)；给定酸+盐总物质的量 n总 时，n盐 = n总·r÷(1+r)，n酸 = n总÷(1+r)。区别于已有 hxbuffer（由比值求 pH），本工具是由目标 pH 反求配比与用量；缓冲有效范围约 pKa±1",
+  inputs:[
+   {id:"pka", label:"弱酸 pKa", def:"4.76", hint:"如醋酸 4.76、碳酸氢根 10.33"},
+   {id:"ph", label:"目标 pH", def:"5.76"},
+   {id:"tot", label:"酸 + 盐总物质的量", unit:"mol", def:"0.2", hint:"配制总量（酸与盐合计）"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var PK=Number(pka),PH=Number(ph),TT=Number(tot);if(!isFinite(PK)||PK<-2||PK>16)return {ok:false,msg:'pKa 应在 −2~16 之间'};if(!isFinite(PH)||PH<0||PH>14)return {ok:false,msg:'目标 pH 应在 0~14 之间'};if(!(TT>0)||TT>1e6)return {ok:false,msg:'总物质的量须大于 0'};var r=Math.pow(10,PH-PK);var ns=TT*r/(1+r),na=TT/(1+r);var warn=Math.abs(PH-PK)>1?'<div class=\"row\">注意：目标 pH 偏离 pKa 超过 1，已超出缓冲有效范围（pKa±1），缓冲能力很弱</div>':'';return {ok:true,html:'<div class=\"big\">需盐 '+F(ns)+' mol，酸 '+F(na)+' mol</div><div class=\"row\">[盐]/[酸] = 10^('+F(PH-PK)+') = '+r.toPrecision(4)+'；盐占比 '+(ns/TT*100).toFixed(1)+'%</div>'+warn};",
+  test:{inputs:{pka:4.76, ph:5.76, tot:0.2}, expect:"0.1818"}},
+ {id:"hxsp", cat:"hx", icon:"💎", name:"溶度积与溶解度互算", desc:"AB/A₂B/AB₂/A₃B 四种盐型的 Ksp 与摩尔溶解度 s 双向换算",
+  formula:"AB 型：Ksp = s²；A₂B 与 AB₂ 型：Ksp = (2s)²·s = 4s³；A₃B 型：Ksp = (3s)³·s = 27s⁴。反算取对应方根。区别于已有 hxksp（仅 Ksp→s 且只有两型），本工具双向且四型；忽略水解与同离子效应",
+  inputs:[
+   {id:"mode", label:"计算方向", def:"k2s", type:"select", options:[{v:"k2s",t:"由 Ksp 求溶解度 s"},{v:"s2k",t:"由溶解度 s 求 Ksp"}]},
+   {id:"typ", label:"盐型", def:"AB", type:"select", options:[{v:"AB",t:"AB 型（如 AgCl、BaSO₄）"},{v:"A2B",t:"A₂B 型（如 Ag₂CrO₄）"},{v:"AB2",t:"AB₂ 型（如 Ca(OH)₂、PbCl₂）"},{v:"A3B",t:"A₃B 型（如 Fe(OH)₃ 近似）"}]},
+   {id:"val", label:"Ksp（方向为 Ksp→s 时）或 s（反之，mol/L）", def:"1.8e-10", hint:"如 AgCl 的 Ksp = 1.8×10⁻¹⁰"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var V=Number(val);if(!(V>0)||V>1e10)return {ok:false,msg:'输入值须大于 0'};var ty=String(typ);var out,rel;if(String(mode)==='k2s'){if(ty==='AB'){out=Math.sqrt(V);rel='s = √Ksp';}else if(ty==='A3B'){out=Math.pow(V/27,0.25);rel='s = (Ksp÷27)^(1/4)';}else{out=Math.pow(V/4,1/3);rel='s = ∛(Ksp÷4)';}return {ok:true,html:'<div class=\"big\">s = '+out.toExponential(3)+' mol/L</div><div class=\"row\">'+ty+' 型，'+rel+'；即每升饱和溶液溶解 '+out.toExponential(3)+' mol 该盐</div>'};}else{if(ty==='AB'){out=V*V;rel='Ksp = s²';}else if(ty==='A3B'){out=27*Math.pow(V,4);rel='Ksp = 27s⁴';}else{out=4*Math.pow(V,3);rel='Ksp = 4s³';}if(!isFinite(out))return {ok:false,msg:'结果超出可表示范围'};return {ok:true,html:'<div class=\"big\">Ksp = '+out.toPrecision(4)+'</div><div class=\"row\">'+ty+' 型，'+rel+'（s = '+V.toPrecision(4)+' mol/L）</div>'};}",
+  test:{inputs:{mode:"k2s", typ:"AB", val:"1.8e-10"}, expect:"1.342e-5"}},
+ {id:"hxprecip", cat:"hx", icon:"🌧️", name:"沉淀判定与开始沉淀 pH", desc:"混合稀释后 Q 与 Ksp 比较判沉淀；氢氧化物开始沉淀 pH 反算",
+  formula:"判定分支：混合后浓度 c = c₀·V₀÷(V₁+V₂)，离子积 Q = [A]^x·[B]^y，Q > Ksp 沉淀、Q = Ksp 临界、Q < Ksp 不沉淀。pH 分支：M(OH)ₙ 开始沉淀时 [OH⁻] = (Ksp÷[M])^(1/n)，pH = 14 − pOH（25℃）。区别于已有 hxqsp（未计混合稀释、无 pH 分支）",
+  inputs:[
+   {id:"mode", label:"计算分支", def:"judge", type:"select", options:[{v:"judge",t:"混合后沉淀判定"},{v:"ph",t:"氢氧化物开始沉淀 pH"}]},
+   {id:"ca", label:"离子 A 原浓度", unit:"mol/L", def:"0.02", when:"mode=judge"},
+   {id:"va", label:"A 溶液体积", unit:"mL", def:"100", when:"mode=judge"},
+   {id:"x", label:"A 的化学计量数 x", def:"1", when:"mode=judge"},
+   {id:"cb", label:"离子 B 原浓度", unit:"mol/L", def:"0.02", when:"mode=judge"},
+   {id:"vb", label:"B 溶液体积", unit:"mL", def:"100", when:"mode=judge"},
+   {id:"y", label:"B 的化学计量数 y", def:"1", when:"mode=judge"},
+   {id:"ksp", label:"Ksp", def:"1.8e-10", when:"mode=judge"},
+   {id:"ksp2", label:"氢氧化物 Ksp", def:"5.61e-12", hint:"如 Mg(OH)₂ 5.61×10⁻¹²、Fe(OH)₃ 约 2.8×10⁻³⁹", when:"mode=ph"},
+   {id:"cm", label:"金属离子浓度 [M]", unit:"mol/L", def:"0.01", when:"mode=ph"},
+   {id:"nn", label:"氢氧根个数 n（M(OH)ₙ）", def:"2", when:"mode=ph"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}if(String(mode)==='ph'){var K2=Number(ksp2),CM=Number(cm),N2=Number(nn);if(!(K2>0))return {ok:false,msg:'Ksp 须大于 0'};if(!(CM>0))return {ok:false,msg:'金属离子浓度须大于 0'};if(!(N2>=1&&N2<=4)||Math.floor(N2)!==N2)return {ok:false,msg:'n 须为 1~4 的整数'};var oh=Math.pow(K2/CM,1/N2);if(!isFinite(oh)||oh<=0)return {ok:false,msg:'结果超出可表示范围'};var pH=14+Math.log10(oh);return {ok:true,html:'<div class=\"big\">开始沉淀 pH ≈ '+pH.toFixed(2)+'</div><div class=\"row\">临界 [OH⁻] = (Ksp÷[M])^(1/'+N2+') = '+oh.toPrecision(4)+' mol/L；pH 高于此值开始析出 M(OH)ₙ（25℃，Kw = 10⁻¹⁴）</div>'};}var CA=Number(ca),VA=Number(va),CB=Number(cb),VB=Number(vb),XX=Number(x),YY=Number(y),KS=Number(ksp);if(!(CA>=0)||!(CB>=0))return {ok:false,msg:'浓度不能为负'};if(!(VA>0)||!(VB>0))return {ok:false,msg:'体积须大于 0'};if(!(XX>=1&&XX<=4)||Math.floor(XX)!==XX||!(YY>=1&&YY<=4)||Math.floor(YY)!==YY)return {ok:false,msg:'计量数须为 1~4 的整数'};if(!(KS>0))return {ok:false,msg:'Ksp 须大于 0'};var c1=CA*VA/(VA+VB),c2=CB*VB/(VA+VB);var Q=Math.pow(c1,XX)*Math.pow(c2,YY);if(!isFinite(Q))return {ok:false,msg:'结果超出可表示范围'};var verdict=Q>KS?'会产生沉淀':Q<KS?'不产生沉淀':'恰好饱和（临界）';return {ok:true,html:'<div class=\"big\">'+verdict+'</div><div class=\"row\">混合后 [A] = '+c1.toPrecision(4)+' mol/L，[B] = '+c2.toPrecision(4)+' mol/L；Q = '+Q.toExponential(2)+'，Ksp = '+KS.toExponential(2)+'</div>'};",
+  test:{inputs:{mode:"judge", ca:0.02, va:100, x:1, cb:0.02, vb:100, y:1, ksp:"1.8e-10", ksp2:"5.61e-12", cm:0.01, nn:2}, expect:"会产生沉淀"}},
+ {id:"hxgibbs2", cat:"hx", icon:"🌡️", name:"吉布斯判据与转变温度", desc:"ΔG 计算、自发性判据四象限分析与转变温度（ΔS 以 J 输入自动换算）",
+  formula:"ΔG = ΔH − T·ΔS（ΔH 输入 kJ/mol，ΔS 输入 J/(mol·K)，内部 ÷1000 统一为 kJ 计算）；ΔH 与 ΔS 同号时转变温度 T转 = ΔH÷ΔS（单位一致后），T 越过 T转 自发性反转；异号时恒自发（ΔH<0、ΔS>0）或恒非自发（ΔH>0、ΔS<0）。区别于已有 hxgibbs（ΔS 按 kJ 输入、无转变温度与象限分析）",
+  inputs:[
+   {id:"dH", label:"焓变 ΔH", unit:"kJ/mol", def:"-100"},
+   {id:"dS", label:"熵变 ΔS", unit:"J/(mol·K)", def:"-200", hint:"注意单位是 J，勿与 kJ 混淆"},
+   {id:"T", label:"温度 T", unit:"K", def:"298"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var H=Number(dH),SJ=Number(dS),TT=Number(T);if(!isFinite(H)||Math.abs(H)>1e7)return {ok:false,msg:'ΔH 超出合理范围'};if(!isFinite(SJ)||Math.abs(SJ)>1e7)return {ok:false,msg:'ΔS 超出合理范围'};if(!(TT>0)||TT>1e6)return {ok:false,msg:'温度须大于 0 K（绝对零度不可达）'};var S=SJ/1000;var G=H-TT*S;var verdict=G<0?'自发进行':G>0?'非自发（逆向自发）':'处于平衡';var quad;if(H<0&&SJ>0)quad='ΔH<0、ΔS>0：任意温度下恒自发';else if(H>0&&SJ<0)quad='ΔH>0、ΔS<0：任意温度下恒非自发';else if(H<0&&SJ<0)quad='同号（均负）：转变温度 T转 = '+(H/S).toFixed(1)+' K，低于 T转 自发、高于则非自发';else if(H>0&&SJ>0)quad='同号（均正）：转变温度 T转 = '+(H/S).toFixed(1)+' K，高于 T转 自发、低于则非自发';else quad='ΔH 或 ΔS 为 0：自发性不随温度反转';return {ok:true,html:'<div class=\"big\">ΔG = '+G.toFixed(2)+' kJ/mol（'+verdict+'）</div><div class=\"row\">ΔG = '+F(H)+' − '+TT+' × '+F(S)+'（ΔS 已由 '+SJ+' J 换算为 '+F(S)+' kJ/(mol·K)）</div><div class=\"row\">'+quad+'</div>'};",
+  test:{inputs:{dH:-100, dS:-200, T:298}, expect:"-40.40"}},
+ {id:"hxarrhenius", cat:"hx", icon:"🔥", name:"活化能两点式求算", desc:"由两温度下的速率常数求活化能，或由 Ea 反推另一温度的 k",
+  formula:"ln(k₂/k₁) = (Ea/R)·(1/T₁ − 1/T₂)，R = 8.314 J/(mol·K) → Ea = R·ln(k₂/k₁) ÷ (1/T₁ − 1/T₂)；反推分支 k₂ = k₁·exp[−Ea/R·(1/T₂ − 1/T₁)]，Ea 输入 kJ/mol 内部换算 J。区别于已有 hxarrh（由 A 与 Ea 求 k 的单点式），本工具是两点式",
+  inputs:[
+   {id:"mode", label:"计算分支", def:"ea", type:"select", options:[{v:"ea",t:"由 k₁、k₂、T₁、T₂ 求 Ea"},{v:"k2",t:"由 Ea、k₁、T₁、T₂ 求 k₂"}]},
+   {id:"k1", label:"速率常数 k₁", def:"0.001"},
+   {id:"T1", label:"温度 T₁", unit:"K", def:"300"},
+   {id:"k2", label:"速率常数 k₂", def:"0.002", when:"mode=ea"},
+   {id:"T2", label:"温度 T₂", unit:"K", def:"310"},
+   {id:"Ea", label:"活化能 Ea", unit:"kJ/mol", def:"53.6", when:"mode=k2"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var K1=Number(k1),TT1=Number(T1),TT2=Number(T2);if(!(K1>0))return {ok:false,msg:'k₁ 须大于 0'};if(!(TT1>0)||!(TT2>0)||TT1>5000||TT2>5000)return {ok:false,msg:'温度须在 (0,5000] K 之间'};if(TT1===TT2)return {ok:false,msg:'两温度不能相等（分母 1/T₁−1/T₂ 为 0）'};if(String(mode)==='ea'){var K2=Number(k2);if(!(K2>0))return {ok:false,msg:'k₂ 须大于 0'};var EaJ=8.314*Math.log(K2/K1)/(1/TT1-1/TT2);if(!isFinite(EaJ))return {ok:false,msg:'结果超出可表示范围'};return {ok:true,html:'<div class=\"big\">Ea ≈ '+(EaJ/1000).toFixed(1)+' kJ/mol</div><div class=\"row\">Ea = '+F(EaJ)+' J/mol；ln(k₂/k₁) = '+Math.log(K2/K1).toFixed(4)+'，温度倒数差 = '+(1/TT1-1/TT2).toExponential(3)+' K⁻¹</div><div class=\"row\">'+(EaJ>0?'Ea 为正：升温使 k 增大（T₂ 高时 k 应更大，请核对 k 与 T 的对应）':'Ea 为负或异常：通常升温 k 增大，请核对 k₁、k₂ 与温度的对应关系')+'</div>'};}var EJ=Number(Ea)*1000;if(!isFinite(EJ))return {ok:false,msg:'活化能输入无效'};var kk=K1*Math.exp(-EJ/8.314*(1/TT2-1/TT1));if(!isFinite(kk))return {ok:false,msg:'结果超出可表示范围（指数溢出），请核对入参'};return {ok:true,html:'<div class=\"big\">k₂ ≈ '+kk.toPrecision(4)+'</div><div class=\"row\">由 T₁ = '+TT1+' K 的 k₁ = '+K1+' 与 Ea = '+Ea+' kJ/mol 推算 T₂ = '+TT2+' K</div>'};",
+  test:{inputs:{mode:"ea", k1:0.001, T1:300, k2:0.002, T2:310, Ea:53.6}, expect:"53.6"}},
+ {id:"hxrord", cat:"hx", icon:"⏱️", name:"反应级数动力学（积分式）", desc:"零级/一级/二级反应的现浓度与半衰期，按级数选积分速率方程",
+  formula:"零级：[A] = [A]₀ − kt，t½ = [A]₀÷(2k)；一级：[A] = [A]₀·e^(−kt)，t½ = ln2÷k；二级：1/[A] = 1/[A]₀ + kt，t½ = 1÷(k[A]₀)。k 的单位随级数而异（零级 mol/(L·s)、一级 s⁻¹、二级 L/(mol·s)），时间单位须与 k 一致。区别于已有 hxrate（仅平均速率 Δc/Δt）",
+  inputs:[
+   {id:"ord", label:"反应级数", def:"0", type:"select", options:[{v:"0",t:"零级"},{v:"1",t:"一级"},{v:"2",t:"二级"}]},
+   {id:"c0", label:"初浓度 [A]₀", unit:"mol/L", def:"0.8"},
+   {id:"k", label:"速率常数 k", def:"0.1", hint:"单位随级数不同，见公式说明"},
+   {id:"t", label:"反应时间 t", def:"5", hint:"时间单位须与 k 匹配"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var C0=Number(c0),KK=Number(k),tt=Number(t);if(!(C0>0))return {ok:false,msg:'初浓度须大于 0'};if(!(KK>0))return {ok:false,msg:'速率常数须大于 0'};if(!(tt>=0)||tt>1e12)return {ok:false,msg:'时间须不小于 0（且不超过 1e12）'};var o=String(ord),c,th,note='';if(o==='0'){th=C0/(2*KK);if(KK*tt>=C0){c=0;note='反应物已在 t = '+(C0/KK).toFixed(4)+' 时耗尽，此后浓度为 0';}else{c=C0-KK*tt;}}else if(o==='1'){c=C0*Math.exp(-KK*tt);th=Math.log(2)/KK;}else{c=1/(1/C0+KK*tt);th=1/(KK*C0);}return {ok:true,html:'<div class=\"big\">[A] = '+c.toFixed(4)+' mol/L</div><div class=\"row\">半衰期 t½ = '+th.toPrecision(4)+'（与 t 同单位）；已消耗 '+(C0>0?((C0-c)/C0*100).toFixed(1):'0')+'%</div>'+(note?'<div class=\"row\">'+note+'</div>':'')};",
+  test:{inputs:{ord:"0", c0:0.8, k:0.1, t:5}, expect:"0.3000"}},
+ {id:"hxraoult2", cat:"hx", icon:"💧", name:"拉乌尔定律（溶液蒸气压）", desc:"由溶剂/溶质物质的量算溶液蒸气压与蒸气压下降，含电解质 i 因子",
+  formula:"p = x溶剂·p*，x溶剂 = n溶剂 ÷ (n溶剂 + i·n溶质)；蒸气压下降 Δp = p* − p；i 为 van't Hoff 因子（非电解质 1，NaCl 约 2，CaCl₂ 约 3，须全部计入粒子数）。区别于已有 hxraoult（仅由溶质摩尔分数求 Δp），本工具由物质的量出发并含 i 因子；仅适用于难挥发溶质的稀溶液",
+  inputs:[
+   {id:"pstar", label:"纯溶剂蒸气压 p*", unit:"kPa", def:"3.17", hint:"如水 25℃ 为 3.17 kPa"},
+   {id:"nsolv", label:"溶剂物质的量", unit:"mol", def:"90"},
+   {id:"nsol", label:"溶质物质的量", unit:"mol", def:"10"},
+   {id:"i", label:"van't Hoff 因子 i", def:"1", hint:"非电解质 1；强电解质近似等于每式单位解离出的离子数"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var P=Number(pstar),NS=Number(nsolv),NU=Number(nsol),II=Number(i);if(!(P>0))return {ok:false,msg:'纯溶剂蒸气压须大于 0'};if(!(NS>0))return {ok:false,msg:'溶剂物质的量须大于 0'};if(!(NU>=0))return {ok:false,msg:'溶质物质的量不能为负'};if(!(II>=1&&II<=10))return {ok:false,msg:'i 因子应在 1~10 之间'};var x=NS/(NS+II*NU);var p=x*P;return {ok:true,html:'<div class=\"big\">溶液蒸气压 p = '+p.toFixed(3)+' kPa</div><div class=\"row\">x溶剂 = '+x.toFixed(4)+'，蒸气压下降 Δp = '+(P-p).toFixed(3)+' kPa（有效溶质粒子 '+F(II*NU)+' mol）</div>'};",
+  test:{inputs:{pstar:3.17, nsolv:90, nsol:10, i:1}, expect:"2.853"}},
+ {id:"hxgascol", cat:"hx", icon:"🧪", name:"排水法集气校正", desc:"收集气体的总压扣除饱和水蒸气压，求干燥气体分压与物质的量",
+  formula:"p干 = P总 − p水（饱和水蒸气压按集气温度查表：0℃ 0.61、10℃ 1.23、20℃ 2.34、25℃ 3.17、30℃ 4.25、40℃ 7.38 kPa）；n = p干·V ÷ (R·T)，R = 8.314 kPa·L/(mol·K)，T 为集气温度换算的热力学温度。排水法收集的气体混有水蒸气，必须先校正",
+  inputs:[
+   {id:"tc", label:"集气温度（水温）", def:"25", type:"select", options:[{v:"0",t:"0℃（水蒸气压 0.61 kPa）"},{v:"10",t:"10℃（1.23 kPa）"},{v:"20",t:"20℃（2.34 kPa）"},{v:"25",t:"25℃（3.17 kPa）"},{v:"30",t:"30℃（4.25 kPa）"},{v:"40",t:"40℃（7.38 kPa）"}]},
+   {id:"P", label:"气体总压（大气压）P", unit:"kPa", def:"101.3"},
+   {id:"V", label:"收集气体体积 V", unit:"L", def:"0.5"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var TAB={'0':0.61,'10':1.23,'20':2.34,'25':3.17,'30':4.25,'40':7.38};var pw=TAB[String(tc)];if(pw===undefined)return {ok:false,msg:'请选择集气温度'};var PP=Number(P),VV=Number(V);if(!(PP>0))return {ok:false,msg:'总压须大于 0'};if(!(VV>0))return {ok:false,msg:'体积须大于 0'};if(PP<=pw)return {ok:false,msg:'总压须大于该温度的饱和水蒸气压 '+pw+' kPa'};var TK=Number(tc)+273.15;var pd=PP-pw;var n=pd*VV/(8.314*TK);return {ok:true,html:'<div class=\"big\">干燥气体 n = '+n.toPrecision(4)+' mol</div><div class=\"row\">p干 = '+PP+' − '+pw+' = '+pd.toFixed(2)+' kPa；T = '+TK.toFixed(2)+' K，n = p干V/(RT)</div>'};",
+  test:{inputs:{tc:"25", P:101.3, V:0.5}, expect:"0.01979"}},
+ {id:"hxbondord", cat:"hx", icon:"🪢", name:"键级计算（分子轨道）", desc:"由成键与反键电子数算键级并判断分子稳定性",
+  formula:"键级 = (成键轨道电子数 Nb − 反键轨道电子数 Na) ÷ 2。键级 > 0 分子可存在，越大越稳定、键越短越强；键级 ≤ 0 分子不稳定/不单独存在（如 He₂ 键级 0）。如 O₂：Nb = 10、Na = 6，键级 2；O₂⁺：Na = 5，键级 2.5",
+  inputs:[
+   {id:"nb", label:"成键轨道电子数 Nb", def:"10"},
+   {id:"na", label:"反键轨道电子数 Na", def:"6"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var NB=Number(nb),NA=Number(na);if(!(NB>=0&&NB<=100)||Math.floor(NB)!==NB)return {ok:false,msg:'成键电子数须为 0~100 的整数'};if(!(NA>=0&&NA<=100)||Math.floor(NA)!==NA)return {ok:false,msg:'反键电子数须为 0~100 的整数'};var bo=(NB-NA)/2;var judge=bo<=0?'键级不大于 0：该物种不稳定，不能单独存在':bo<1?'键级小于 1：键很弱，物种勉强存在（如 O₂⁻ 类超氧物种需结合具体体系判断）':'键级 '+F(bo)+'：键较强，键级越大键长越短、键能越大';return {ok:true,html:'<div class=\"big\">键级 = '+F(bo)+'</div><div class=\"row\">(Nb − Na) ÷ 2 = ('+NB+' − '+NA+') ÷ 2 = '+F(bo)+'</div><div class=\"row\">'+judge+'</div>'};",
+  test:{inputs:{nb:10, na:6}, expect:"键级 = 2"}},
+ {id:"hxformalchg", cat:"hx", icon:"➕", name:"形式电荷", desc:"逐原子算形式电荷，并用其余原子之和校验分子净电荷",
+  formula:"形式电荷 FC = 价电子数 −（孤对电子数 + 成键电子数 ÷ 2），孤对/成键均按电子个数计（一个键含 2 个成键电子）。校验口径：分子中各原子形式电荷之和应等于分子净电荷",
+  inputs:[
+   {id:"ve", label:"该原子价电子数", def:"5", hint:"主族元素等于其族序数，如 N 为 5、O 为 6"},
+   {id:"lone", label:"孤对电子数（个数）", def:"2", hint:"一对孤对电子记 2"},
+   {id:"bond", label:"成键电子数（个数）", def:"6", hint:"单键 2、双键 4、三键 6"},
+   {id:"rest", label:"其余原子形式电荷之和", def:"0", hint:"用于总和校验，没有可填 0"},
+   {id:"qnet", label:"分子/离子净电荷", def:"0", hint:"中性分子 0，NH₄⁺ 为 +1"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var VE=Number(ve),LO=Number(lone),BO=Number(bond),RE=Number(rest),QN=Number(qnet);if(!(VE>=1&&VE<=18)||Math.floor(VE)!==VE)return {ok:false,msg:'价电子数须为 1~18 的整数'};if(!(LO>=0&&LO<=12)||Math.floor(LO)!==LO)return {ok:false,msg:'孤对电子数须为 0~12 的整数'};if(!(BO>=0&&BO<=16)||Math.floor(BO)!==BO)return {ok:false,msg:'成键电子数须为 0~16 的整数'};if(!isFinite(RE)||!isFinite(QN))return {ok:false,msg:'校验入参无效'};var fc=VE-(LO+BO/2);function SG(x){return (x>0?'+':'')+F(x);}var sum=fc+RE;var chk=Math.abs(sum-QN)<1e-9?'校验通过：各原子形式电荷之和 '+SG(sum)+' 与净电荷 '+SG(QN)+' 一致':'校验不符：形式电荷之和 '+SG(sum)+' ≠ 净电荷 '+SG(QN)+'，请检查各原子计数';return {ok:true,html:'<div class=\"big\">形式电荷 = '+SG(fc)+'</div><div class=\"row\">FC = '+VE+' − ('+LO+' + '+BO+'÷2) = '+SG(fc)+'</div><div class=\"row\">'+chk+'</div>'};",
+  test:{inputs:{ve:5, lone:2, bond:6, rest:0, qnet:0}, expect:"形式电荷 = 0"}},
+ {id:"hxphase", cat:"hx", icon:"♨️", name:"相变与加热总量（分段）", desc:"固态升温、熔化、液态升温（可选汽化与气态升温）分段求总吸热",
+  formula:"各段求和：Q₁ = m·c固·(t熔 − t始)，Q₂ = m·ΔH熔，Q₃ = m·c液·(t液终 − t熔)；开启汽化时再加 Q₄ = m·c液·(t沸 − t液终)（若液终未到沸点）、Q₅ = m·ΔH汽、Q₆ = m·c气·(t气终 − t沸)。比热与相变热均按每克输入，如水：c冰 2.1、ΔH熔 334 J/g、c水 4.18、ΔH汽 2260 J/g",
+  inputs:[
+   {id:"m", label:"质量 m", unit:"g", def:"100"},
+   {id:"t0", label:"起始温度（固态）", unit:"℃", def:"-10"},
+   {id:"tm", label:"熔点", unit:"℃", def:"0"},
+   {id:"cs", label:"固态比热 c固", unit:"J/(g·℃)", def:"2.1"},
+   {id:"hf", label:"熔化热 ΔH熔", unit:"J/g", def:"334"},
+   {id:"cl", label:"液态比热 c液", unit:"J/(g·℃)", def:"4.18"},
+   {id:"t1", label:"液态升温终温", unit:"℃", def:"20"},
+   {id:"vap", label:"是否继续汽化", def:"off", type:"select", options:[{v:"off",t:"否（到液态终温止）"},{v:"on",t:"是（继续加热成气体）"}]},
+   {id:"tb", label:"沸点", unit:"℃", def:"100", when:"vap=on"},
+   {id:"hv", label:"汽化热 ΔH汽", unit:"J/g", def:"2260", when:"vap=on"},
+   {id:"cg", label:"气态比热 c气", unit:"J/(g·℃)", def:"2.0", when:"vap=on"},
+   {id:"t2", label:"气态升温终温", unit:"℃", def:"120", when:"vap=on"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var MM=Number(m),T0=Number(t0),TM=Number(tm),CS=Number(cs),HF=Number(hf),CL=Number(cl),T1=Number(t1);if(!(MM>0))return {ok:false,msg:'质量须大于 0'};if(!(CS>0)||!(CL>0))return {ok:false,msg:'比热须大于 0'};if(!(HF>=0))return {ok:false,msg:'熔化热不能为负'};if(T0>TM)return {ok:false,msg:'起始温度不能高于熔点'};if(T1<TM)return {ok:false,msg:'液态终温不能低于熔点'};var q1=MM*CS*(TM-T0),q2=MM*HF,q3=MM*CL*(T1-TM);var parts='固态升温 '+F(q1)+' J + 熔化 '+F(q2)+' J + 液态升温 '+F(q3)+' J';var tot=q1+q2+q3;if(String(vap)==='on'){var TB=Number(tb),HV=Number(hv),CG=Number(cg),T2=Number(t2);if(!(HV>=0))return {ok:false,msg:'汽化热不能为负'};if(!(CG>0))return {ok:false,msg:'气态比热须大于 0'};if(TB<T1)return {ok:false,msg:'沸点不能低于液态终温'};if(T2<TB)return {ok:false,msg:'气态终温不能低于沸点'};var q4=MM*CL*(TB-T1),q5=MM*HV,q6=MM*CG*(T2-TB);tot+=q4+q5+q6;parts+=' + 液态续升温 '+F(q4)+' J + 汽化 '+F(q5)+' J + 气态升温 '+F(q6)+' J';}if(!isFinite(tot))return {ok:false,msg:'结果超出可表示范围'};return {ok:true,html:'<div class=\"big\">总吸热 Q = '+(tot/1000).toFixed(2)+' kJ</div><div class=\"row\">'+parts+'，合计 '+F(tot)+' J</div>'};",
+  test:{inputs:{m:100, t0:-10, tm:0, cs:2.1, hf:334, cl:4.18, t1:20, vap:"off", tb:100, hv:2260, cg:2.0, t2:120}, expect:"43.86"}},
+ {id:"hxcalorim", cat:"hx", icon:"🌡️", name:"量热法测摩尔焓变", desc:"由量热计吸热与反应物物质的量求每摩尔反应焓变",
+  formula:"q溶液+计 = (m水·c水 + C计)·ΔT，c水 = 4.18 J/(g·℃)；ΔH = −q ÷ n（n = 反应物质量 ÷ 摩尔质量），ΔT 取升温为正（放热时体系 ΔH 为负）、降温为负（吸热 ΔH 为正）；忽略量热计与环境的散热",
+  inputs:[
+   {id:"mw", label:"溶液（水）质量", unit:"g", def:"100"},
+   {id:"C", label:"量热计热容 C计", unit:"J/℃", def:"0", hint:"含搅拌器、温度计等折算热容，无数据填 0"},
+   {id:"dT", label:"温度变化 ΔT（升温为正）", unit:"℃", def:"5"},
+   {id:"mr", label:"反应物质量", unit:"g", def:"0.92"},
+   {id:"M", label:"反应物摩尔质量", unit:"g/mol", def:"46"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var MW=Number(mw),CC=Number(C),DT=Number(dT),MR=Number(mr),MM=Number(M);if(!(MW>0))return {ok:false,msg:'溶液质量须大于 0'};if(!(CC>=0))return {ok:false,msg:'量热计热容不能为负'};if(!isFinite(DT)||Math.abs(DT)>1000)return {ok:false,msg:'温度变化超出合理范围'};if(!(MR>0))return {ok:false,msg:'反应物质量须大于 0'};if(!(MM>0))return {ok:false,msg:'摩尔质量须大于 0'};var q=(MW*4.18+CC)*DT;var n=MR/MM;var dH=-q/n/1000;return {ok:true,html:'<div class=\"big\">ΔH = '+dH.toFixed(1)+' kJ/mol</div><div class=\"row\">量热计吸热 q = '+F(q)+' J，反应物 n = '+n.toPrecision(4)+' mol；ΔH = −q÷n</div><div class=\"row\">'+(dH<0?'ΔH < 0：反应放热':dH>0?'ΔH > 0：反应吸热':'ΔH = 0：无温度变化')+'</div>'};",
+  test:{inputs:{mw:100, C:0, dT:5, mr:0.92, M:46}, expect:"-104.5"}},
+ {id:"hxhess2", cat:"hx", icon:"🧮", name:"盖斯定律（系数加权版）", desc:"分步反应带系数（含逆反应负系数）逐行输入，求加权总焓变",
+  formula:"ΔH总 = Σ 系数ᵢ × ΔHᵢ；每行输入「系数,ΔH」，系数为该分步方程式在组合中出现的倍数，逆反应（反向使用）系数取负。最多 4 行。区别于已有 hxhess（仅 3 个 ΔH 直接相加、无系数），本工具支持倍乘与逆向",
+  inputs:[
+   {id:"lines", label:"分步反应（每行：系数,ΔH kJ/mol）", def:"1,-393.5\n1,-283.0", hint:"示例：目标反应 = 2×反应1 − 1×反应2 时，写两行「2,ΔH1」与「-1,ΔH2」", type:"textarea"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var raw=String(lines).split(String.fromCharCode(10));var rows=[];var i;for(i=0;i<raw.length;i++){var s=raw[i].replace(/^\\s+|\\s+$/g,'');if(s)rows.push(s);}if(rows.length===0)return {ok:false,msg:'请至少输入一行「系数,ΔH」'};if(rows.length>4)return {ok:false,msg:'最多 4 个分步反应，当前 '+rows.length+' 行'};var tot=0,det=[];for(i=0;i<rows.length;i++){var p=rows[i].split(',');if(p.length!==2)return {ok:false,msg:'第 '+(i+1)+' 行格式应为「系数,ΔH」'};var cf=Number(p[0]),dh=Number(p[1]);if(!isFinite(cf)||!isFinite(dh))return {ok:false,msg:'第 '+(i+1)+' 行含非数值内容'};if(cf===0)return {ok:false,msg:'第 '+(i+1)+' 行系数不能为 0'};tot+=cf*dh;det.push(cf+'×('+dh+')');}return {ok:true,html:'<div class=\"big\">ΔH总 = '+tot.toFixed(2)+' kJ/mol</div><div class=\"row\">'+det.join(' + ')+' = '+tot.toFixed(2)+' kJ/mol（系数为负表示该步逆向使用）</div>'};",
+  test:{inputs:{lines:"1,-393.5\n1,-283.0"}, expect:"-676.50"}},
+ {id:"hxlattice", cat:"hx", icon:"🔷", name:"晶格能（Born–Landé）", desc:"由马德隆常数、离子电荷与核间距估算离子晶体晶格能",
+  formula:"U = −Nₐ·M·z⁺z⁻e² ÷ (4πε₀r₀) × (1 − 1/n)；常数 Nₐe²/(4πε₀) = 138935 kJ·pm/mol，r₀ 输入 pm；M 按晶型：NaCl 型 1.7476、CsCl 型 1.7627、萤石型 2.5194（萤石口径为每摩尔 CaF₂、z⁺z⁻ 取 2×1）；n 为 Born 指数（NaCl 约 9、一般 5~12）；U 为形成晶格的释能，取负值",
+  inputs:[
+   {id:"xtal", label:"晶型（马德隆常数 M）", def:"nacl", type:"select", options:[{v:"nacl",t:"NaCl 型 M = 1.7476"},{v:"cscl",t:"CsCl 型 M = 1.7627"},{v:"caf2",t:"萤石型 M = 2.5194"}]},
+   {id:"zp", label:"阳离子电荷数 z⁺", def:"1"},
+   {id:"zm", label:"阴离子电荷数 z⁻", def:"1"},
+   {id:"r0", label:"阴阳离子核间距 r₀", unit:"pm", def:"282", hint:"如 NaCl 282 pm、MgO 212 pm"},
+   {id:"nb", label:"Born 指数 n", def:"9", hint:"须大于 1，常见 5~12"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var MT={nacl:1.7476,cscl:1.7627,caf2:2.5194};var M=MT[String(xtal)];if(M===undefined)return {ok:false,msg:'请选择晶型'};var ZP=Number(zp),ZM=Number(zm),R0=Number(r0),NB=Number(nb);if(!(ZP>=1&&ZP<=4)||Math.floor(ZP)!==ZP||!(ZM>=1&&ZM<=4)||Math.floor(ZM)!==ZM)return {ok:false,msg:'离子电荷数须为 1~4 的整数'};if(!(R0>0)||R0>10000)return {ok:false,msg:'核间距须大于 0'};if(!(NB>1)||NB>20)return {ok:false,msg:'Born 指数须在 (1,20] 之间（n = 1 时斥力项使 U = 0，无物理意义）'};var U=-138935.4*M*ZP*ZM/R0*(1-1/NB);return {ok:true,html:'<div class=\"big\">晶格能 U ≈ '+U.toFixed(1)+' kJ/mol</div><div class=\"row\">M = '+M+'，z⁺z⁻ = '+(ZP*ZM)+'，r₀ = '+R0+' pm，(1 − 1/n) = '+(1-1/NB).toFixed(4)+'；|U| 越大晶体越稳定、熔点越高</div>'};",
+  test:{inputs:{xtal:"nacl", zp:1, zm:1, r0:282, nb:9}, expect:"-765.3"}},
+ {id:"hxeffusion", cat:"hx", icon:"🎈", name:"格雷厄姆渗流（时间比反求）", desc:"扩散速率比与摩尔质量互算，含由同体积扩散时间比反求未知摩尔质量",
+  formula:"速率比 v₁/v₂ = √(M₂/M₁)；同体积气体扩散时间与速率成反比：t未知/t已知 = √(M未知/M已知) → M未知 = M已知 × (t未知/t已知)²。区别于已有 hxgraham（仅速率比），本工具含时间比反求分支",
+  inputs:[
+   {id:"mode", label:"计算分支", def:"ratio", type:"select", options:[{v:"ratio",t:"由两摩尔质量求速率比"},{v:"findM",t:"由时间比反求未知摩尔质量"}]},
+   {id:"M1", label:"气体 1 摩尔质量 M₁", unit:"g/mol", def:"2", when:"mode=ratio"},
+   {id:"M2", label:"气体 2 摩尔质量 M₂", unit:"g/mol", def:"32", when:"mode=ratio"},
+   {id:"Mref", label:"已知气体摩尔质量", unit:"g/mol", def:"32", when:"mode=findM"},
+   {id:"tr", label:"时间比 t未知 ÷ t已知", def:"2", hint:"同体积、同温同压下测得", when:"mode=findM"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}if(String(mode)==='findM'){var MR=Number(Mref),TR=Number(tr);if(!(MR>0))return {ok:false,msg:'已知摩尔质量须大于 0'};if(!(TR>0)||TR>1e4)return {ok:false,msg:'时间比须大于 0'};var Mx=MR*TR*TR;return {ok:true,html:'<div class=\"big\">未知气体 M ≈ '+Mx.toFixed(1)+' g/mol</div><div class=\"row\">M未知 = '+MR+' × '+TR+'² = '+Mx.toFixed(1)+' g/mol（时间越长、扩散越慢、摩尔质量越大）</div>'};}var A=Number(M1),B=Number(M2);if(!(A>0)||!(B>0))return {ok:false,msg:'摩尔质量须大于 0'};var r=Math.sqrt(B/A);return {ok:true,html:'<div class=\"big\">v₁/v₂ = '+r.toFixed(2)+'</div><div class=\"row\">√(M₂/M₁) = √('+B+'÷'+A+') = '+r.toFixed(4)+'；同体积扩散时间比 t₁/t₂ = '+(1/r).toFixed(4)+'</div>'};",
+  test:{inputs:{mode:"ratio", M1:2, M2:32, Mref:32, tr:2}, expect:"4.00"}},
+ {id:"hxcompfac", cat:"hx", icon:"🗜️", name:"压缩因子 Z", desc:"由 PVnT 算压缩因子并判偏离，或由 Z 反算压强",
+  formula:"Z = PV ÷ (nRT)，R = 8.314 kPa·L/(mol·K)（P 用 kPa、V 用 L 时）；Z = 1 理想气体，Z > 1 分子斥力/自身体积占优（难压缩），Z < 1 分子引力占优（易压缩、易液化）；反算分支 P = Z·nRT ÷ V",
+  inputs:[
+   {id:"mode", label:"计算分支", def:"z", type:"select", options:[{v:"z",t:"由 P、V、n、T 求 Z"},{v:"p",t:"由 Z 反算 P"}]},
+   {id:"P", label:"压强 P", unit:"kPa", def:"1000", when:"mode=z"},
+   {id:"Z", label:"压缩因子 Z", def:"0.95", when:"mode=p"},
+   {id:"V", label:"体积 V", unit:"L", def:"2.5"},
+   {id:"n", label:"物质的量 n", unit:"mol", def:"1"},
+   {id:"T", label:"温度 T", unit:"K", def:"300"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var VV=Number(V),NN=Number(n),TT=Number(T);if(!(VV>0))return {ok:false,msg:'体积须大于 0'};if(!(NN>0))return {ok:false,msg:'物质的量须大于 0'};if(!(TT>0)||TT>1e6)return {ok:false,msg:'温度须大于 0 K'};if(String(mode)==='p'){var ZZ=Number(Z);if(!(ZZ>0)||ZZ>100)return {ok:false,msg:'Z 须大于 0（实际气体多在 0.2~2 之间）'};var PP=ZZ*NN*8.314*TT/VV;return {ok:true,html:'<div class=\"big\">P = '+PP.toFixed(1)+' kPa</div><div class=\"row\">P = Z·nRT÷V，同条件理想气体压强 '+(NN*8.314*TT/VV).toFixed(1)+' kPa</div>'};}var P2=Number(P);if(!(P2>0))return {ok:false,msg:'压强须大于 0'};var Z2=P2*VV/(NN*8.314*TT);var judge=Math.abs(Z2-1)<0.005?'Z ≈ 1：近似理想气体':Z2>1?'Z > 1：斥力/自身体积占优，较难压缩':'Z < 1：引力占优，较易压缩';return {ok:true,html:'<div class=\"big\">Z = '+Z2.toFixed(4)+'</div><div class=\"row\">'+judge+'（理想气体 PV = '+(NN*8.314*TT).toFixed(1)+' kPa·L，实际 PV = '+(P2*VV).toFixed(1)+' kPa·L）</div>'};",
+  test:{inputs:{mode:"z", P:1000, Z:0.95, V:2.5, n:1, T:300}, expect:"1.0023"}},
+ {id:"hxionicstr", cat:"hx", icon:"🧂", name:"离子强度", desc:"最多 4 种离子逐行输入浓度与电荷数，求溶液离子强度",
+  formula:"I = ½·Σ cᵢzᵢ²（cᵢ 为各离子浓度 mol/L，zᵢ 为其电荷数，取绝对值平方）。每行输入「浓度,电荷数」，最多 4 行；离子强度决定活度系数、电离平衡移动等，是 Debye–Hückel 理论的输入量",
+  inputs:[
+   {id:"lines", label:"离子（每行：浓度 mol/L,电荷数）", def:"0.1,1\n0.1,1", hint:"如 0.1 mol/L CaCl₂ 溶液写两行：「0.1,2」与「0.2,1」", type:"textarea"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var raw=String(lines).split(String.fromCharCode(10));var rows=[];var i;for(i=0;i<raw.length;i++){var s=raw[i].replace(/^\\s+|\\s+$/g,'');if(s)rows.push(s);}if(rows.length===0)return {ok:false,msg:'请至少输入一行离子数据'};if(rows.length>4)return {ok:false,msg:'最多 4 种离子，当前 '+rows.length+' 行'};var sum=0,det=[];for(i=0;i<rows.length;i++){var p=rows[i].split(',');if(p.length!==2)return {ok:false,msg:'第 '+(i+1)+' 行格式应为「浓度,电荷数」'};var c=Number(p[0]),z=Number(p[1]);if(!isFinite(c)||!(c>0))return {ok:false,msg:'第 '+(i+1)+' 行浓度须大于 0'};if(!(z>=1&&z<=6)||Math.floor(z)!==z)return {ok:false,msg:'第 '+(i+1)+' 行电荷数须为 1~6 的整数（填绝对值）'};sum+=c*z*z;det.push(c+'×'+z+'²');}var I=0.5*sum;return {ok:true,html:'<div class=\"big\">离子强度 I = '+I.toFixed(4)+' mol/L</div><div class=\"row\">I = ½×('+det.join(' + ')+') = '+I.toFixed(4)+' mol/L</div>'};",
+  test:{inputs:{lines:"0.1,1\n0.1,1"}, expect:"0.1000"}},
+ {id:"hxactcoef", cat:"hx", icon:"🎯", name:"活度系数（Debye–Hückel）", desc:"极限公式由离子强度算平均活度系数或单离子活度系数",
+  formula:"Debye–Hückel 极限式（25℃ 水溶液）：平均活度系数 −lgγ± = 0.509·|z⁺z⁻|·√I；单离子式 −lgγᵢ = 0.509·zᵢ²·√I，0.509 为 25℃ 水的常数 A。仅适用于极稀溶液（I < 0.01 mol/L），I 越大偏差越大。与已有 hxactivity（放射性活度）无关，本工具是溶液活度系数",
+  inputs:[
+   {id:"mode", label:"计算分支", def:"mean", type:"select", options:[{v:"mean",t:"平均活度系数 γ±"},{v:"single",t:"单离子活度系数 γᵢ"}]},
+   {id:"I", label:"离子强度 I", unit:"mol/L", def:"0.01"},
+   {id:"zp", label:"阳离子电荷数 z⁺", def:"1", when:"mode=mean"},
+   {id:"zm", label:"阴离子电荷数 z⁻", def:"1", when:"mode=mean"},
+   {id:"zi", label:"该离子电荷数 zᵢ", def:"2", when:"mode=single"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var II=Number(I);if(!(II>=0)||II>10)return {ok:false,msg:'离子强度须不小于 0（且不超过 10）'};var warn=II>=0.01?'<div class=\"row\">注意：I ≥ 0.01 已超出极限式的可靠范围（要求 I < 0.01），结果仅作参考</div>':'';var sq=Math.sqrt(II);if(String(mode)==='single'){var ZI=Number(zi);if(!(ZI>=1&&ZI<=6)||Math.floor(ZI)!==ZI)return {ok:false,msg:'离子电荷数须为 1~6 的整数'};var lg=0.509*ZI*ZI*sq;var g=Math.pow(10,-lg);return {ok:true,html:'<div class=\"big\">γᵢ = '+g.toFixed(4)+'</div><div class=\"row\">−lgγᵢ = 0.509×'+(ZI*ZI)+'×√'+II+' = '+lg.toFixed(4)+'</div>'+warn};}var ZP=Number(zp),ZM=Number(zm);if(!(ZP>=1&&ZP<=6)||Math.floor(ZP)!==ZP||!(ZM>=1&&ZM<=6)||Math.floor(ZM)!==ZM)return {ok:false,msg:'电荷数须为 1~6 的整数'};var lg2=0.509*Math.abs(ZP*ZM)*sq;var g2=Math.pow(10,-lg2);return {ok:true,html:'<div class=\"big\">γ± = '+g2.toFixed(4)+'</div><div class=\"row\">−lgγ± = 0.509×'+Math.abs(ZP*ZM)+'×√'+II+' = '+lg2.toFixed(4)+'；I = 0 时 γ = 1（理想稀溶液）</div>'+warn};",
+  test:{inputs:{mode:"mean", I:0.01, zp:1, zm:1, zi:2}, expect:"0.8894"}},
+ {id:"hxconduct", cat:"hx", icon:"📟", name:"摩尔电导率与电离度", desc:"由电导率与浓度算摩尔电导率，再与极限摩尔电导率比得电离度",
+  formula:"Λm = κ ÷ c，单位口径：κ 用 S/cm、c 用 mol/L 时，Λm（S·cm²/mol）= 1000×κ ÷ c（因子 1000 来自 1 L = 1000 cm³）；电离度 α = Λm ÷ Λm∞（弱电解质近似，Arrhenius 电离学说口径）",
+  inputs:[
+   {id:"kap", label:"电导率 κ", unit:"S/cm", def:"0.000423", hint:"如 0.01 mol/L 醋酸约 4.23×10⁻⁴ S/cm"},
+   {id:"c", label:"溶液浓度 c", unit:"mol/L", def:"0.01"},
+   {id:"linf", label:"极限摩尔电导率 Λm∞", unit:"S·cm²/mol", def:"390.5", hint:"由离子极限摩尔电导率相加，如醋酸 390.5"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var K=Number(kap),CC=Number(c),LI=Number(linf);if(!(K>0))return {ok:false,msg:'电导率须大于 0'};if(!(CC>0))return {ok:false,msg:'浓度须大于 0'};if(!(LI>0))return {ok:false,msg:'极限摩尔电导率须大于 0'};var Lm=1000*K/CC;var al=Lm/LI;var warn=al>1?'<div class=\"row\">注意：Λm 大于 Λm∞ 使 α > 1，不合物理意义，请核对 κ、c 与 Λm∞ 是否同一电解质、同一温度</div>':'';return {ok:true,html:'<div class=\"big\">Λm = '+Lm.toFixed(1)+' S·cm²/mol，α ≈ '+(al*100).toFixed(2)+'%</div><div class=\"row\">Λm = 1000×'+K+'÷'+CC+' = '+Lm.toFixed(2)+'；α = Λm÷Λm∞ = '+Lm.toFixed(2)+'÷'+LI+'</div>'+warn};",
+  test:{inputs:{kap:0.000423, c:0.01, linf:390.5}, expect:"42.3"}},
+ {id:"hxalpha", cat:"hx", icon:"🍋", name:"弱电解质电离度（Ostwald）", desc:"由 Ka 与浓度精确解电离度，并与稀释定律近似式对照",
+  formula:"Ostwald 稀释定律：Ka = cα²÷(1−α)；精确解为一元二次方程 cα² + Ka·α − Ka = 0 的正根；近似解 α ≈ √(Ka/c) 仅当 α < 5%（即 c/Ka > 400 量级）时可用。[H⁺] = cα，pH = −lg[H⁺]（弱酸口径）。区别于已有 hxweakacid（直接用近似 [H⁺]=√(Ka·c)），本工具给精确解并判定近似是否成立",
+  inputs:[
+   {id:"Ka", label:"电离常数 Ka", def:"0.000018", hint:"如醋酸 1.8×10⁻⁵"},
+   {id:"c", label:"弱电解质浓度 c", unit:"mol/L", def:"0.1"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var KA=Number(Ka),CC=Number(c);if(!(KA>0)||KA>1e3)return {ok:false,msg:'Ka 须大于 0'};if(!(CC>0))return {ok:false,msg:'浓度须大于 0'};var disc=Math.sqrt(KA*KA+4*CC*KA);var aex=(-KA+disc)/(2*CC);var aap=Math.sqrt(KA/CC);if(!(aex>0&&aex<1))return {ok:false,msg:'该 Ka 与浓度组合下电离度接近或超过 100%，已超出弱电解质模型范围'};var H=CC*aex;var pH=-Math.log10(H);var ok5=aap<0.05;return {ok:true,html:'<div class=\"big\">α（精确）= '+(aex*100).toFixed(2)+'%</div><div class=\"row\">近似 α ≈ √(Ka/c) = '+(aap*100).toFixed(2)+'%；'+(ok5?'近似 α < 5%，近似式可用':'近似 α ≥ 5%，近似式失效（偏差大），应采用左列精确解')+'</div><div class=\"row\">[H⁺] = cα = '+H.toPrecision(4)+' mol/L，pH ≈ '+pH.toFixed(2)+'（弱酸口径）</div>'};",
+  test:{inputs:{Ka:1.8e-05, c:0.1}, expect:"1.33"}},
+ {id:"hxhydro", cat:"hx", icon:"🧼", name:"盐类水解度与 pH", desc:"强碱弱酸盐/强酸弱碱盐的水解常数、水解度与 pH（稀释近似）",
+  formula:"强碱弱酸盐：Kh = Kw÷Ka（Ka 为共轭弱酸），[OH⁻] ≈ √(Kh·c)，水解度 h = [OH⁻]÷c，pH = 14 − pOH；强酸弱碱盐：Kh = Kw÷Kb，[H⁺] ≈ √(Kh·c)。Kw = 1.0×10⁻¹⁴（25℃）；近似条件 h < 5%，h 过大时近似误差增大（已在结果中提示）",
+  inputs:[
+   {id:"mode", label:"盐类型", def:"sa", type:"select", options:[{v:"sa",t:"强碱弱酸盐（如醋酸钠，给弱酸 Ka）"},{v:"sb",t:"强酸弱碱盐（如氯化铵，给弱碱 Kb）"}]},
+   {id:"K", label:"共轭弱酸 Ka 或弱碱 Kb", def:"0.000018", hint:"醋酸 Ka、氨水 Kb 均约 1.8×10⁻⁵"},
+   {id:"c", label:"盐浓度 c", unit:"mol/L", def:"0.1"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var KK=Number(K),CC=Number(c);if(!(KK>0)||KK>=1)return {ok:false,msg:'Ka/Kb 须在 (0,1) 之间（弱酸弱碱）'};if(!(CC>0))return {ok:false,msg:'盐浓度须大于 0'};var Kh=1e-14/KK;var x=Math.sqrt(Kh*CC);if(x>=CC)return {ok:false,msg:'该组合下近似水解度达到或超过 100%，超出稀释近似模型范围，请核对 Ka/Kb 与浓度'};var h=x/CC;var warn=h>=0.05?'<div class=\"row\">注意：水解度 h ≥ 5%，√(Kh·c) 近似误差较大，结果仅作估算</div>':'';if(String(mode)==='sa'){var pH=14+Math.log10(x);return {ok:true,html:'<div class=\"big\">pH ≈ '+pH.toFixed(2)+'，水解度 h ≈ '+(h*100).toFixed(3)+'%</div><div class=\"row\">Kh = Kw÷Ka = '+Kh.toPrecision(4)+'，[OH⁻] ≈ √(Kh·c) = '+x.toPrecision(4)+' mol/L，溶液呈碱性</div>'+warn};}var pH2=-Math.log10(x);return {ok:true,html:'<div class=\"big\">pH ≈ '+pH2.toFixed(2)+'，水解度 h ≈ '+(h*100).toFixed(3)+'%</div><div class=\"row\">Kh = Kw÷Kb = '+Kh.toPrecision(4)+'，[H⁺] ≈ √(Kh·c) = '+x.toPrecision(4)+' mol/L，溶液呈酸性</div>'+warn};",
+  test:{inputs:{mode:"sa", K:1.8e-05, c:0.1}, expect:"8.87"}},
+ {id:"hxmixph2", cat:"hx", icon:"⚖️", name:"酸碱混合 pH（体积浓度版）", desc:"强酸强碱/同类混合按体积与浓度算混合 pH，含恰好中和分支",
+  formula:"强酸+强碱：n(H⁺) = c₁V₁、n(OH⁻) = c₂V₂，过量离子浓度 = |n(H⁺) − n(OH⁻)| ÷ (V₁+V₂)（V 用 mL 与 mmol 对应，浓度结果为 mol/L），再求 pH；恰好相等时 pH = 7.00。同为强酸：[H⁺] = (c₁V₁+c₂V₂)÷(V₁+V₂)；同为强碱同理求 [OH⁻]。区别于已有 hxmixph（等体积、由 pH 输入），本工具由浓度与任意体积输入（25℃，Kw = 10⁻¹⁴，一元强酸强碱口径）",
+  inputs:[
+   {id:"mode", label:"混合类型", def:"ab", type:"select", options:[{v:"ab",t:"强酸（液1）+ 强碱（液2）"},{v:"aa",t:"强酸 + 强酸"},{v:"bb",t:"强碱 + 强碱"}]},
+   {id:"c1", label:"溶液 1 浓度", unit:"mol/L", def:"0.1"},
+   {id:"v1", label:"溶液 1 体积", unit:"mL", def:"25"},
+   {id:"c2", label:"溶液 2 浓度", unit:"mol/L", def:"0.1"},
+   {id:"v2", label:"溶液 2 体积", unit:"mL", def:"25"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var C1=Number(c1),V1=Number(v1),C2=Number(c2),V2=Number(v2);if(!(C1>=0)||!(C2>=0))return {ok:false,msg:'浓度不能为负'};if(!(V1>0)||!(V2>0))return {ok:false,msg:'体积须大于 0'};var VT=V1+V2;var md=String(mode);if(md==='aa'){var h=(C1*V1+C2*V2)/VT;if(h<=0)return {ok:true,html:'<div class=\"big\">pH = 7.00</div><div class=\"row\">两液浓度均为 0，混合后为纯水（中性）</div>'};return {ok:true,html:'<div class=\"big\">pH = '+(-Math.log10(h)).toFixed(2)+'</div><div class=\"row\">[H⁺] = (c₁V₁+c₂V₂)÷(V₁+V₂) = '+h.toPrecision(4)+' mol/L</div>'};}if(md==='bb'){var o=(C1*V1+C2*V2)/VT;if(o<=0)return {ok:true,html:'<div class=\"big\">pH = 7.00</div><div class=\"row\">两液浓度均为 0，混合后为纯水（中性）</div>'};return {ok:true,html:'<div class=\"big\">pH = '+(14+Math.log10(o)).toFixed(2)+'</div><div class=\"row\">[OH⁻] = (c₁V₁+c₂V₂)÷(V₁+V₂) = '+o.toPrecision(4)+' mol/L</div>'};}var diff=C1*V1-C2*V2;if(Math.abs(diff)<1e-12)return {ok:true,html:'<div class=\"big\">pH = 7.00（恰好中和）</div><div class=\"row\">n(H⁺) = n(OH⁻) = '+(C1*V1).toPrecision(4)+' mmol，强酸强碱恰好完全中和</div>'};if(diff>0){var hc=diff/VT;return {ok:true,html:'<div class=\"big\">pH = '+(-Math.log10(hc)).toFixed(2)+'（酸过量）</div><div class=\"row\">剩余 [H⁺] = '+hc.toPrecision(4)+' mol/L（过量 '+(diff).toPrecision(4)+' mmol ÷ 总体积 '+VT+' mL）</div>'};}var oc=-diff/VT;return {ok:true,html:'<div class=\"big\">pH = '+(14+Math.log10(oc)).toFixed(2)+'（碱过量）</div><div class=\"row\">剩余 [OH⁻] = '+oc.toPrecision(4)+' mol/L（过量 '+(-diff).toPrecision(4)+' mmol ÷ 总体积 '+VT+' mL）</div>'};",
+  test:{inputs:{mode:"ab", c1:0.1, v1:25, c2:0.1, v2:25}, expect:"7.00"}}
 );
 
 
