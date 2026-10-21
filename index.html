@@ -1879,7 +1879,7 @@ TOOLS.push(
  {id:"wllens", cat:"wl", icon:"💡", name:"透镜成像", desc:"薄透镜求像距",
   formula:"1/f = 1/u + 1/v",
   inputs:[{id:"f", label:"焦距", unit:"cm", def:"10"},{id:"u", label:"物距", unit:"cm", def:"30"}],
-  run:"if(f===0||u===0)return {ok:false,msg:'焦距物距不能为0'};var v=1/(1/f-1/u);var s=v>0?'实像':'虚像';return {ok:true,html:'<div class=\"big\">v = '+v.toFixed(2)+' cm</div><div class=\"row\">1/f=1/u+1/v，'+s+'</div>'};",
+  run:"if(f===0||u===0)return {ok:false,msg:'焦距物距不能为0'};if(1/f===1/u)return {ok:false,msg:'物距等于焦距，像成在无穷远处'};var v=1/(1/f-1/u);var s=v>0?'实像':'虚像';return {ok:true,html:'<div class=\"big\">v = '+v.toFixed(2)+' cm</div><div class=\"row\">1/f=1/u+1/v，'+s+'</div>'};",
   test:{inputs:{f:10,u:30}, expect:"v = 15.00 cm"}}
 ,
  {id:"hxlimit", cat:"hx", icon:"🧪", name:"限量反应物", desc:"判断限量反应物与理论产量",
@@ -4556,7 +4556,7 @@ TOOLS.push(
  {id:"wlweight", cat:"wl", icon:"🧍", name:"超重失重视重计算", desc:"电梯加速运动时的视重",
   formula:"加速上升N=m(g+a)；加速下降N=m(g−a)",
   inputs:[{id:"m", label:"质量", unit:"kg", def:"60", min:0},{id:"a", label:"加速度大小", unit:"m/s²", def:"2", min:0},{id:"mode", label:"方向", type:"select", options:[{v:"u",t:"加速上升（超重）"},{v:"d",t:"加速下降（失重）"}], def:"u"}],
-  run:"var g=9.8,n=mode==='u'?m*(g+a):m*(g-a);return {ok:true,html:'<div class=\"big\">视重N='+n.toFixed(1)+'N（实重'+(m*g).toFixed(1)+'N）</div>'};",
+  run:"if(mode==='d'&&a>9.8)return {ok:false,msg:'下降加速度超过 g 时物体已完全失重，视重为 0，不能为负'};var g=9.8,n=mode==='u'?m*(g+a):m*(g-a);return {ok:true,html:'<div class=\"big\">视重N='+n.toFixed(1)+'N（实重'+(m*g).toFixed(1)+'N）</div>'};",
   test:{inputs:{m:60,a:2,mode:"u"}, expect:"708"}}
 );
 TOOLS.push(
@@ -6317,7 +6317,7 @@ TOOLS.push(
    {id:"v", label:"速度 v", unit:"m/s", def:"1000000"},
    {id:"B", label:"磁感应强度 B", unit:"T", def:"1"}
   ],
-  run:"var vv=Number(v),BB=Number(B);if(!(vv>0))return {ok:false,msg:'速度须大于 0'};if(!(BB>0))return {ok:false,msg:'磁感应强度须大于 0'};var M={'e':[9.1094e-31,1],'p':[1.6726e-27,1],'a':[6.6447e-27,2]};var pr=M[String(p)]||M['p'];var m=pr[0],q=pr[1]*1.6022e-19;var r=m*vv/(q*BB);var f=q*BB/(2*Math.PI*m);function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}return {ok:true,html:'<div class=\"big\">回旋半径 r = '+r.toPrecision(4)+' m</div><div class=\"row\">r = '+F(r*100)+' cm；回旋频率 f = '+F(f/1e6)+' MHz，周期 T = '+(1/f).toPrecision(4)+' s</div>'};",
+  run:"var vv=Number(v),BB=Number(B);if(!(vv>0))return {ok:false,msg:'速度须大于 0'};if(!(BB>0))return {ok:false,msg:'磁感应强度须大于 0'};var M={'e':[9.1094e-31,1],'p':[1.6726e-27,1],'a':[6.6447e-27,2]};var pr=M[String(p)]||M['p'];var m=pr[0],q=pr[1]*1.6022e-19;var r=m*vv/(q*BB);var f=q*BB/(2*Math.PI*m);function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-2)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}return {ok:true,html:'<div class=\"big\">回旋半径 r = '+r.toPrecision(4)+' m</div><div class=\"row\">r = '+F(r*100)+' cm；回旋频率 f = '+F(f/1e6)+' MHz，周期 T = '+(1/f).toPrecision(4)+' s</div>'};",
   test:{inputs:{p:"p",v:1000000,B:1}, expect:"0.01044"}},
  {id:"hxvdw", cat:"hx", icon:"🎈", name:"范德华方程（真实气体）", desc:"用范德华方程算真实气体压强，并与理想气体对比",
   formula:"(P + a·n²/V²)(V − n·b) = nRT → P = nRT ÷ (V − nb) − a·n²/V²；R = 0.08314 L·bar/(mol·K)；a、b 取常用值：CO₂ 3.640/0.04267，N₂ 1.370/0.03870，O₂ 1.382/0.03186（L²·bar/mol²、L/mol）",
@@ -8209,6 +8209,274 @@ TOOLS.push(
   ],
   run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var C1=Number(c1),V1=Number(v1),C2=Number(c2),V2=Number(v2);if(!(C1>=0)||!(C2>=0))return {ok:false,msg:'浓度不能为负'};if(!(V1>0)||!(V2>0))return {ok:false,msg:'体积须大于 0'};var VT=V1+V2;var md=String(mode);if(md==='aa'){var h=(C1*V1+C2*V2)/VT;if(h<=0)return {ok:true,html:'<div class=\"big\">pH = 7.00</div><div class=\"row\">两液浓度均为 0，混合后为纯水（中性）</div>'};return {ok:true,html:'<div class=\"big\">pH = '+(-Math.log10(h)).toFixed(2)+'</div><div class=\"row\">[H⁺] = (c₁V₁+c₂V₂)÷(V₁+V₂) = '+h.toPrecision(4)+' mol/L</div>'};}if(md==='bb'){var o=(C1*V1+C2*V2)/VT;if(o<=0)return {ok:true,html:'<div class=\"big\">pH = 7.00</div><div class=\"row\">两液浓度均为 0，混合后为纯水（中性）</div>'};return {ok:true,html:'<div class=\"big\">pH = '+(14+Math.log10(o)).toFixed(2)+'</div><div class=\"row\">[OH⁻] = (c₁V₁+c₂V₂)÷(V₁+V₂) = '+o.toPrecision(4)+' mol/L</div>'};}var diff=C1*V1-C2*V2;if(Math.abs(diff)<1e-12)return {ok:true,html:'<div class=\"big\">pH = 7.00（恰好中和）</div><div class=\"row\">n(H⁺) = n(OH⁻) = '+(C1*V1).toPrecision(4)+' mmol，强酸强碱恰好完全中和</div>'};if(diff>0){var hc=diff/VT;return {ok:true,html:'<div class=\"big\">pH = '+(-Math.log10(hc)).toFixed(2)+'（酸过量）</div><div class=\"row\">剩余 [H⁺] = '+hc.toPrecision(4)+' mol/L（过量 '+(diff).toPrecision(4)+' mmol ÷ 总体积 '+VT+' mL）</div>'};}var oc=-diff/VT;return {ok:true,html:'<div class=\"big\">pH = '+(14+Math.log10(oc)).toFixed(2)+'（碱过量）</div><div class=\"row\">剩余 [OH⁻] = '+oc.toPrecision(4)+' mol/L（过量 '+(-diff).toPrecision(4)+' mmol ÷ 总体积 '+VT+' mL）</div>'};",
   test:{inputs:{mode:"ab", c1:0.1, v1:25, c2:0.1, v2:25}, expect:"7.00"}}
+);
+
+/* ===== R3 生活助手新增 25 工具（2026-10-21） ===== */
+TOOLS.push(
+ {id:"shtip2", cat:"sh", icon:"🍽️", name:"餐厅小费与分账", desc:"按税前/税后口径算小费、多人分账（进阶版，旧 shtip 仅算小费总额）",
+  formula:"税额 = 税前金额 × 税率；小费基数：税前口径 = 税前金额，税后口径 = 税前金额 + 税额；小费 = 基数 × 小费率；总计 = 税前金额 + 税额 + 小费；人均 = 总计 ÷ 人数。小费率 0/10/15/20% 为常见档（北美多按税前计小费，欧洲多含服务费），可自填",
+  inputs:[
+   {"id":"bill","label":"税前账单金额","unit":"元","def":"200"},
+   {"id":"basis","label":"小费计算口径","type":"select","def":"post","options":[{"v":"post","t":"按税后总额计"},{"v":"pre","t":"按税前金额计"}]},
+   {"id":"taxrate","label":"税率","unit":"%","def":"0","hint":"无税费填 0"},
+   {"id":"tiprate","label":"小费率","type":"select","def":"15","options":[{"v":"0","t":"0%（不付）"},{"v":"10","t":"10%"},{"v":"15","t":"15%"},{"v":"20","t":"20%"},{"v":"cust","t":"自填"}]},
+   {"id":"custrate","label":"自填小费率","unit":"%","when":"tiprate=cust","def":"18"},
+   {"id":"people","label":"分账人数","def":"2"}
+  ],
+  run:"var sub=Number(bill),tr=Number(taxrate),pp=Number(people);if(!(sub>=0&&sub<=1e9))return {ok:false,msg:'账单金额应在 0~1e9 之间'};if(!(tr>=0&&tr<=50))return {ok:false,msg:'税率应在 0~50% 之间'};if(!(pp>=1&&pp<=1000)||Math.floor(pp)!==pp)return {ok:false,msg:'人数须为 1~1000 的整数'};var rate=String(tiprate)==='cust'?Number(custrate):Number(tiprate);if(!(rate>=0&&rate<=100))return {ok:false,msg:'小费率应在 0~100% 之间'};var tax=sub*tr/100;var baseAmt=String(basis)==='pre'?sub:sub+tax;var tip=baseAmt*rate/100;var grand=sub+tax+tip;var per=grand/pp;return {ok:true,html:'<div class=\"big\">人均 '+per.toFixed(2)+' 元</div><div class=\"row\">小费 '+tip.toFixed(2)+' 元（按'+(String(basis)==='pre'?'税前':'税后')+'基数 '+baseAmt.toFixed(2)+' 元 × '+rate+'%）；税额 '+tax.toFixed(2)+' 元；总计 '+grand.toFixed(2)+' 元 ÷ '+pp+' 人</div>'};",
+  test:{inputs:{"bill":200,"basis":"post","taxrate":0,"tiprate":"15","custrate":18,"people":2}, expect:"115.00"}},
+ {id:"shmanjian", cat:"sh", icon:"🏷️", name:"满减优惠择优", desc:"多档满减与优惠券横向比较，算最优实付（与 shcoupon 只算单券差额不同）",
+  formula:"逐档比较：达到门槛的满减档实付 = 订单金额 − 减额；优惠券实付 = 订单金额 − 券额（需达券门槛）；与原价三者取最小（实付不低于 0）。口径：满减与优惠券不可叠加、择优使用（多数平台规则）；满减档最多 5 档，每行填「满,减」",
+  inputs:[
+   {"id":"amount","label":"订单金额","unit":"元","def":"600"},
+   {"id":"tiers","label":"满减档位（每行「满,减」，最多 5 档）","type":"textarea","def":"300,50\n500,120","hint":"如 300,50 表示满 300 减 50"},
+   {"id":"coupon","label":"优惠券金额（不用填 0）","unit":"元","def":"0"},
+   {"id":"coupmin","label":"优惠券使用门槛","unit":"元","def":"0"}
+  ],
+  run:"var amt=Number(amount);if(!(amt>=0&&amt<=1e9))return {ok:false,msg:'订单金额应在 0~1e9 之间'};var ca=Number(coupon),cm=Number(coupmin);if(!(ca>=0))return {ok:false,msg:'优惠券金额不能为负'};if(!(cm>=0))return {ok:false,msg:'券门槛不能为负'};var raw=String(tiers).split(/\\n+/).map(function(s){return s.trim();}).filter(function(s){return s!=='';});if(raw.length>5)return {ok:false,msg:'满减档位最多 5 档（当前 '+raw.length+' 档）'};var opts=[{label:'不用优惠',pay:amt}];for(var i=0;i<raw.length;i++){var parts=raw[i].split(/[,，\\s]+/).filter(function(s){return s!=='';});if(parts.length!==2)return {ok:false,msg:'第 '+(i+1)+' 档格式应为「满,减」两个数字'};var full=Number(parts[0]),cut=Number(parts[1]);if(!(full>0)||!(cut>0))return {ok:false,msg:'第 '+(i+1)+' 档满/减金额须大于 0'};if(cut>=full)return {ok:false,msg:'第 '+(i+1)+' 档减额须小于满额'};if(amt>=full)opts.push({label:'满'+full+'减'+cut,pay:amt-cut});else opts.push({label:'满'+full+'减'+cut+'（差 '+(full-amt).toFixed(2)+' 元未达）',pay:amt,miss:true});}if(ca>0){if(amt>=cm)opts.push({label:'优惠券减 '+ca.toFixed(2),pay:amt-ca});else opts.push({label:'优惠券（差 '+(cm-amt).toFixed(2)+' 元未达门槛）',pay:amt,miss:true});}var best=opts[0];for(i=0;i<opts.length;i++){if(!opts[i].miss&&opts[i].pay<best.pay)best=opts[i];}var pay=Math.max(0,best.pay);var rows=opts.map(function(o){return '<div class=\"row\">'+o.label+'：'+(o.miss?'未达门槛':Math.max(0,o.pay).toFixed(2)+' 元')+'</div>';}).join('');return {ok:true,html:'<div class=\"big\">最优实付 '+pay.toFixed(2)+' 元</div>'+rows+'<div class=\"row\">方案「'+best.label+'」，共省 '+(amt-pay).toFixed(2)+' 元；满减与券不可叠加口径</div>'};",
+  test:{inputs:{"amount":600,"tiers":"300,50\n500,120","coupon":0,"coupmin":0}, expect:"480.00"}},
+ {id:"shunitprice", cat:"sh", icon:"⚖️", name:"商品单位价格比价", desc:"两件商品按每克/每毫升/每个比单价，谁更划算",
+  formula:"先把规格量换算到基准单位（质量 g：kg×1000；体积 mL：L×1000；计数 个）；单位价 = 总价 ÷ 基准量；食品常用每 100g（或 100mL）价 = 单位价 × 100。两件单位类别不同（质量/体积/计数）不可比",
+  inputs:[
+   {"id":"p1","label":"商品 A 总价","unit":"元","def":"12"},
+   {"id":"q1","label":"商品 A 规格量","def":"500"},
+   {"id":"u1","label":"商品 A 单位","type":"select","def":"g","options":[{"v":"g","t":"克 g"},{"v":"kg","t":"千克 kg"},{"v":"ml","t":"毫升 mL"},{"v":"l","t":"升 L"},{"v":"pc","t":"个"}]},
+   {"id":"p2","label":"商品 B 总价","unit":"元","def":"20"},
+   {"id":"q2","label":"商品 B 规格量","def":"1"},
+   {"id":"u2","label":"商品 B 单位","type":"select","def":"kg","options":[{"v":"g","t":"克 g"},{"v":"kg","t":"千克 kg"},{"v":"ml","t":"毫升 mL"},{"v":"l","t":"升 L"},{"v":"pc","t":"个"}]}
+  ],
+  run:"var P1=Number(p1),Q1=Number(q1),P2=Number(p2),Q2=Number(q2);if(!(P1>=0)||!(P2>=0))return {ok:false,msg:'价格不能为负'};if(!(Q1>0)||!(Q2>0))return {ok:false,msg:'规格量须大于 0'};var F={g:1,kg:1000,ml:1,l:1000,pc:1};var D={g:'mass',kg:'mass',ml:'vol',l:'vol',pc:'count'};var BN={mass:'每克',vol:'每毫升',count:'每个'};if(F[String(u1)]===undefined||F[String(u2)]===undefined)return {ok:false,msg:'请选择单位'};if(D[String(u1)]!==D[String(u2)])return {ok:false,msg:'两件商品单位类别不同（质量/体积/计数），无法直接比价'};var b1=Q1*F[String(u1)],b2=Q2*F[String(u2)];var up1=P1/b1,up2=P2/b2;var dim=D[String(u1)];var s1=dim==='count'?up1.toFixed(4)+' 元/个':(up1*100).toFixed(2)+' 元/100'+(dim==='mass'?'g':'mL');var s2=dim==='count'?up2.toFixed(4)+' 元/个':(up2*100).toFixed(2)+' 元/100'+(dim==='mass'?'g':'mL');var verdict=Math.abs(up1-up2)<1e-12?'两件单价相同':(up1<up2?'商品 A 更划算':'商品 B 更划算');var save=Math.abs(up1-up2)<1e-12?0:Math.abs(up1-up2);return {ok:true,html:'<div class=\"big\">'+verdict+'</div><div class=\"row\">A：'+P1+' 元 ÷ '+b1+' 基准单位 = '+up1.toFixed(4)+' 元（'+s1+'）；B：'+P2+' 元 ÷ '+b2+' = '+up2.toFixed(4)+' 元（'+s2+'）</div>'+(save>0?'<div class=\"row\">每基准单位相差 '+save.toFixed(4)+' 元（'+BN[dim]+'口径）</div>':'')};",
+  test:{inputs:{"p1":12,"q1":500,"u1":"g","p2":20,"q2":1,"u2":"kg"}, expect:"2.00"}},
+ {id:"shbaggage", cat:"sh", icon:"🧳", name:"行李超重费计算", desc:"按免费额与每公斤费率算超重费",
+  formula:"超重 = max(0, 行李重 − 免费额)；超重费 = 超重 × 每公斤费率。口径提示：各航司差异很大——国内航司多按每公斤经济舱全价票 1.5% 计，国际航线多按件/分段固定费率或按公斤计，本工具为按公斤口径估算，以航司公布为准",
+  inputs:[
+   {"id":"free","label":"免费行李额","unit":"kg","def":"23"},
+   {"id":"weight","label":"行李实际重量","unit":"kg","def":"28"},
+   {"id":"rate","label":"超重费率","unit":"元/kg","def":"100"}
+  ],
+  run:"var f=Number(free),w=Number(weight),r=Number(rate);if(!(f>=0&&f<=200))return {ok:false,msg:'免费额应在 0~200 kg 之间'};if(!(w>=0&&w<=500))return {ok:false,msg:'行李重量应在 0~500 kg 之间'};if(!(r>=0&&r<=100000))return {ok:false,msg:'费率应在 0~100000 元/kg 之间'};var over=Math.max(0,w-f);var fee=over*r;return {ok:true,html:'<div class=\"big\">超重费 '+fee.toFixed(2)+' 元</div><div class=\"row\">免费额 '+f+' kg，实际 '+w+' kg，超重 '+over.toFixed(1)+' kg × '+r+' 元/kg</div><div class=\"row\">各航司口径各异（按公斤/按件/分段），以航司公布为准；单件行李另有 32 kg 上限规定</div>'};",
+  test:{inputs:{"free":23,"weight":28,"rate":100}, expect:"500.00"}},
+ {id:"shevrange", cat:"sh", icon:"🔋", name:"电动汽车电耗与成本", desc:"由电池容量与续航反推百公里电耗与用车成本（与 shevcost 已知电耗算花费方向相反）",
+  formula:"百公里电耗 = 电池容量(kWh) ÷ 续航(km) × 100（按满电跑完的表显口径，未含充电损耗，实际电表电量约高 10%~15%）；每公里成本 = 百公里电耗 ÷ 100 × 电价；可选与油车对比：油车百公里成本 = 油耗 × 油价",
+  inputs:[
+   {"id":"batt","label":"电池容量","unit":"kWh","def":"60"},
+   {"id":"range","label":"续航里程","unit":"km","def":"400"},
+   {"id":"price","label":"电价","unit":"元/kWh","def":"0.6"},
+   {"id":"cmp","label":"与油车对比","type":"select","def":"no","options":[{"v":"no","t":"不对比"},{"v":"yes","t":"对比"}]},
+   {"id":"fuelcons","label":"油车油耗","unit":"L/100km","when":"cmp=yes","def":"8"},
+   {"id":"fuelprice","label":"油价","unit":"元/L","when":"cmp=yes","def":"7.5"}
+  ],
+  run:"var b=Number(batt),rg=Number(range),pr=Number(price);if(!(b>0&&b<=1000))return {ok:false,msg:'电池容量应在 (0,1000] kWh 之间'};if(!(rg>0&&rg<=5000))return {ok:false,msg:'续航应在 (0,5000] km 之间'};if(!(pr>=0&&pr<=20))return {ok:false,msg:'电价应在 0~20 元/kWh 之间'};var cons=b/rg*100;var per100=cons*pr;var perkm=per100/100;var h='<div class=\"big\">百公里电耗 '+cons.toFixed(2)+' kWh</div><div class=\"row\">每公里成本 '+perkm.toFixed(3)+' 元，百公里成本 '+per100.toFixed(2)+' 元（'+b+' kWh ÷ '+rg+' km 口径）</div>';if(String(cmp)==='yes'){var fc=Number(fuelcons),fp=Number(fuelprice);if(!(fc>=0&&fc<=50))return {ok:false,msg:'油车油耗应在 0~50 L/100km 之间'};if(!(fp>=0&&fp<=30))return {ok:false,msg:'油价应在 0~30 元/L 之间'};var f100=fc*fp;h+='<div class=\"row\">油车百公里成本 '+f100.toFixed(2)+' 元，电车每百公里省 '+(f100-per100).toFixed(2)+' 元</div>';}return {ok:true,html:h};",
+  test:{inputs:{"batt":60,"range":400,"price":0.6,"cmp":"no","fuelcons":8,"fuelprice":7.5}, expect:"15.00"}},
+ {id:"shparking2", cat:"sh", icon:"🅿️", name:"停车费计算（首时+封顶）", desc:"首小时价+后续价+日封顶+免费时长完整规则（进阶版，旧 shparking 仅单价×时长封顶）",
+  formula:"计费时长 = 停车时长 − 免费时长（≤0 免单）；后续时段不足 1 小时按 1 小时计；单日费 = 首小时价 + 后续小时数 × 后续价，并受日封顶限制（封顶填 0 = 无封顶）；跨日口径：总费 = 整天数 × 单日满价 + 余下时长单日费（免费时长仅入场抵扣一次）",
+  inputs:[
+   {"id":"hours","label":"停车时长","unit":"小时","def":"5"},
+   {"id":"first","label":"首小时价","unit":"元","def":"10"},
+   {"id":"rest","label":"后续每小时价","unit":"元","def":"5"},
+   {"id":"cap","label":"日封顶（0 = 无封顶）","unit":"元","def":"40"},
+   {"id":"freemin","label":"免费时长","unit":"分钟","def":"0"}
+  ],
+  run:"var hrs=Number(hours),fi=Number(first),re=Number(rest),cp=Number(cap),fm=Number(freemin);if(!(hrs>=0&&hrs<=8760))return {ok:false,msg:'停车时长应在 0~8760 小时之间'};if(!(fi>=0)||!(re>=0))return {ok:false,msg:'价格不能为负'};if(!(cp>=0))return {ok:false,msg:'封顶不能为负（无封顶填 0）'};if(!(fm>=0&&fm<=10080))return {ok:false,msg:'免费时长应在 0~10080 分钟之间'};function dayFee(x){if(x<=0)return 0;var v=fi+Math.ceil(Math.max(0,x-1)-1e-9)*re;if(cp>0)v=Math.min(v,cp);return v;}var eff=hrs-fm/60;var fee=0,days=0,rem=0;if(eff>0){days=Math.floor(eff/24);rem=eff-days*24;fee=days*dayFee(24)+dayFee(rem);}return {ok:true,html:'<div class=\"big\">停车费 '+fee.toFixed(2)+' 元</div><div class=\"row\">停车 '+hrs+' 小时，免费 '+fm+' 分钟，计费 '+Math.max(0,eff).toFixed(2)+' 小时'+(days>0?'（整 '+days+' 天 + 余 '+rem.toFixed(2)+' 小时）':'')+'；首时 '+fi+' 元，后续 '+re+' 元/小时，日封顶 '+(cp>0?cp+' 元':'无')+'</div><div class=\"row\">跨日按封顶×整天数+余数口径；各地停车场规则（按次/按 15 分钟计）不同，以现场公示为准</div>'};",
+  test:{inputs:{"hours":5,"first":10,"rest":5,"cap":40,"freemin":0}, expect:"30.00"}},
+ {id:"shtile2", cat:"sh", icon:"🔲", name:"瓷砖用量（规格+箱数）", desc:"按房间长宽与砖规格算片数并按箱购买（进阶版，旧 shtile/shfloor 无箱数与规格预设）",
+  formula:"房间面积 = 长 × 宽；单砖面积 = 砖长 × 砖宽（mm 换算 m）；片数 = 向上取整(面积 × (1+损耗率) ÷ 单砖面积)；箱数 = 向上取整(片数 ÷ 每箱片数)。损耗经验：正铺约 5%，斜铺/复杂户型 8%~10%",
+  inputs:[
+   {"id":"L","label":"房间长","unit":"m","def":"4"},
+   {"id":"W","label":"房间宽","unit":"m","def":"3"},
+   {"id":"spec","label":"砖规格","type":"select","def":"6060","options":[{"v":"3030","t":"300×300 mm"},{"v":"6060","t":"600×600 mm"},{"v":"8080","t":"800×800 mm"},{"v":"cust","t":"自填长宽"}]},
+   {"id":"cl","label":"自填砖长","unit":"mm","when":"spec=cust","def":"400"},
+   {"id":"cw","label":"自填砖宽","unit":"mm","when":"spec=cust","def":"400"},
+   {"id":"waste","label":"损耗率","unit":"%","def":"5"},
+   {"id":"perbox","label":"每箱片数","unit":"片/箱","def":"4"}
+  ],
+  run:"var LL=Number(L),WW=Number(W),wa=Number(waste),pb=Number(perbox);if(!(LL>0&&LL<=1000)||!(WW>0&&WW<=1000))return {ok:false,msg:'房间长宽应在 (0,1000] m 之间'};if(!(wa>=0&&wa<=100))return {ok:false,msg:'损耗率应在 0~100% 之间'};if(!(pb>=1)||Math.floor(pb)!==pb)return {ok:false,msg:'每箱片数须为不小于 1 的整数'};var MAP={'3030':[300,300],'6060':[600,600],'8080':[800,800]};var dim=MAP[String(spec)];if(!dim){var a=Number(cl),b=Number(cw);if(!(a>0&&a<=5000)||!(b>0&&b<=5000))return {ok:false,msg:'自填砖长宽应在 (0,5000] mm 之间'};dim=[a,b];}var area=LL*WW;var ta=(dim[0]/1000)*(dim[1]/1000);var raw=area*(1+wa/100)/ta;var pieces=Math.ceil(raw-1e-9);var boxes=Math.ceil(pieces/pb);return {ok:true,html:'<div class=\"big\">需要 '+pieces+' 片（'+boxes+' 箱）</div><div class=\"row\">面积 '+area.toFixed(2)+' m²，砖 '+dim[0]+'×'+dim[1]+' mm（单片 '+ta.toFixed(4)+' m²），含损耗 '+wa+'% 理论 '+raw.toFixed(2)+' 片向上取整；每箱 '+pb+' 片</div>'};",
+  test:{inputs:{"L":4,"W":3,"spec":"6060","cl":400,"cw":400,"waste":5,"perbox":4}, expect:"35 片"}},
+ {id:"shfloor2", cat:"sh", icon:"🪵", name:"地板用量（片数+箱数）", desc:"按房间面积与单片面积算地板片数和整箱数（进阶版，旧 shfloor 无箱数）",
+  formula:"片数 = 向上取整(房间面积 × (1+损耗率) ÷ 单片面积)；箱数 = 向上取整(片数 ÷ 每箱片数)。损耗经验：直铺约 5%，人字拼/鱼骨拼 10%~15%；单片面积如 1.2×0.2 m 木地板 = 0.24 m²",
+  inputs:[
+   {"id":"area","label":"房间面积","unit":"m²","def":"20"},
+   {"id":"piece","label":"单片面积","unit":"m²","def":"0.5","hint":"如 0.8×0.8 瓷砖 0.64，1.2×0.2 地板 0.24"},
+   {"id":"waste","label":"损耗率","unit":"%","def":"0"},
+   {"id":"perbox","label":"每箱片数","unit":"片/箱","def":"10"}
+  ],
+  run:"var ar=Number(area),pc=Number(piece),wa=Number(waste),pb=Number(perbox);if(!(ar>0&&ar<=100000))return {ok:false,msg:'房间面积应在 (0,100000] m² 之间'};if(!(pc>0&&pc<=100))return {ok:false,msg:'单片面积应在 (0,100] m² 之间'};if(!(wa>=0&&wa<=100))return {ok:false,msg:'损耗率应在 0~100% 之间'};if(!(pb>=1)||Math.floor(pb)!==pb)return {ok:false,msg:'每箱片数须为不小于 1 的整数'};var raw=ar*(1+wa/100)/pc;var pieces=Math.ceil(raw-1e-9);var boxes=Math.ceil(pieces/pb);return {ok:true,html:'<div class=\"big\">需要 '+pieces+' 片（'+boxes+' 箱）</div><div class=\"row\">面积 '+ar+' m² ÷ 单片 '+pc+' m² × (1+'+wa+'%) = '+raw.toFixed(2)+' 片向上取整；每箱 '+pb+' 片，建议留 2~3 片备用修补</div>'};",
+  test:{inputs:{"area":20,"piece":0.5,"waste":0,"perbox":10}, expect:"40 片"}},
+ {id:"shconcrete", cat:"sh", icon:"🏗️", name:"混凝土浇筑用量", desc:"长宽厚算方量与袋装混凝土袋数",
+  formula:"体积 V = 长 × 宽 × 厚（m³）；需备量 = V × (1+损耗率)；袋数 = 向上取整(需备量 ÷ 每袋出浆量)，本工具每袋（约 25~30 kg 干拌料）出浆 0.02 m³ 为常见口径（以产品说明为准）。标号经验配比（水泥:砂:石，重量比）仅供参考：C20 约 1:2.0:3.2，C25 约 1:1.6:2.8，C30 约 1:1.3:2.4",
+  inputs:[
+   {"id":"L","label":"长","unit":"m","def":"5"},
+   {"id":"W","label":"宽","unit":"m","def":"4"},
+   {"id":"T","label":"厚度","unit":"m","def":"0.1","hint":"地面 0.08~0.1，基础可达 0.3 以上"},
+   {"id":"grade","label":"标号（配比提示）","type":"select","def":"c25","options":[{"v":"c20","t":"C20"},{"v":"c25","t":"C25"},{"v":"c30","t":"C30"}]},
+   {"id":"waste","label":"损耗率","unit":"%","def":"0"}
+  ],
+  run:"var LL=Number(L),WW=Number(W),TT=Number(T),wa=Number(waste);if(!(LL>0&&LL<=10000)||!(WW>0&&WW<=10000))return {ok:false,msg:'长宽须大于 0'};if(!(TT>0&&TT<=10))return {ok:false,msg:'厚度应在 (0,10] m 之间'};if(!(wa>=0&&wa<=100))return {ok:false,msg:'损耗率应在 0~100% 之间'};var vol=LL*WW*TT;var need=vol*(1+wa/100);var bags=Math.ceil(need/0.02-1e-9);var RATIO={c20:'1 : 2.0 : 3.2',c25:'1 : 1.6 : 2.8',c30:'1 : 1.3 : 2.4'};var gr=String(grade).toUpperCase();return {ok:true,html:'<div class=\"big\">体积 '+vol.toFixed(2)+' m³ · 需 '+bags+' 袋</div><div class=\"row\">含损耗 '+wa+'% 需备 '+need.toFixed(3)+' m³ ÷ 每袋 0.02 m³ 向上取整；商砼订购可直接报 '+need.toFixed(2)+' m³</div><div class=\"row\">'+gr+' 经验配比（水泥:砂:石）约 '+(RATIO[String(grade)]||'')+'，正式配比以实验室配比单为准</div>'};",
+  test:{inputs:{"L":5,"W":4,"T":0.1,"grade":"c25","waste":0}, expect:"100 袋"}},
+ {id:"shsoil", cat:"sh", icon:"🪴", name:"花盆用土量", desc:"圆台/方盆体积换算营养土升数",
+  formula:"圆盆按圆台体积 V = π·h÷3 × (R² + R·r + r²)（R 上口半径、r 底半径，cm）；方盆 V = 长 × 宽 × 高；用土量(L) = V ÷ 1000 × 填充系数 0.85（不装满、留浇水沿口径，并考虑轻微沉降）",
+  inputs:[
+   {"id":"shape","label":"盆型","type":"select","def":"round","options":[{"v":"round","t":"圆盆（圆台）"},{"v":"square","t":"方盆（长方体）"}]},
+   {"id":"topd","label":"上口直径","unit":"cm","when":"shape=round","def":"30"},
+   {"id":"botd","label":"盆底直径","unit":"cm","when":"shape=round","def":"20"},
+   {"id":"hh","label":"盆高","unit":"cm","when":"shape=round","def":"25"},
+   {"id":"fl","label":"方盆长","unit":"cm","when":"shape=square","def":"40"},
+   {"id":"fw","label":"方盆宽","unit":"cm","when":"shape=square","def":"30"},
+   {"id":"fh","label":"方盆高","unit":"cm","when":"shape=square","def":"30"}
+  ],
+  run:"var V;if(String(shape)==='round'){var td=Number(topd),bd=Number(botd),h=Number(hh);if(!(td>0&&td<=500)||!(bd>0&&bd<=500)||!(h>0&&h<=500))return {ok:false,msg:'圆盆尺寸应在 (0,500] cm 之间'};var R=td/2,r=bd/2;V=Math.PI*h/3*(R*R+R*r+r*r);}else{var a=Number(fl),b=Number(fw),c=Number(fh);if(!(a>0&&a<=500)||!(b>0&&b<=500)||!(c>0&&c<=500))return {ok:false,msg:'方盆尺寸应在 (0,500] cm 之间'};V=a*b*c;}var liters=V/1000*0.85;return {ok:true,html:'<div class=\"big\">用土约 '+liters.toFixed(2)+' L</div><div class=\"row\">盆内体积 '+(V/1000).toFixed(2)+' L × 填充系数 0.85（留沿口、不压实口径）；陶粒垫底会再减少土量</div>'};",
+  test:{inputs:{"shape":"round","topd":30,"botd":20,"hh":25,"fl":40,"fw":30,"fh":30}, expect:"10.57"}},
+ {id:"shwaterchange", cat:"sh", icon:"🐠", name:"鱼缸换水稀释计算", desc:"按单次换水比算浓度几何衰减与达标次数",
+  formula:"每次换水后浓度 C ← C × (1 − 换水比)（新水浓度按 0 计，几何衰减）；达标次数为 C ≤ 目标的最小次数，迭代上限 100 次；每次换水量 = 水体 × 换水比。目标 ≥ 当前浓度时无需换水",
+  inputs:[
+   {"id":"vol","label":"鱼缸水体","unit":"L","def":"200"},
+   {"id":"cur","label":"当前浓度（如硝酸盐）","unit":"mg/L","def":"40"},
+   {"id":"tgt","label":"目标浓度","unit":"mg/L","def":"10"},
+   {"id":"ratio","label":"单次换水比","unit":"%","def":"50"}
+  ],
+  run:"var V=Number(vol),C0=Number(cur),TG=Number(tgt),ra=Number(ratio);if(!(V>0&&V<=100000))return {ok:false,msg:'水体应在 (0,100000] L 之间'};if(!(C0>=0)||!(TG>=0))return {ok:false,msg:'浓度不能为负'};if(!(ra>0&&ra<=100))return {ok:false,msg:'单次换水比应在 (0,100%] 之间'};var each=V*ra/100;if(TG>=C0)return {ok:true,html:'<div class=\"big\">0 次（已达标）</div><div class=\"row\">目标浓度 '+TG+' ≥ 当前 '+C0+' mg/L，无需换水稀释</div>'};var c=C0,n=0;while(c>TG&&n<100){c=c*(1-ra/100);n++;}if(c>TG)return {ok:true,html:'<div class=\"big\">100 次后仍未达标</div><div class=\"row\">每次换 '+ra+'% 后浓度从 '+C0+' 降至 '+c.toFixed(2)+' mg/L，仍高于目标 '+TG+'；请加大单次换水比或检查污染源</div>'};return {ok:true,html:'<div class=\"big\">需换水 '+n+' 次</div><div class=\"row\">每次换 '+each.toFixed(1)+' L（'+ra+'%），浓度 '+C0+' → '+c.toFixed(2)+' mg/L（目标 ≤ '+TG+'）；换水过频过量易引起水质震荡</div>'};",
+  test:{inputs:{"vol":200,"cur":40,"tgt":10,"ratio":50}, expect:"2 次"}},
+ {id:"shacsize2", cat:"sh", icon:"❄️", name:"空调匹数选型（分场景）", desc:"按场景单位冷量算所需制冷量与匹数（进阶版，旧 shacsize 固定 200W/㎡、1匹=2500W）",
+  formula:"所需冷量 = 面积 × 单位冷量（普通 180、西晒 220、顶楼 240、商业 260 W/㎡，经验口径）；匹数 = 所需冷量 ÷ 2324 W（1 匹 = 2324 W 行业口径）；推荐匹数向上取标准档 1/1.5/2/2.5/3/3.5/4/5，超出 5 匹建议多台或中央空调",
+  inputs:[
+   {"id":"area","label":"房间面积","unit":"m²","def":"20"},
+   {"id":"dens","label":"场景单位冷量","type":"select","def":"180","options":[{"v":"180","t":"普通房间 180 W/㎡"},{"v":"220","t":"西晒 220 W/㎡"},{"v":"240","t":"顶楼 240 W/㎡"},{"v":"260","t":"商业 260 W/㎡"}]}
+  ],
+  run:"var ar=Number(area),dn=Number(dens);if(!(ar>0&&ar<=10000))return {ok:false,msg:'面积应在 (0,10000] m² 之间'};if([180,220,240,260].indexOf(dn)<0)return {ok:false,msg:'请选择场景'};var need=ar*dn;var pi=need/2324;var STD=[1,1.5,2,2.5,3,3.5,4,5];var rec=null;for(var i=0;i<STD.length;i++){if(STD[i]>=pi){rec=STD[i];break;}}var big=rec!==null?'推荐 '+rec+' 匹':'约 '+pi.toFixed(1)+' 匹（建议多台）';return {ok:true,html:'<div class=\"big\">'+big+'</div><div class=\"row\">所需冷量 '+Math.round(need)+' W（'+ar+' m² × '+dn+' W/㎡）÷ 2324 = '+pi.toFixed(2)+' 匹'+(rec===null?'，超出单台 5 匹上限，建议分设多台或中央空调':'，向上取标准档 '+rec+' 匹')+'</div><div class=\"row\">层高超 3 m、落地玻璃多或人员密集时再上调一档</div>'};",
+  test:{inputs:{"area":20,"dens":"180"}, expect:"2 匹"}},
+ {id:"shwaterheater", cat:"sh", icon:"🚿", name:"电热水器加热时间与电费", desc:"水量、功率与温升算加热时长和电费",
+  formula:"热量 Q = m × c × ΔT（m = 水量 kg，c = 4.186 kJ/(kg·℃)）；耗电(kWh) = Q ÷ 3600 ÷ 效率 0.95；加热时间(分钟) = 耗电 ÷ (功率÷1000) × 60；电费 = 耗电 × 电价",
+  inputs:[
+   {"id":"vol","label":"水量","unit":"L","def":"50"},
+   {"id":"power","label":"加热功率","unit":"W","def":"2000"},
+   {"id":"dt","label":"温升 ΔT","unit":"℃","def":"30","hint":"如自来水 15℃ 加热到 45℃ 则 ΔT = 30"},
+   {"id":"price","label":"电价","unit":"元/度","def":"0.6"}
+  ],
+  run:"var V=Number(vol),P=Number(power),dT=Number(dt),pr=Number(price);if(!(V>0&&V<=2000))return {ok:false,msg:'水量应在 (0,2000] L 之间'};if(!(P>0&&P<=30000))return {ok:false,msg:'功率应在 (0,30000] W 之间'};if(!(dT>=0&&dT<=100))return {ok:false,msg:'温升应在 0~100 ℃ 之间'};if(!(pr>=0&&pr<=20))return {ok:false,msg:'电价应在 0~20 元/度之间'};var Q=V*4.186*dT;var kwh=Q/3600/0.95;var mins=kwh/(P/1000)*60;var cost=kwh*pr;return {ok:true,html:'<div class=\"big\">加热约 '+mins.toFixed(2)+' 分钟</div><div class=\"row\">耗电 '+kwh.toFixed(3)+' 度（Q = '+Math.round(Q)+' kJ，效率 95% 口径），电费 '+cost.toFixed(2)+' 元</div><div class=\"row\">实际时间受保温散热与边用边加热影响会略长</div>'};",
+  test:{inputs:{"vol":50,"power":2000,"dt":30,"price":0.6}, expect:"55.08"}},
+ {id:"shfreshair", cat:"sh", icon:"🌬️", name:"新风风量计算", desc:"按人数或换气次数算所需新风量",
+  formula:"按人数：风量 = 人数 × 30 m³/h（GB 50736 人均新风量口径，住宅/办公常用）；按换气次数：风量 = 房间体积（长×宽×层高）× 换气次数/h（住宅常取 0.5~1 次/h）。机型档位为常见家用 150/250/350/500 m³/h 档",
+  inputs:[
+   {"id":"mode","label":"计算方式","type":"select","def":"person","options":[{"v":"person","t":"按人数"},{"v":"ach","t":"按换气次数"}]},
+   {"id":"people","label":"人数","when":"mode=person","def":"4"},
+   {"id":"L","label":"房间长","unit":"m","when":"mode=ach","def":"5"},
+   {"id":"W","label":"房间宽","unit":"m","when":"mode=ach","def":"4"},
+   {"id":"H","label":"层高","unit":"m","when":"mode=ach","def":"3"},
+   {"id":"ach","label":"换气次数","unit":"次/h","when":"mode=ach","def":"1"}
+  ],
+  run:"var flow,detail;if(String(mode)==='person'){var pp=Number(people);if(!(pp>=1&&pp<=10000)||Math.floor(pp)!==pp)return {ok:false,msg:'人数须为 1~10000 的整数'};flow=pp*30;detail=pp+' 人 × 30 m³/h（国标人均口径）';}else{var LL=Number(L),WW=Number(W),HH=Number(H),ac=Number(ach);if(!(LL>0)||!(WW>0)||!(HH>0))return {ok:false,msg:'房间长宽高须大于 0'};if(!(ac>0&&ac<=20))return {ok:false,msg:'换气次数应在 (0,20] 次/h 之间'};var vol=LL*WW*HH;flow=vol*ac;detail='体积 '+vol.toFixed(1)+' m³ × '+ac+' 次/h';}var gear=flow<=150?'150 档':flow<=250?'250 档':flow<=350?'350 档':flow<=500?'500 档':'500 以上（建议双台或中央新风）';var fs=flow%1===0?flow.toFixed(0):flow.toFixed(1);return {ok:true,html:'<div class=\"big\">所需风量 '+fs+' m³/h</div><div class=\"row\">'+detail+'；建议机型 '+gear+'（选型宜略大于计算值，管道损耗另计）</div>'};",
+  test:{inputs:{"mode":"person","people":4,"L":5,"W":4,"H":3,"ach":1}, expect:"120"}},
+ {id:"shlight", cat:"sh", icon:"💡", name:"房间照明功率估算", desc:"按 LED 功率密度算总瓦数与灯数（与 dgflux 流明法互为不同口径）",
+  formula:"总功率 = 面积 × LED 功率密度（经验值：客厅 4、卧室 3、厨房 5、书房 6 W/㎡，对应约 300/200/300/500 lx 的 LED 口径，老式荧光灯时代密度约为其 2 倍）；灯数 = 向上取整(总功率 ÷ 单灯瓦数)",
+  inputs:[
+   {"id":"area","label":"房间面积","unit":"m²","def":"20"},
+   {"id":"room","label":"房间类型","type":"select","def":"living","options":[{"v":"living","t":"客厅 4 W/㎡"},{"v":"bed","t":"卧室 3 W/㎡"},{"v":"kitchen","t":"厨房 5 W/㎡"},{"v":"study","t":"书房 6 W/㎡"},{"v":"cust","t":"自填密度"}]},
+   {"id":"custdens","label":"自填功率密度","unit":"W/㎡","when":"room=cust","def":"4"},
+   {"id":"lampw","label":"单灯瓦数","unit":"W","def":"10"}
+  ],
+  run:"var ar=Number(area),lw=Number(lampw);if(!(ar>0&&ar<=10000))return {ok:false,msg:'面积应在 (0,10000] m² 之间'};if(!(lw>0&&lw<=1000))return {ok:false,msg:'单灯瓦数应在 (0,1000] W 之间'};var MAP={living:4,bed:3,kitchen:5,study:6};var dn=MAP[String(room)];if(dn===undefined){dn=Number(custdens);if(!(dn>0&&dn<=50))return {ok:false,msg:'自填密度应在 (0,50] W/㎡ 之间'};}var total=ar*dn;var lamps=Math.ceil(total/lw-1e-9);var ts=total%1===0?total.toFixed(0):total.toFixed(1);return {ok:true,html:'<div class=\"big\">总功率约 '+ts+' W · 需 '+lamps+' 盏</div><div class=\"row\">'+ar+' m² × '+dn+' W/㎡（LED 经验密度）= '+ts+' W ÷ 单灯 '+lw+' W 向上取整；重点照明（台灯/射灯）需另加</div>'};",
+  test:{inputs:{"area":20,"room":"living","custdens":4,"lampw":10}, expect:"80"}},
+ {id:"shseed", cat:"sh", icon:"🌱", name:"草坪播种量计算", desc:"按草种播种量与发芽率算种子重量",
+  formula:"种子量(g) = 面积 × 播种量(g/㎡) ÷ 发芽率；播种量经验值：高羊茅 25、草地早熟禾 15、多年生黑麦草 30 g/㎡（草坪草种子学常用范围中值）；发芽率按种子标签标示（常用 75%~90%）",
+  inputs:[
+   {"id":"area","label":"草坪面积","unit":"m²","def":"100"},
+   {"id":"species","label":"草种","type":"select","def":"rye","options":[{"v":"fescue","t":"高羊茅 25 g/㎡"},{"v":"blue","t":"草地早熟禾 15 g/㎡"},{"v":"rye","t":"多年生黑麦草 30 g/㎡"},{"v":"cust","t":"自填播种量"}]},
+   {"id":"custrate","label":"自填播种量","unit":"g/㎡","when":"species=cust","def":"20"},
+   {"id":"germ","label":"发芽率","unit":"%","def":"85"}
+  ],
+  run:"var ar=Number(area),gm=Number(germ);if(!(ar>0&&ar<=1000000))return {ok:false,msg:'面积应在 (0,1000000] m² 之间'};if(!(gm>0&&gm<=100))return {ok:false,msg:'发芽率应在 (0,100%] 之间'};var MAP={fescue:25,blue:15,rye:30};var rate=MAP[String(species)];if(rate===undefined){rate=Number(custrate);if(!(rate>0&&rate<=200))return {ok:false,msg:'自填播种量应在 (0,200] g/㎡ 之间'};}var g=ar*rate/(gm/100);var kg=g/1000;return {ok:true,html:'<div class=\"big\">需种子 '+kg.toFixed(2)+' kg</div><div class=\"row\">'+ar+' m² × '+rate+' g/㎡ ÷ 发芽率 '+gm+'% = '+Math.round(g)+' g；补播/建坪建议多备 10%</div>'};",
+  test:{inputs:{"area":100,"species":"rye","custrate":20,"germ":100}, expect:"3.00"}},
+ {id:"shrainwater", cat:"sh", icon:"🌧️", name:"雨水收集量估算", desc:"屋面面积与降雨量算可收集雨水",
+  formula:"收集量(L) = 屋面面积(m²) × 降雨量(mm) × 径流系数（1 mm 降雨落 1 m² = 1 L；径流系数默认 0.8，瓦屋面约 0.8~0.9、混凝土屋面约 0.8、绿化屋面约 0.3~0.4，另有初雨弃流损失未计）",
+  inputs:[
+   {"id":"area","label":"屋面集水面积","unit":"m²","def":"100"},
+   {"id":"rain","label":"降雨量","unit":"mm","def":"50","hint":"单场填该场降雨量，年收集填年降雨量"},
+   {"id":"period","label":"统计口径","type":"select","def":"single","options":[{"v":"single","t":"单场降雨"},{"v":"year","t":"全年降雨"}]},
+   {"id":"coeff","label":"径流系数","def":"0.8"}
+  ],
+  run:"var ar=Number(area),rn=Number(rain),cf=Number(coeff);if(!(ar>0&&ar<=1000000))return {ok:false,msg:'屋面面积应在 (0,1000000] m² 之间'};if(!(rn>=0&&rn<=10000))return {ok:false,msg:'降雨量应在 0~10000 mm 之间'};if(!(cf>=0&&cf<=1))return {ok:false,msg:'径流系数应在 0~1 之间'};var liters=ar*rn*cf;var ls=liters%1===0?liters.toFixed(0):liters.toFixed(1);return {ok:true,html:'<div class=\"big\">可收集约 '+ls+' L</div><div class=\"row\">'+ar+' m² × '+rn+' mm × '+cf+' = '+ls+' L（约 '+(liters/1000).toFixed(2)+' m³，'+(String(period)==='year'?'全年':'单场')+'口径）；初雨弃流与蒸发损失未计</div>'};",
+  test:{inputs:{"area":100,"rain":50,"period":"single","coeff":0.8}, expect:"4000"}},
+ {id:"shpowerbank", cat:"sh", icon:"🔌", name:"充电宝实际可用容量", desc:"标称容量换算 5V 实际输出与充电次数",
+  formula:"可用能量按标称口径（电芯 3.7 V）：5V 可用容量(mAh) = 标称 mAh × 3.7 ÷ 5 × 转换效率（效率含升压与线损，常见 85%，优质产品约 90%）；充电次数 = 5V 可用容量 ÷ 手机电池容量（手机同按标称 mAh 口径粗估，实际再打约 9 折）",
+  inputs:[
+   {"id":"cap","label":"充电宝标称容量","unit":"mAh","def":"10000"},
+   {"id":"eff","label":"转换效率","type":"select","def":"85","options":[{"v":"85","t":"85%（常见）"},{"v":"90","t":"90%（优质）"},{"v":"cust","t":"自填"}]},
+   {"id":"custeff","label":"自填效率","unit":"%","when":"eff=cust","def":"88"},
+   {"id":"phone","label":"手机电池容量","unit":"mAh","def":"4000"}
+  ],
+  run:"var cp=Number(cap),ph=Number(phone);if(!(cp>0&&cp<=500000))return {ok:false,msg:'标称容量应在 (0,500000] mAh 之间'};if(!(ph>0&&ph<=30000))return {ok:false,msg:'手机电池容量应在 (0,30000] mAh 之间'};var ef=String(eff)==='cust'?Number(custeff):Number(eff);if(!(ef>0&&ef<=100))return {ok:false,msg:'转换效率应在 (0,100%] 之间'};var usable=cp*3.7/5*(ef/100);var times=usable/ph;return {ok:true,html:'<div class=\"big\">5V 可用约 '+Math.round(usable)+' mAh</div><div class=\"row\">'+cp+' mAh × 3.7 ÷ 5 × '+ef+'% = '+Math.round(usable)+' mAh；给 '+ph+' mAh 手机约充 '+times.toFixed(1)+' 次（满充约 '+Math.floor(times)+' 次）</div><div class=\"row\">标称容量为电芯 3.7V 口径，输出 5V 必须打折，勿被商家数字误导</div>'};",
+  test:{inputs:{"cap":10000,"eff":"85","custeff":88,"phone":4000}, expect:"6290"}},
+ {id:"shdataflow", cat:"sh", icon:"📶", name:"流量消耗估算", desc:"看视频或日均使用两种口径估流量",
+  formula:"视频口径：流量(GB) = 码率(Mbps) × 时长(h) × 3600 ÷ 8 ÷ 1000（十进制 GB）；码率经验：标清约 1.5、高清约 4、超清约 8、4K 约 16 Mbps。日均口径：流量(GB) = 每日 MB × 天数 ÷ 1000",
+  inputs:[
+   {"id":"mode","label":"估算方式","type":"select","def":"video","options":[{"v":"video","t":"看视频（码率×时长）"},{"v":"daily","t":"日均使用（MB×天数）"}]},
+   {"id":"br","label":"视频码率","type":"select","when":"mode=video","def":"4","options":[{"v":"1.5","t":"标清 1.5 Mbps"},{"v":"4","t":"高清 4 Mbps"},{"v":"8","t":"超清 8 Mbps"},{"v":"16","t":"4K 16 Mbps"}]},
+   {"id":"hrs","label":"观看时长","unit":"小时","when":"mode=video","def":"2"},
+   {"id":"dmb","label":"每日用量","unit":"MB/天","when":"mode=daily","def":"500"},
+   {"id":"days","label":"天数","unit":"天","when":"mode=daily","def":"30"}
+  ],
+  run:"var gb,detail;if(String(mode)==='video'){var b=Number(br),h=Number(hrs);if([1.5,4,8,16].indexOf(b)<0)return {ok:false,msg:'请选择码率档'};if(!(h>=0&&h<=100000))return {ok:false,msg:'时长应在 0~100000 小时之间'};gb=b*h*3600/8/1000;detail=b+' Mbps × '+h+' 小时';}else{var dm=Number(dmb),dy=Number(days);if(!(dm>=0&&dm<=1000000))return {ok:false,msg:'每日用量应在 0~1000000 MB 之间'};if(!(dy>=0&&dy<=36500)||Math.floor(dy)!==dy)return {ok:false,msg:'天数须为 0~36500 的整数'};gb=dm*dy/1000;detail=dm+' MB/天 × '+dy+' 天';}return {ok:true,html:'<div class=\"big\">约消耗 '+gb.toFixed(2)+' GB</div><div class=\"row\">'+detail+'（十进制 GB 口径）；自适应码率会随网络浮动，实际可上下浮动 30%</div>'};",
+  test:{inputs:{"mode":"video","br":"4","hrs":2,"dmb":500,"days":30}, expect:"3.60"}},
+ {id:"shstorage", cat:"sh", icon:"📹", name:"监控存储容量（按时长）", desc:"路数×码率×每日录制时长算存储（与 nvrstore 默认 24h 连续录制不同，本工具可设每日时长）",
+  formula:"每天容量(GB) = 路数 × 码率(Mbps) × 每日小时 × 3600 ÷ 8 ÷ 1000；总容量(TB) = 每天 GB × 保留天数 ÷ 1000（硬盘十进制口径）；H.265 同画质码率约为 H.264 一半，填码率时按编码实际值填",
+  inputs:[
+   {"id":"ch","label":"摄像头路数","def":"8"},
+   {"id":"br","label":"单路码率","unit":"Mbps","def":"4","hint":"1080P H.265 约 2，H.264 约 4"},
+   {"id":"hpd","label":"每天录制时长","unit":"小时","def":"24"},
+   {"id":"days","label":"保留天数","unit":"天","def":"30"}
+  ],
+  run:"var cc=Number(ch),b=Number(br),h=Number(hpd),d=Number(days);if(!(cc>=1&&cc<=1000)||Math.floor(cc)!==cc)return {ok:false,msg:'路数须为 1~1000 的整数'};if(!(b>0&&b<=1000))return {ok:false,msg:'码率应在 (0,1000] Mbps 之间'};if(!(h>0&&h<=24))return {ok:false,msg:'每天时长应在 (0,24] 小时之间'};if(!(d>=1&&d<=3650)||Math.floor(d)!==d)return {ok:false,msg:'保留天数须为 1~3650 的整数'};var dailyGB=cc*b*h*3600/8/1000;var totalTB=dailyGB*d/1000;return {ok:true,html:'<div class=\"big\">共需约 '+totalTB.toFixed(2)+' TB</div><div class=\"row\">每天 '+dailyGB.toFixed(1)+' GB（约 '+(dailyGB/1000).toFixed(2)+' TB）× '+d+' 天；移动侦测录像可大幅减少，连续录制按本口径</div>'};",
+  test:{inputs:{"ch":8,"br":4,"hpd":24,"days":30}, expect:"10.37"}},
+ {id:"shphotoprint", cat:"sh", icon:"🖼️", name:"照片冲印像素需求", desc:"冲印尺寸与 DPI 算所需照片像素",
+  formula:"所需像素 = 尺寸(英寸) × DPI；常用尺寸（长×宽，英寸）：5 寸 5×3.5、6 寸 6×4、7 寸 7×5、10 寸 10×8；300 DPI 为精细冲印标准，150 DPI 为大幅面可接受下限",
+  inputs:[
+   {"id":"size","label":"冲印尺寸","type":"select","def":"6","options":[{"v":"5","t":"5 寸（5×3.5 英寸）"},{"v":"6","t":"6 寸（6×4 英寸）"},{"v":"7","t":"7 寸（7×5 英寸）"},{"v":"10","t":"10 寸（10×8 英寸）"}]},
+   {"id":"dpi","label":"冲印精度 DPI","def":"300","hint":"精细 300，大幅面可降至 150"}
+  ],
+  run:"var MAP={'5':[5,3.5],'6':[6,4],'7':[7,5],'10':[10,8]};var dim=MAP[String(size)];if(!dim)return {ok:false,msg:'请选择冲印尺寸'};var dp=Number(dpi);if(!(dp>0&&dp<=2400))return {ok:false,msg:'DPI 应在 (0,2400] 之间'};var pw=Math.round(dim[0]*dp),ph=Math.round(dim[1]*dp);var mp=pw*ph/1000000;return {ok:true,html:'<div class=\"big\">需 '+pw+' × '+ph+' px</div><div class=\"row\">总像素 '+mp.toFixed(2)+' MP（'+dim[0]+'×'+dim[1]+' 英寸 × '+dp+' DPI）；照片低于此像素冲印会发虚</div>'};",
+  test:{inputs:{"size":"6","dpi":300}, expect:"1800"}},
+ {id:"shdiaper", cat:"sh", icon:"👶", name:"纸尿裤用量与花费", desc:"按月龄段日均片数算总片数、包数与费用",
+  formula:"总片数 = 日均片数 × 天数（日均经验值：新生儿约 10、1~3 月约 8、4~6 月约 7、7~12 月约 6、1 岁以上约 5 片/天，个体差异大）；包数 = 向上取整(总片数 ÷ 每包片数)；费用 = 总片数 × 每片单价（按实际使用片数计）",
+  inputs:[
+   {"id":"stage","label":"月龄段","type":"select","def":"new","options":[{"v":"new","t":"新生儿 约10片/天"},{"v":"m13","t":"1~3月 约8片/天"},{"v":"m46","t":"4~6月 约7片/天"},{"v":"m712","t":"7~12月 约6片/天"},{"v":"t12","t":"1岁以上 约5片/天"},{"v":"cust","t":"自填日均"}]},
+   {"id":"custper","label":"自填日均片数","unit":"片/天","when":"stage=cust","def":"6"},
+   {"id":"days","label":"天数","unit":"天","def":"30"},
+   {"id":"perpack","label":"每包片数","unit":"片/包","def":"50"},
+   {"id":"price","label":"每片单价","unit":"元/片","def":"1.5"}
+  ],
+  run:"var MAP={new:10,m13:8,m46:7,m712:6,t12:5};var per=MAP[String(stage)];if(per===undefined){per=Number(custper);if(!(per>0&&per<=30))return {ok:false,msg:'自填日均片数应在 (0,30] 之间'};}var dy=Number(days),pk=Number(perpack),pr=Number(price);if(!(dy>=1&&dy<=3650)||Math.floor(dy)!==dy)return {ok:false,msg:'天数须为 1~3650 的整数'};if(!(pk>=1)||Math.floor(pk)!==pk)return {ok:false,msg:'每包片数须为不小于 1 的整数'};if(!(pr>=0&&pr<=100))return {ok:false,msg:'单价应在 0~100 元/片之间'};var total=per*dy;var packs=Math.ceil(total/pk);var cost=total*pr;return {ok:true,html:'<div class=\"big\">共需 '+total+' 片（'+packs+' 包）</div><div class=\"row\">日均 '+per+' 片 × '+dy+' 天 = '+total+' 片，每包 '+pk+' 片向上取整 '+packs+' 包；费用约 '+cost.toFixed(2)+' 元（按 '+pr+' 元/片 × 实际片数）</div><div class=\"row\">日均片数为经验值，拉拉裤阶段与夜间用量另有差异</div>'};",
+  test:{inputs:{"stage":"new","custper":6,"days":30,"perpack":50,"price":1.5}, expect:"300 片"}},
+ {id:"shcommute", cat:"sh", icon:"🛣️", name:"通勤月成本计算", desc:"油车/电车两种口径算月通勤花费与每公里成本",
+  formula:"月里程 = 单程 km × 2 × 工作日天数；油车能耗费 = 月里程 ÷ 100 × 油耗(L/100km) × 油价；电车能耗费 = 月里程 ÷ 100 × 电耗(kWh/100km) × 电价；月成本 = 能耗费 + 停车/过路月费；每公里成本 = 月成本 ÷ 月里程（月里程为 0 时不计）",
+  inputs:[
+   {"id":"km","label":"单程距离","unit":"km","def":"20"},
+   {"id":"days","label":"每月工作日","unit":"天","def":"22"},
+   {"id":"mode","label":"能源类型","type":"select","def":"fuel","options":[{"v":"fuel","t":"燃油车"},{"v":"ev","t":"电动车"}]},
+   {"id":"cons","label":"油耗","unit":"L/100km","when":"mode=fuel","def":"8"},
+   {"id":"fprice","label":"油价","unit":"元/L","when":"mode=fuel","def":"7.5"},
+   {"id":"econ","label":"电耗","unit":"kWh/100km","when":"mode=ev","def":"15"},
+   {"id":"eprice","label":"电价","unit":"元/kWh","when":"mode=ev","def":"0.6"},
+   {"id":"extra","label":"停车+过路月费","unit":"元","def":"0"}
+  ],
+  run:"var K=Number(km),dy=Number(days),ex=Number(extra);if(!(K>=0&&K<=2000))return {ok:false,msg:'单程距离应在 0~2000 km 之间'};if(!(dy>=1&&dy<=31)||Math.floor(dy)!==dy)return {ok:false,msg:'工作日天数须为 1~31 的整数'};if(!(ex>=0&&ex<=1000000))return {ok:false,msg:'月附加费应在 0~1000000 元之间'};var dist=K*2*dy;var energy,label;if(String(mode)==='fuel'){var cs=Number(cons),fp=Number(fprice);if(!(cs>=0&&cs<=60))return {ok:false,msg:'油耗应在 0~60 L/100km 之间'};if(!(fp>=0&&fp<=30))return {ok:false,msg:'油价应在 0~30 元/L 之间'};energy=dist/100*cs*fp;label='油耗 '+cs+' L/100km × 油价 '+fp+' 元/L';}else{var ec=Number(econ),ep=Number(eprice);if(!(ec>=0&&ec<=100))return {ok:false,msg:'电耗应在 0~100 kWh/100km 之间'};if(!(ep>=0&&ep<=20))return {ok:false,msg:'电价应在 0~20 元/kWh 之间'};energy=dist/100*ec*ep;label='电耗 '+ec+' kWh/100km × 电价 '+ep+' 元/kWh';}var total=energy+ex;var perkm=dist>0?total/dist:0;return {ok:true,html:'<div class=\"big\">月成本 '+total.toFixed(2)+' 元</div><div class=\"row\">月里程 '+dist.toFixed(0)+' km（'+K+' km × 往返 × '+dy+' 天），能耗费 '+energy.toFixed(2)+' 元（'+label+'）+ 附加 '+ex.toFixed(2)+' 元；每公里成本 '+(dist>0?perkm.toFixed(2)+' 元':'—（里程为 0）')+'</div><div class=\"row\">未计保险、保养、折旧等固定成本</div>'};",
+  test:{inputs:{"km":20,"days":22,"mode":"fuel","cons":8,"fprice":7.5,"econ":15,"eprice":0.6,"extra":0}, expect:"528.00"}},
+ {id:"shbuspass", cat:"sh", icon:"🎫", name:"公交月票回本计算", desc:"月票价与单次票价算回本次数与盈亏",
+  formula:"回本次数 = 向上取整(月票价 ÷ 单次票价)（月票价为 0 时回本 0 次）；按月乘次对比：单买总价 = 乘次 × 单次票价；月票盈亏 = 单买总价 − 月票价（正为月票划算）",
+  inputs:[
+   {"id":"pass","label":"月票价格","unit":"元","def":"90"},
+   {"id":"single","label":"单次票价","unit":"元","def":"2"},
+   {"id":"rides","label":"每月乘车次数","unit":"次","def":"60"}
+  ],
+  run:"var pa=Number(pass),si=Number(single),ri=Number(rides);if(!(pa>=0&&pa<=100000))return {ok:false,msg:'月票价应在 0~100000 元之间'};if(!(si>0&&si<=1000))return {ok:false,msg:'单次票价须大于 0（不超过 1000 元）'};if(!(ri>=0&&ri<=10000)||Math.floor(ri)!==ri)return {ok:false,msg:'乘次须为 0~10000 的整数'};var be=pa===0?0:Math.ceil(pa/si-1e-9);var pay=ri*si;var save=pay-pa;return {ok:true,html:'<div class=\"big\">回本需 '+be+' 次</div><div class=\"row\">月乘 '+ri+' 次单买共 '+pay.toFixed(2)+' 元，月票 '+pa.toFixed(2)+' 元，'+(save>0?'月票省 '+save.toFixed(2)+' 元':save<0?'月票多花 '+(-save).toFixed(2)+' 元':'两者持平')+'</div><div class=\"row\">月票另有不限次的便利价值，未计入金额对比</div>'};",
+  test:{inputs:{"pass":90,"single":2,"rides":60}, expect:"45"}},
+ {id:"shscreen2", cat:"sh", icon:"📺", name:"屏幕尺寸与观看距离", desc:"对角线算宽高并给推荐观看距离（kfscr 只算宽高、kfppi 算密度，本工具加距离口径）",
+  formula:"对角线(cm) = 英寸 × 2.54；宽 = 对角线 × 宽边 ÷ √(宽²+高²)，高同理（16:9 / 21:9 / 4:3）；推荐观看距离 = 屏幕宽 × 1.2 ~ 2.0（经验口径：约对应 40°~26° 水平视角，影院沉浸取下限、日常观看取上限）",
+  inputs:[
+   {"id":"inch","label":"对角线尺寸","unit":"英寸","def":"55"},
+   {"id":"ratio","label":"宽高比","type":"select","def":"169","options":[{"v":"169","t":"16:9"},{"v":"219","t":"21:9"},{"v":"43","t":"4:3"}]}
+  ],
+  run:"var ic=Number(inch);if(!(ic>0&&ic<=300))return {ok:false,msg:'尺寸应在 (0,300] 英寸之间'};var MAP={'169':[16,9],'219':[21,9],'43':[4,3]};var wh=MAP[String(ratio)];if(!wh)return {ok:false,msg:'请选择宽高比'};var diag=ic*2.54;var hyp=Math.sqrt(wh[0]*wh[0]+wh[1]*wh[1]);var w=diag*wh[0]/hyp,h=diag*wh[1]/hyp;var d1=w*1.2/100,d2=w*2.0/100;return {ok:true,html:'<div class=\"big\">宽 '+w.toFixed(2)+' cm × 高 '+h.toFixed(2)+' cm</div><div class=\"row\">推荐观看距离约 '+d1.toFixed(2)+' ~ '+d2.toFixed(2)+' m（屏幕宽 × 1.2~2.0 口径）；'+ic+' 英寸对角线 = '+diag.toFixed(1)+' cm</div><div class=\"row\">与 kfscr（仅宽高）、kfppi（像素密度）分工不同，本工具含观看距离建议</div>'};",
+  test:{inputs:{"inch":55,"ratio":"169"}, expect:"121.76"}}
 );
 
 
