@@ -13116,6 +13116,1975 @@ TOOLS.push(
   run:"var pl=Number(plan),dy=Number(days),vh=Number(vhours),mh=Number(mhours),so=Number(social),wk=Number(work),op=Number(overprice);if(!(pl>=0))return {ok:false,msg:'套餐流量不能为负'};if(!(dy>=1&&dy<=366)||Math.floor(dy)!==dy)return {ok:false,msg:'天数须为 1~366 的整数'};if(!(vh>=0&&vh<=24)||!(mh>=0&&mh<=24))return {ok:false,msg:'每日视频/音乐时长应在 0~24 小时之间'};if(!(so>=0)||!(wk>=0))return {ok:false,msg:'每日流量不能为负'};if(!(op>=0))return {ok:false,msg:'套外单价不能为负'};var RATE={sd:1.5,hd:4,uhd:8,k4:16};var br=RATE[String(quality)];if(!br)return {ok:false,msg:'请选择清晰度'};var vgb=br*vh*3600/8/1000*dy;var mgb=0.144*mh*dy;var ogb=(so+wk)*dy/1000;var total=vgb+mgb+ogb;var over=Math.max(0,total-pl);return {ok:true,html:'<div class=\"big\">预计月用 '+total.toFixed(2)+' GB，套餐 '+pl+' GB '+(over>0?'超出 '+over.toFixed(2)+' GB':'够用，余 '+(pl-total).toFixed(2)+' GB')+'</div><div class=\"row\">视频 '+vgb.toFixed(2)+' GB + 音乐 '+mgb.toFixed(2)+' GB + 社交办公 '+ogb.toFixed(2)+' GB（'+dy+' 天）</div>'+(over>0?'<div class=\"row\">按套外 '+op+' 元/GB 估算约多花 '+(over*op).toFixed(2)+' 元，建议升级套餐或连 Wi-Fi 看视频</div>':'<div class=\"row\">在套餐内，无套外费用（估算）</div>')};",
   test:{inputs:{plan:50,days:30,vhours:1,quality:"hd",mhours:1,social:200,work:0,overprice:5}, expect:"64.32"}}
 );
+/* ===== R3-DWHS2 单位换算场景细化（子任务产出，未并入站点） ===== */
+/* cat 全部 dwhs；run 自包含；因子按国际定义/行业标准独立复核 */
+TOOLS.push(
+{
+ "id": "dwtex",
+ "cat": "dwhs",
+ "icon": "🧵",
+ "name": "纺织线密度与支数换算",
+ "desc": "tex/dtex/旦尼尔与公支Nm/英支Ne互转（dwunit只有线密度直接制，本工具补支数倒数制）",
+ "formula": "直接制：tex=g/1000m，dtex=g/10000m，旦尼尔D=g/9000m（D=9×tex）；间接制（支数，越大越细）：公支 Nm=1000/tex，英支 Ne(棉型)=590.54/tex。支数与tex成反比。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "20"
+  },
+  {
+   "id": "from",
+   "label": "从",
+   "type": "select",
+   "def": "tex",
+   "options": [
+    {
+     "v": "tex",
+     "t": "特克斯(tex)"
+    },
+    {
+     "v": "dtex",
+     "t": "分特(dtex)"
+    },
+    {
+     "v": "den",
+     "t": "旦尼尔(D)"
+    },
+    {
+     "v": "nm",
+     "t": "公支(Nm)"
+    },
+    {
+     "v": "ne",
+     "t": "英支(Ne 棉型)"
+    }
+   ]
+  },
+  {
+   "id": "to",
+   "label": "到",
+   "type": "select",
+   "def": "den",
+   "options": [
+    {
+     "v": "tex",
+     "t": "特克斯(tex)"
+    },
+    {
+     "v": "dtex",
+     "t": "分特(dtex)"
+    },
+    {
+     "v": "den",
+     "t": "旦尼尔(D)"
+    },
+    {
+     "v": "nm",
+     "t": "公支(Nm)"
+    },
+    {
+     "v": "ne",
+     "t": "英支(Ne 棉型)"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};if(!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e12)return {ok:false,msg:'数值过大'};var LB={tex:'特克斯(tex)',dtex:'分特(dtex)',den:'旦尼尔(D)',nm:'公支(Nm)',ne:'英支(Ne)'};function tt(u,val){if(u==='tex')return val;if(u==='dtex')return val*0.1;if(u==='den')return val/9;if(u==='nm')return 1000/val;return 590.54/val;}function ft(u,t){if(u==='tex')return t;if(u==='dtex')return t*10;if(u==='den')return t*9;if(u==='nm')return 1000/t;return 590.54/t;}var t=tt(from,x);var r=ft(to,t);return {ok:true,html:'<div class=\"big\">'+F(x)+' '+LB[from]+' = '+F(r)+' '+LB[to]+'</div><div class=\"row\">支数(Nm/Ne)与线密度成反比：数值越大纱越细；Ne 为棉型英支常用常数 590.54，麻/毛体系常数不同</div>'};",
+ "test": {
+  "inputs": {
+   "v": 20,
+   "from": "tex",
+   "to": "den"
+  },
+  "expect": "180"
+ }
+},
+{
+ "id": "dwgoldwt",
+ "cat": "dwhs",
+ "icon": "🏅",
+ "name": "金衡制与各地两换算",
+ "desc": "金衡盎司/英钱/格令与内地·香港·台湾三种两互转（各地两克重不同）",
+ "formula": "金衡制：1金衡盎司(ozt)=31.1034768g=20英钱(dwt)，1英钱=24格令(grain)，1格令=0.06479891g。两的差异：内地市两=50g，香港两=37.429g，台湾两=37.5g，香港钱=3.7429g——买金饰务必先确认用哪种两。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "1"
+  },
+  {
+   "id": "from",
+   "label": "从",
+   "type": "select",
+   "def": "ozt",
+   "options": [
+    {
+     "v": "g",
+     "t": "克(g)"
+    },
+    {
+     "v": "ozt",
+     "t": "金衡盎司(ozt)"
+    },
+    {
+     "v": "dwt",
+     "t": "英钱(dwt)"
+    },
+    {
+     "v": "gr",
+     "t": "格令(grain)"
+    },
+    {
+     "v": "cn",
+     "t": "内地市两(50g)"
+    },
+    {
+     "v": "hk",
+     "t": "香港两(37.429g)"
+    },
+    {
+     "v": "tw",
+     "t": "台湾两(37.5g)"
+    },
+    {
+     "v": "hkq",
+     "t": "香港钱(3.7429g)"
+    }
+   ]
+  },
+  {
+   "id": "to",
+   "label": "到",
+   "type": "select",
+   "def": "g",
+   "options": [
+    {
+     "v": "g",
+     "t": "克(g)"
+    },
+    {
+     "v": "ozt",
+     "t": "金衡盎司(ozt)"
+    },
+    {
+     "v": "dwt",
+     "t": "英钱(dwt)"
+    },
+    {
+     "v": "gr",
+     "t": "格令(grain)"
+    },
+    {
+     "v": "cn",
+     "t": "内地市两(50g)"
+    },
+    {
+     "v": "hk",
+     "t": "香港两(37.429g)"
+    },
+    {
+     "v": "tw",
+     "t": "台湾两(37.5g)"
+    },
+    {
+     "v": "hkq",
+     "t": "香港钱(3.7429g)"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};if(!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e12)return {ok:false,msg:'数值过大'};var K={\"g\": 1, \"ozt\": 31.1034768, \"dwt\": 1.55517384, \"gr\": 0.06479891, \"cn\": 50, \"hk\": 37.429, \"tw\": 37.5, \"hkq\": 3.7429};var LB={\"g\": \"\\u514b(g)\", \"ozt\": \"\\u91d1\\u8861\\u76ce\\u53f8(ozt)\", \"dwt\": \"\\u82f1\\u94b1(dwt)\", \"gr\": \"\\u683c\\u4ee4(grain)\", \"cn\": \"\\u5185\\u5730\\u5e02\\u4e24\", \"hk\": \"\\u9999\\u6e2f\\u4e24\", \"tw\": \"\\u53f0\\u6e7e\\u4e24\", \"hkq\": \"\\u9999\\u6e2f\\u94b1\"};if(K[from]===undefined||K[to]===undefined)return {ok:false,msg:'请选择单位'};var r=x*K[from]/K[to];return {ok:true,html:'<div class=\"big\">'+F(x)+' '+LB[from]+' = '+F(r)+' '+LB[to]+'</div><div class=\"row\">同为一两：内地 50g · 香港 37.429g · 台湾 37.5g，相差约三成，交易前先确认口径</div>'};",
+ "test": {
+  "inputs": {
+   "v": 1,
+   "from": "ozt",
+   "to": "g"
+  },
+  "expect": "31.1034768"
+ }
+},
+{
+ "id": "dwcarat",
+ "cat": "dwhs",
+ "icon": "💎",
+ "name": "宝石重量换算（克拉/分/格令）",
+ "desc": "克拉/分/格令与克/毫克/金衡盎司互转，钻石珠宝专用口径",
+ "formula": "1克拉(ct)=0.2g（1907年国际定义）=100分(point，1分=0.01ct=0.002g)；1格令(grain)=0.06479891g。注意：珍珠格令(pearl grain)=0.05g 与标准格令不同，买珍珠时留意。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "1"
+  },
+  {
+   "id": "from",
+   "label": "从",
+   "type": "select",
+   "def": "ct",
+   "options": [
+    {
+     "v": "ct",
+     "t": "克拉(ct)"
+    },
+    {
+     "v": "pt",
+     "t": "分(point)"
+    },
+    {
+     "v": "gr",
+     "t": "格令(grain)"
+    },
+    {
+     "v": "g",
+     "t": "克(g)"
+    },
+    {
+     "v": "mg",
+     "t": "毫克(mg)"
+    },
+    {
+     "v": "ozt",
+     "t": "金衡盎司(ozt)"
+    }
+   ]
+  },
+  {
+   "id": "to",
+   "label": "到",
+   "type": "select",
+   "def": "pt",
+   "options": [
+    {
+     "v": "ct",
+     "t": "克拉(ct)"
+    },
+    {
+     "v": "pt",
+     "t": "分(point)"
+    },
+    {
+     "v": "gr",
+     "t": "格令(grain)"
+    },
+    {
+     "v": "g",
+     "t": "克(g)"
+    },
+    {
+     "v": "mg",
+     "t": "毫克(mg)"
+    },
+    {
+     "v": "ozt",
+     "t": "金衡盎司(ozt)"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};if(!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e12)return {ok:false,msg:'数值过大'};var K={\"ct\": 0.2, \"pt\": 0.002, \"gr\": 0.06479891, \"g\": 1, \"mg\": 0.001, \"ozt\": 31.1034768};var LB={\"ct\": \"\\u514b\\u62c9(ct)\", \"pt\": \"\\u5206(point)\", \"gr\": \"\\u683c\\u4ee4(grain)\", \"g\": \"\\u514b(g)\", \"mg\": \"\\u6beb\\u514b(mg)\", \"ozt\": \"\\u91d1\\u8861\\u76ce\\u53f8(ozt)\"};if(K[from]===undefined||K[to]===undefined)return {ok:false,msg:'请选择单位'};var r=x*K[from]/K[to];return {ok:true,html:'<div class=\"big\">'+F(x)+' '+LB[from]+' = '+F(r)+' '+LB[to]+'</div><div class=\"row\">钻石报价常以分为单位：30分=0.30ct；克拉指重量不是尺寸</div>'};",
+ "test": {
+  "inputs": {
+   "v": 1,
+   "from": "ct",
+   "to": "pt"
+  },
+  "expect": "100"
+ }
+},
+{
+ "id": "dwpaper",
+ "cat": "dwhs",
+ "icon": "📄",
+ "name": "纸张克重与令重换算",
+ "desc": "由克重gsm与纸张规格算单张重与整令(500张)重，或由令重反推克重",
+ "formula": "单张重(g)=克重(g/㎡)×单张面积(㎡)；令重(kg)=单张重×500÷1000。面积按标准尺寸：A4=210×297mm=0.06237㎡，全开=787×1092mm，大度全开=889×1194mm。美制令重(basis weight)另有基准尺寸体系，不在此列。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "80"
+  },
+  {
+   "id": "mode",
+   "label": "模式",
+   "type": "select",
+   "def": "gsm2wt",
+   "options": [
+    {
+     "v": "gsm2wt",
+     "t": "克重 → 单张重/令重"
+    },
+    {
+     "v": "wt2gsm",
+     "t": "令重(kg) → 克重"
+    }
+   ]
+  },
+  {
+   "id": "size",
+   "label": "纸张规格",
+   "type": "select",
+   "def": "a4",
+   "options": [
+    {
+     "v": "a4",
+     "t": "A4 (210×297)"
+    },
+    {
+     "v": "a3",
+     "t": "A3 (297×420)"
+    },
+    {
+     "v": "a5",
+     "t": "A5 (148×210)"
+    },
+    {
+     "v": "a2",
+     "t": "A2 (420×594)"
+    },
+    {
+     "v": "a1",
+     "t": "A1 (594×841)"
+    },
+    {
+     "v": "a0",
+     "t": "A0 (841×1189)"
+    },
+    {
+     "v": "qk",
+     "t": "全开 (787×1092)"
+    },
+    {
+     "v": "dd",
+     "t": "大度全开 (889×1194)"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x)||!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e9)return {ok:false,msg:'数值过大'};var A={a4:0.06237,a3:0.12474,a5:0.03108,a2:0.24948,a1:0.499554,a0:0.999949,qk:0.859404,dd:1.061526};var a=A[size];if(!a)return {ok:false,msg:'请选择规格'};if(mode==='gsm2wt'){var sheet=x*a;var ream=sheet*500/1000;return {ok:true,html:'<div class=\"big\">单张 '+F(sheet)+' g · 一令(500张) '+F(ream)+' kg</div><div class=\"row\">克重 '+F(x)+' g/㎡ × 单张面积 '+F(a)+' ㎡</div>'};}var gsm=x*1000/500/a;var sheet2=x*1000/500;return {ok:true,html:'<div class=\"big\">克重 '+F(gsm)+' g/㎡ · 单张 '+F(sheet2)+' g</div><div class=\"row\">令重 '+F(x)+' kg ÷ 500 张 ÷ 单张面积 '+F(a)+' ㎡</div>'};",
+ "test": {
+  "inputs": {
+   "v": 80,
+   "mode": "gsm2wt",
+   "size": "a4"
+  },
+  "expect": "2.4948"
+ }
+},
+{
+ "id": "dwgrain",
+ "cat": "dwhs",
+ "icon": "🎯",
+ "name": "格令换算（弹药/药剂）",
+ "desc": "格令grain与毫克/克/药衡斯克鲁普尔/常衡打兰互转，装药量与子弹头重常用",
+ "formula": "1格令(gr)=64.79891mg（英制质量基准单位，弹药装药与弹头重、传统药剂量常用）；药衡：1斯克鲁普尔=20gr；常衡：1打兰(dram)=27.34375gr=1.771845g。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "100"
+  },
+  {
+   "id": "from",
+   "label": "从",
+   "type": "select",
+   "def": "gr",
+   "options": [
+    {
+     "v": "gr",
+     "t": "格令(gr)"
+    },
+    {
+     "v": "mg",
+     "t": "毫克(mg)"
+    },
+    {
+     "v": "g",
+     "t": "克(g)"
+    },
+    {
+     "v": "scr",
+     "t": "斯克鲁普尔(药衡)"
+    },
+    {
+     "v": "dram",
+     "t": "打兰(常衡)"
+    },
+    {
+     "v": "oz",
+     "t": "盎司(oz)"
+    },
+    {
+     "v": "lb",
+     "t": "磅(lb)"
+    }
+   ]
+  },
+  {
+   "id": "to",
+   "label": "到",
+   "type": "select",
+   "def": "g",
+   "options": [
+    {
+     "v": "gr",
+     "t": "格令(gr)"
+    },
+    {
+     "v": "mg",
+     "t": "毫克(mg)"
+    },
+    {
+     "v": "g",
+     "t": "克(g)"
+    },
+    {
+     "v": "scr",
+     "t": "斯克鲁普尔(药衡)"
+    },
+    {
+     "v": "dram",
+     "t": "打兰(常衡)"
+    },
+    {
+     "v": "oz",
+     "t": "盎司(oz)"
+    },
+    {
+     "v": "lb",
+     "t": "磅(lb)"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};if(!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e12)return {ok:false,msg:'数值过大'};var K={\"gr\": 64.79891, \"mg\": 1, \"g\": 1000, \"scr\": 1295.9782, \"dram\": 1771.8451953125, \"oz\": 28349.523125, \"lb\": 453592.37};var LB={\"gr\": \"\\u683c\\u4ee4(gr)\", \"mg\": \"\\u6beb\\u514b(mg)\", \"g\": \"\\u514b(g)\", \"scr\": \"\\u65af\\u514b\\u9c81\\u666e\\u5c14\", \"dram\": \"\\u6253\\u5170(dram)\", \"oz\": \"\\u76ce\\u53f8(oz)\", \"lb\": \"\\u78c5(lb)\"};if(K[from]===undefined||K[to]===undefined)return {ok:false,msg:'请选择单位'};var r=x*K[from]/K[to];return {ok:true,html:'<div class=\"big\">'+F(x)+' '+LB[from]+' = '+F(r)+' '+LB[to]+'</div><div class=\"row\">装药量差 1 格令约 65mg，复装数据务必以官方装药表为准</div>'};",
+ "test": {
+  "inputs": {
+   "v": 100,
+   "from": "gr",
+   "to": "g"
+  },
+  "expect": "6.479891"
+ }
+},
+{
+ "id": "dwradiation",
+ "cat": "dwhs",
+ "icon": "☢️",
+ "name": "辐射剂量与活度换算",
+ "desc": "吸收剂量Gy/rad、当量剂量Sv/rem、活度Bq/Ci分组换算（三组不可混换）",
+ "formula": "吸收剂量：1Gy=100rad；当量剂量：1Sv=100rem；活度：1Ci=3.7×10¹⁰Bq。三组量纲不同：Gy/rad 是吸收剂量，Sv/rem 还要乘辐射权重因子才能由 Gy 换得，不能直接互换——本工具只在组内换算。",
+ "inputs": [
+  {
+   "id": "mode",
+   "label": "量组",
+   "type": "select",
+   "def": "act",
+   "options": [
+    {
+     "v": "abs",
+     "t": "吸收剂量"
+    },
+    {
+     "v": "eq",
+     "t": "当量剂量"
+    },
+    {
+     "v": "act",
+     "t": "放射性活度"
+    }
+   ]
+  },
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "1"
+  },
+  {
+   "id": "from_abs",
+   "label": "从",
+   "when": "mode=abs",
+   "type": "select",
+   "def": "Gy",
+   "options": [
+    {
+     "v": "Gy",
+     "t": "戈瑞(Gy)"
+    },
+    {
+     "v": "mGy",
+     "t": "毫戈瑞(mGy)"
+    },
+    {
+     "v": "rad",
+     "t": "拉德(rad)"
+    }
+   ]
+  },
+  {
+   "id": "to_abs",
+   "label": "到",
+   "when": "mode=abs",
+   "type": "select",
+   "def": "rad",
+   "options": [
+    {
+     "v": "Gy",
+     "t": "戈瑞(Gy)"
+    },
+    {
+     "v": "mGy",
+     "t": "毫戈瑞(mGy)"
+    },
+    {
+     "v": "rad",
+     "t": "拉德(rad)"
+    }
+   ]
+  },
+  {
+   "id": "from_eq",
+   "label": "从",
+   "when": "mode=eq",
+   "type": "select",
+   "def": "Sv",
+   "options": [
+    {
+     "v": "Sv",
+     "t": "希沃特(Sv)"
+    },
+    {
+     "v": "mSv",
+     "t": "毫希(mSv)"
+    },
+    {
+     "v": "uSv",
+     "t": "微希(μSv)"
+    },
+    {
+     "v": "rem",
+     "t": "雷姆(rem)"
+    }
+   ]
+  },
+  {
+   "id": "to_eq",
+   "label": "到",
+   "when": "mode=eq",
+   "type": "select",
+   "def": "rem",
+   "options": [
+    {
+     "v": "Sv",
+     "t": "希沃特(Sv)"
+    },
+    {
+     "v": "mSv",
+     "t": "毫希(mSv)"
+    },
+    {
+     "v": "uSv",
+     "t": "微希(μSv)"
+    },
+    {
+     "v": "rem",
+     "t": "雷姆(rem)"
+    }
+   ]
+  },
+  {
+   "id": "from_act",
+   "label": "从",
+   "when": "mode=act",
+   "type": "select",
+   "def": "Ci",
+   "options": [
+    {
+     "v": "Bq",
+     "t": "贝克(Bq)"
+    },
+    {
+     "v": "kBq",
+     "t": "千贝克(kBq)"
+    },
+    {
+     "v": "MBq",
+     "t": "兆贝克(MBq)"
+    },
+    {
+     "v": "GBq",
+     "t": "吉贝克(GBq)"
+    },
+    {
+     "v": "Ci",
+     "t": "居里(Ci)"
+    },
+    {
+     "v": "mCi",
+     "t": "毫居里(mCi)"
+    },
+    {
+     "v": "uCi",
+     "t": "微居里(μCi)"
+    }
+   ]
+  },
+  {
+   "id": "to_act",
+   "label": "到",
+   "when": "mode=act",
+   "type": "select",
+   "def": "mCi",
+   "options": [
+    {
+     "v": "Bq",
+     "t": "贝克(Bq)"
+    },
+    {
+     "v": "kBq",
+     "t": "千贝克(kBq)"
+    },
+    {
+     "v": "MBq",
+     "t": "兆贝克(MBq)"
+    },
+    {
+     "v": "GBq",
+     "t": "吉贝克(GBq)"
+    },
+    {
+     "v": "Ci",
+     "t": "居里(Ci)"
+    },
+    {
+     "v": "mCi",
+     "t": "毫居里(mCi)"
+    },
+    {
+     "v": "uCi",
+     "t": "微居里(μCi)"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x)||!(x>=0))return {ok:false,msg:'数值不能为负'};if(x>1e15)return {ok:false,msg:'数值过大'};var _fa=typeof from_abs==='undefined'?'':from_abs,_ta=typeof to_abs==='undefined'?'':to_abs,_fe=typeof from_eq==='undefined'?'':from_eq,_te=typeof to_eq==='undefined'?'':to_eq,_fc=typeof from_act==='undefined'?'':from_act,_tc=typeof to_act==='undefined'?'':to_act;var G={abs:{K:{Gy:1,mGy:0.001,rad:0.01},LB:{Gy:'戈瑞(Gy)',mGy:'毫戈瑞(mGy)',rad:'拉德(rad)'},f:_fa,t:_ta,n:'吸收剂量'},eq:{K:{Sv:1,mSv:0.001,uSv:1e-6,rem:0.01},LB:{Sv:'希沃特(Sv)',mSv:'毫希(mSv)',uSv:'微希(μSv)',rem:'雷姆(rem)'},f:_fe,t:_te,n:'当量剂量'},act:{K:{Bq:1,kBq:1e3,MBq:1e6,GBq:1e9,Ci:3.7e10,mCi:3.7e7,uCi:3.7e4},LB:{Bq:'贝克(Bq)',kBq:'千贝克(kBq)',MBq:'兆贝克(MBq)',GBq:'吉贝克(GBq)',Ci:'居里(Ci)',mCi:'毫居里(mCi)',uCi:'微居里(μCi)'},f:_fc,t:_tc,n:'放射性活度'}};var g=G[mode];if(!g||g.K[g.f]===undefined||g.K[g.t]===undefined)return {ok:false,msg:'请选择量组与单位'};var r=x*g.K[g.f]/g.K[g.t];return {ok:true,html:'<div class=\"big\">'+F(x)+' '+g.LB[g.f]+' = '+F(r)+' '+g.LB[g.t]+'</div><div class=\"row\">'+g.n+'组内换算；吸收剂量与当量剂量不可直接混换</div>'};",
+ "test": {
+  "inputs": {
+   "mode": "act",
+   "v": 1,
+   "from_act": "Ci",
+   "to_act": "mCi"
+  },
+  "expect": "1000"
+ }
+},
+{
+ "id": "dwmagnet",
+ "cat": "dwhs",
+ "icon": "🧲",
+ "name": "磁场单位换算（B/H）",
+ "desc": "磁感应强度T/高斯与磁场强度A/m/奥斯特分组换算",
+ "formula": "磁感应强度 B：1T=10⁴高斯(G)，1T=1000mT；磁场强度 H：1奥斯特(Oe)=1000/(4π) A/m≈79.5775 A/m。B 与 H 量纲不同（真空中 B=μ₀H），本工具只在组内换算。",
+ "inputs": [
+  {
+   "id": "mode",
+   "label": "量组",
+   "type": "select",
+   "def": "B",
+   "options": [
+    {
+     "v": "B",
+     "t": "磁感应强度 B"
+    },
+    {
+     "v": "H",
+     "t": "磁场强度 H"
+    }
+   ]
+  },
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "1"
+  },
+  {
+   "id": "from_b",
+   "label": "从",
+   "when": "mode=B",
+   "type": "select",
+   "def": "T",
+   "options": [
+    {
+     "v": "T",
+     "t": "特斯拉(T)"
+    },
+    {
+     "v": "mT",
+     "t": "毫特(mT)"
+    },
+    {
+     "v": "G",
+     "t": "高斯(G)"
+    },
+    {
+     "v": "kG",
+     "t": "千高斯(kG)"
+    }
+   ]
+  },
+  {
+   "id": "to_b",
+   "label": "到",
+   "when": "mode=B",
+   "type": "select",
+   "def": "G",
+   "options": [
+    {
+     "v": "T",
+     "t": "特斯拉(T)"
+    },
+    {
+     "v": "mT",
+     "t": "毫特(mT)"
+    },
+    {
+     "v": "G",
+     "t": "高斯(G)"
+    },
+    {
+     "v": "kG",
+     "t": "千高斯(kG)"
+    }
+   ]
+  },
+  {
+   "id": "from_h",
+   "label": "从",
+   "when": "mode=H",
+   "type": "select",
+   "def": "Oe",
+   "options": [
+    {
+     "v": "Am",
+     "t": "安/米(A/m)"
+    },
+    {
+     "v": "kAm",
+     "t": "千安/米(kA/m)"
+    },
+    {
+     "v": "Oe",
+     "t": "奥斯特(Oe)"
+    }
+   ]
+  },
+  {
+   "id": "to_h",
+   "label": "到",
+   "when": "mode=H",
+   "type": "select",
+   "def": "Am",
+   "options": [
+    {
+     "v": "Am",
+     "t": "安/米(A/m)"
+    },
+    {
+     "v": "kAm",
+     "t": "千安/米(kA/m)"
+    },
+    {
+     "v": "Oe",
+     "t": "奥斯特(Oe)"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};if(x>1e15||x<-1e15)return {ok:false,msg:'数值过大'};var _fb=typeof from_b==='undefined'?'':from_b,_tb=typeof to_b==='undefined'?'':to_b,_fh=typeof from_h==='undefined'?'':from_h,_th=typeof to_h==='undefined'?'':to_h;var G={B:{K:{T:1,mT:0.001,G:0.0001,kG:0.1},LB:{T:'特斯拉(T)',mT:'毫特(mT)',G:'高斯(G)',kG:'千高斯(kG)'},f:_fb,t:_tb,n:'磁感应强度 B'},H:{K:{Am:1,kAm:1000,Oe:79.57747154594767},LB:{Am:'安/米(A/m)',kAm:'千安/米(kA/m)',Oe:'奥斯特(Oe)'},f:_fh,t:_th,n:'磁场强度 H'}};var g=G[mode];if(!g||g.K[g.f]===undefined||g.K[g.t]===undefined)return {ok:false,msg:'请选择量组与单位'};var r=x*g.K[g.f]/g.K[g.t];return {ok:true,html:'<div class=\"big\">'+F(x)+' '+g.LB[g.f]+' = '+F(r)+' '+g.LB[g.t]+'</div><div class=\"row\">'+g.n+'组内换算；B 与 H 量纲不同不可直接互换</div>'};",
+ "test": {
+  "inputs": {
+   "mode": "B",
+   "v": 1,
+   "from_b": "T",
+   "to_b": "G"
+  },
+  "expect": "10000"
+ }
+},
+{
+ "id": "dwacoustic",
+ "cat": "dwhs",
+ "icon": "🔊",
+ "name": "声压级与声功率级换算",
+ "desc": "声压Pa↔声压级dB SPL（参考20µPa）、声功率W↔声功率级dB（参考1pW）",
+ "formula": "声压级 Lp=20·lg(p/20µPa)，20µPa 为人耳听阈参考声压；声功率级 Lw=10·lg(W/10⁻¹²W)。与 dwunit 的分贝功率(dBm，电功率口径)参考量不同，不可混用。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "1"
+  },
+  {
+   "id": "mode",
+   "label": "模式",
+   "type": "select",
+   "def": "pa2db",
+   "options": [
+    {
+     "v": "pa2db",
+     "t": "声压 Pa → 声压级 dB"
+    },
+    {
+     "v": "db2pa",
+     "t": "声压级 dB → 声压 Pa"
+    },
+    {
+     "v": "w2lw",
+     "t": "声功率 W → 声功率级 dB"
+    },
+    {
+     "v": "lw2w",
+     "t": "声功率级 dB → 声功率 W"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};var r,html;if(mode==='pa2db'){if(!(x>0))return {ok:false,msg:'声压须大于 0'};r=20*Math.log10(x/2e-5);html='<div class=\"big\">'+F(x)+' Pa = '+F(r)+' dB SPL</div><div class=\"row\">参考声压 20µPa；日常谈话约 0.02~0.2Pa（60~80dB）</div>';}else if(mode==='db2pa'){if(x<-100||x>300)return {ok:false,msg:'声压级超出合理范围'};r=2e-5*Math.pow(10,x/20);html='<div class=\"big\">'+F(x)+' dB SPL = '+F(r)+' Pa</div><div class=\"row\">声压每增 20dB 增大 10 倍</div>';}else if(mode==='w2lw'){if(!(x>0))return {ok:false,msg:'声功率须大于 0'};r=10*Math.log10(x/1e-12);html='<div class=\"big\">'+F(x)+' W = '+F(r)+' dB</div><div class=\"row\">参考声功率 1pW(10⁻¹²W)；声功率级是声源本身属性，与距离无关</div>';}else if(mode==='lw2w'){if(x<-50||x>300)return {ok:false,msg:'声功率级超出合理范围'};r=1e-12*Math.pow(10,x/10);html='<div class=\"big\">'+F(x)+' dB = '+F(r)+' W</div><div class=\"row\">声功率每增 10dB 增大 10 倍</div>';}else return {ok:false,msg:'请选择模式'};return {ok:true,html:html};",
+ "test": {
+  "inputs": {
+   "v": 1,
+   "mode": "pa2db"
+  },
+  "expect": "93.9794"
+ }
+},
+{
+ "id": "dwviscosity2",
+ "cat": "dwhs",
+ "icon": "🛢️",
+ "name": "运动粘度与赛氏秒换算",
+ "desc": "cSt/St/㎡·s⁻¹与赛氏通用秒SUS互转，并按密度折算动力粘度cP",
+ "formula": "运动粘度：1St=100cSt=100mm²/s，1㎡/s=10⁶cSt。SUS 为经验单位，ASTM D2161 近似：cSt≈0.226×SUS−195/SUS（适用于 SUS≈38 以上、cSt 约 2 以上）；动力粘度 cP = cSt × 密度(g/cm³)。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "100"
+  },
+  {
+   "id": "from",
+   "label": "从",
+   "type": "select",
+   "def": "cst",
+   "options": [
+    {
+     "v": "cst",
+     "t": "厘斯(cSt=mm²/s)"
+    },
+    {
+     "v": "st",
+     "t": "斯(St)"
+    },
+    {
+     "v": "m2s",
+     "t": "平方米/秒(m²/s)"
+    },
+    {
+     "v": "sus",
+     "t": "赛氏通用秒(SUS)"
+    }
+   ]
+  },
+  {
+   "id": "to",
+   "label": "到",
+   "type": "select",
+   "def": "st",
+   "options": [
+    {
+     "v": "cst",
+     "t": "厘斯(cSt=mm²/s)"
+    },
+    {
+     "v": "st",
+     "t": "斯(St)"
+    },
+    {
+     "v": "m2s",
+     "t": "平方米/秒(m²/s)"
+    },
+    {
+     "v": "sus",
+     "t": "赛氏通用秒(SUS)"
+    }
+   ]
+  },
+  {
+   "id": "rho",
+   "label": "密度（折算cP用）",
+   "unit": "g/cm³",
+   "def": "0.9"
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};if(!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e12)return {ok:false,msg:'数值过大'};var rho=Number(rho);if(!isFinite(rho)||!(rho>0)||rho>10)return {ok:false,msg:'密度须在 (0,10] g/cm³'};var LB={cst:'厘斯(cSt)',st:'斯(St)',m2s:'平方米/秒(m²/s)',sus:'赛氏秒(SUS)'};var cst;if(from==='cst')cst=x;else if(from==='st')cst=x*100;else if(from==='m2s')cst=x*1e6;else{if(x<=38)return {ok:false,msg:'SUS 须大于约 38 才适用此经验式'};cst=0.226*x-195/x;if(!(cst>0))return {ok:false,msg:'SUS 换算结果无效'};}var r;if(to==='cst')r=cst;else if(to==='st')r=cst/100;else if(to==='m2s')r=cst/1e6;else{var disc=cst*cst+176.28;r=(cst+Math.sqrt(disc))/0.452;}if(LB[from]===undefined||LB[to]===undefined)return {ok:false,msg:'请选择单位'};return {ok:true,html:'<div class=\"big\">'+F(x)+' '+LB[from]+' = '+F(r)+' '+LB[to]+'</div><div class=\"row\">运动粘度 '+F(cst)+' cSt；按密度 '+F(rho)+' g/cm³ 折算动力粘度 ≈ '+F(cst*rho)+' cP（SUS 为经验换算，近似）</div>'};",
+ "test": {
+  "inputs": {
+   "v": 100,
+   "from": "cst",
+   "to": "st",
+   "rho": 0.9
+  },
+  "expect": "1 斯(St)"
+ }
+},
+{
+ "id": "dwhardness",
+ "cat": "dwhs",
+ "icon": "🔨",
+ "name": "金属硬度近似换算（钢）",
+ "desc": "洛氏HRC/布氏HB/维氏HV经验对照互换（碳钢近似，节选对照表插值）",
+ "formula": "钢的硬度对照为经验近似（节选常用对照表锚点线性插值，口径近 ISO 18265）：HRC20↔HV236↔HB226，HRC40↔HV392↔HB379，HRC60↔HV697↔HB601。只适用于钢的大致对照，仲裁以实测为准；HRC 低于 20 或高于 60 不在此表范围。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "硬度值",
+   "def": "40"
+  },
+  {
+   "id": "src",
+   "label": "源标尺",
+   "type": "select",
+   "def": "hrc",
+   "options": [
+    {
+     "v": "hrc",
+     "t": "洛氏 HRC"
+    },
+    {
+     "v": "hb",
+     "t": "布氏 HB"
+    },
+    {
+     "v": "hv",
+     "t": "维氏 HV"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};var P=[[20,236,226],[25,266,253],[30,302,286],[35,345,327],[40,392,379],[45,446,429],[50,513,481],[55,587,546],[60,697,601]];var ci=src==='hrc'?0:src==='hv'?1:2;var lo=P[0][ci],hi=P[P.length-1][ci];if(x<lo||x>hi)return {ok:false,msg:'超出对照表范围（HRC 20~60 / HV 236~697 / HB 226~601）'};function interp(fromC,toC,val){for(var i=0;i<P.length-1;i++){var a=P[i],b=P[i+1];if(val>=a[fromC]&&val<=b[fromC]){var t=(val-a[fromC])/(b[fromC]-a[fromC]);return a[toC]+t*(b[toC]-a[toC]);}}return P[P.length-1][toC];}var hv=src==='hv'?x:interp(ci,1,x);var hrc=src==='hrc'?x:interp(1,0,hv);var hb=src==='hb'?x:interp(1,2,hv);return {ok:true,html:'<div class=\"big\">≈ HRC '+F(Math.round(hrc*10)/10)+' · HB '+F(Math.round(hb))+' · HV '+F(Math.round(hv))+'</div><div class=\"row\">钢的经验近似对照（插值），不同材质偏差可达数个单位，重要场合请实测</div>'};",
+ "test": {
+  "inputs": {
+   "v": 40,
+   "src": "hrc"
+  },
+  "expect": "392"
+ }
+},
+{
+ "id": "dwbrix",
+ "cat": "dwhs",
+ "icon": "🍇",
+ "name": "糖度与比重换算（酿造）",
+ "desc": "Brix/Plato/Baumé与比重SG互转，酿酒制糖场景口径",
+ "formula": "Brix→SG：SG=1+Bx/(258.6−(Bx/258.2)×227.1)；SG→Brix 用标准多项式；Plato≈259−259/SG；Baumé(重液)=145−145/SG。Plato 与 Brix 数值接近但定义不同（Plato 按比重表），均为近似换算。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "10"
+  },
+  {
+   "id": "from",
+   "label": "从",
+   "type": "select",
+   "def": "brix",
+   "options": [
+    {
+     "v": "brix",
+     "t": "糖度 Brix (°Bx)"
+    },
+    {
+     "v": "plato",
+     "t": "柏拉图 Plato (°P)"
+    },
+    {
+     "v": "baume",
+     "t": "波美度 Baumé"
+    },
+    {
+     "v": "sg",
+     "t": "比重 SG"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};var sg;if(from==='brix'){if(x<0||x>100)return {ok:false,msg:'Brix 须在 0~100'};sg=1+x/(258.6-(x/258.2)*227.1);}else if(from==='plato'){if(x<0||x>=100)return {ok:false,msg:'Plato 须在 0~100'};sg=259/(259-x);}else if(from==='baume'){if(x<0||x>=145)return {ok:false,msg:'Baumé 须在 0~145'};sg=145/(145-x);}else{if(x<0.9||x>2)return {ok:false,msg:'比重 SG 须在 0.9~2'};sg=x;}var bx=((182.4601*sg-775.6821)*sg+1262.7794)*sg-669.5622;var pl=259-259/sg;var be=145-145/sg;return {ok:true,html:'<div class=\"big\">比重 SG '+F(sg)+' · Brix '+F(bx)+' °Bx</div><div class=\"row\">Plato '+F(pl)+' °P · Baumé '+F(be)+' °Bé（均为近似换算，温度口径 20℃）</div>'};",
+ "test": {
+  "inputs": {
+   "v": 10,
+   "from": "brix"
+  },
+  "expect": "1.040031"
+ }
+},
+{
+ "id": "dwapi",
+ "cat": "dwhs",
+ "icon": "🛢",
+ "name": "石油API度与密度换算",
+ "desc": "API度↔相对密度SG↔密度kg/m³，石油行业口径（60°F）",
+ "formula": "API=141.5/SG−131.5；SG=141.5/(API+131.5)；密度≈SG×999.016 kg/m³（水 60°F）。API 越大油越轻：>31.1 为轻质原油，22.3~31.1 中质，<22.3 重质。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "0.85"
+  },
+  {
+   "id": "from",
+   "label": "从",
+   "type": "select",
+   "def": "sg",
+   "options": [
+    {
+     "v": "sg",
+     "t": "相对密度 SG"
+    },
+    {
+     "v": "api",
+     "t": "API 度"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x)||!(x>0))return {ok:false,msg:'数值须大于 0'};var sg,api;if(from==='sg'){if(x<0.5||x>1.5)return {ok:false,msg:'SG 须在 0.5~1.5'};sg=x;api=141.5/sg-131.5;}else{if(x<=-100||x>120)return {ok:false,msg:'API 度超出合理范围'};api=x;sg=141.5/(api+131.5);if(!(sg>0))return {ok:false,msg:'换算结果无效'};}var den=sg*999.016;var grade=api>31.1?'轻质原油':api>=22.3?'中质原油':'重质原油';return {ok:true,html:'<div class=\"big\">API '+F(api)+' 度 · SG '+F(sg)+'</div><div class=\"row\">密度 ≈ '+F(den)+' kg/m³（60°F 口径）· 分级：'+grade+'</div>'};",
+ "test": {
+  "inputs": {
+   "v": 0.85,
+   "from": "sg"
+  },
+  "expect": "34.970588"
+ }
+},
+{
+ "id": "dwsalin",
+ "cat": "dwhs",
+ "icon": "🧂",
+ "name": "盐度换算（ppt/PSU/比重/电导）",
+ "desc": "实用盐度PSU、千分盐度ppt、海水比重与电导率近似互转",
+ "formula": "近似口径（25℃）：PSU 与 ppt 数值近似相等；比重 SG≈1+0.00075×ppt（海水 35ppt→SG≈1.026）；电导 EC(mS/cm)≈1.52×ppt（海水 35ppt≈53mS/cm）。均为经验近似，精确测量以盐度计为准。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "35"
+  },
+  {
+   "id": "from",
+   "label": "从",
+   "type": "select",
+   "def": "ppt",
+   "options": [
+    {
+     "v": "ppt",
+     "t": "盐度 ppt (g/kg)"
+    },
+    {
+     "v": "psu",
+     "t": "实用盐度 PSU"
+    },
+    {
+     "v": "sg",
+     "t": "比重 SG"
+    },
+    {
+     "v": "ec",
+     "t": "电导率 mS/cm"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};var ppt;if(from==='ppt'||from==='psu'){if(x<0||x>100)return {ok:false,msg:'盐度须在 0~100'};ppt=x;}else if(from==='sg'){if(x<1||x>1.1)return {ok:false,msg:'海水比重须在 1~1.1'};ppt=(x-1)/0.00075;}else{if(x<0||x>200)return {ok:false,msg:'电导率须在 0~200 mS/cm'};ppt=x/1.52;}var sg=1+0.00075*ppt;var ec=ppt*1.52;return {ok:true,html:'<div class=\"big\">'+F(ppt)+' ppt ≈ '+F(ppt)+' PSU · SG '+F(sg)+'</div><div class=\"row\">电导率 ≈ '+F(ec)+' mS/cm（25℃ 经验近似）；标准海水约 35ppt</div>'};",
+ "test": {
+  "inputs": {
+   "v": 35,
+   "from": "ppt"
+  },
+  "expect": "1.02625"
+ }
+},
+{
+ "id": "dwcook2",
+ "cat": "dwhs",
+ "icon": "🥄",
+ "name": "烹饪量杯克重换算（各国制）",
+ "desc": "美制/公制/英制/日式杯匙先换毫升，再按食材密度折成克",
+ "formula": "杯：美制=236.588mL，公制=250mL，英制=284.131mL，日式=200mL；匙：美制汤匙=14.787mL、茶匙=4.929mL，公制汤匙=15mL、茶匙=5mL。克重=mL×密度（面粉≈0.53、白糖≈0.845、黄油≈0.96、蜂蜜≈1.42 等，装杯方式不同会有出入）。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数量",
+   "def": "1"
+  },
+  {
+   "id": "measure",
+   "label": "量具",
+   "type": "select",
+   "def": "us_cup",
+   "options": [
+    {
+     "v": "us_cup",
+     "t": "美制杯 236.588mL"
+    },
+    {
+     "v": "metric_cup",
+     "t": "公制杯 250mL"
+    },
+    {
+     "v": "uk_cup",
+     "t": "英制杯 284.131mL"
+    },
+    {
+     "v": "jp_cup",
+     "t": "日式杯 200mL"
+    },
+    {
+     "v": "us_tbsp",
+     "t": "美制汤匙 14.787mL"
+    },
+    {
+     "v": "metric_tbsp",
+     "t": "公制汤匙 15mL"
+    },
+    {
+     "v": "us_tsp",
+     "t": "美制茶匙 4.929mL"
+    },
+    {
+     "v": "metric_tsp",
+     "t": "公制茶匙 5mL"
+    }
+   ]
+  },
+  {
+   "id": "ing",
+   "label": "食材",
+   "type": "select",
+   "def": "water",
+   "options": [
+    {
+     "v": "water",
+     "t": "水/牛奶类 (1.00)"
+    },
+    {
+     "v": "flour",
+     "t": "面粉 (0.53)"
+    },
+    {
+     "v": "sugar",
+     "t": "白糖 (0.845)"
+    },
+    {
+     "v": "rice",
+     "t": "生米 (0.85)"
+    },
+    {
+     "v": "oil",
+     "t": "食用油 (0.92)"
+    },
+    {
+     "v": "butter",
+     "t": "黄油 (0.96)"
+    },
+    {
+     "v": "milk",
+     "t": "牛奶 (1.03)"
+    },
+    {
+     "v": "honey",
+     "t": "蜂蜜 (1.42)"
+    },
+    {
+     "v": "cocoa",
+     "t": "可可粉 (0.50)"
+    },
+    {
+     "v": "salt",
+     "t": "食盐 (1.20)"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x)||!(x>0))return {ok:false,msg:'数量须大于 0'};if(x>10000)return {ok:false,msg:'数量过大'};var ML={us_cup:236.5882365,metric_cup:250,uk_cup:284.131,jp_cup:200,us_tbsp:14.7867648,metric_tbsp:15,us_tsp:4.92892159,metric_tsp:5};var D={water:1.0,flour:0.53,sugar:0.845,rice:0.85,oil:0.92,butter:0.959,milk:1.03,honey:1.42,cocoa:0.50,salt:1.20};var LB={water:'水',flour:'面粉',sugar:'白糖',rice:'生米',oil:'食用油',butter:'黄油',milk:'牛奶',honey:'蜂蜜',cocoa:'可可粉',salt:'食盐'};var ml=ML[measure],d=D[ing];if(ml===undefined||d===undefined)return {ok:false,msg:'请选择量具与食材'};var tot=x*ml;var g=tot*d;return {ok:true,html:'<div class=\"big\">'+F(tot)+' mL ≈ '+F(g)+' g（'+LB[ing]+'）</div><div class=\"row\">密度按 '+F(d)+' g/mL 估算；面粉等粉类因装杯松紧误差可达 ±10%</div>'};",
+ "test": {
+  "inputs": {
+   "v": 1,
+   "measure": "us_cup",
+   "ing": "water"
+  },
+  "expect": "236.5882365"
+ }
+},
+{
+ "id": "dwmil",
+ "cat": "dwhs",
+ "icon": "🎯",
+ "name": "密位换算（军用/测绘角度）",
+ "desc": "北约6400密位/华约6000密位/真毫弧度与度·弧度·梯度互转",
+ "formula": "密位把圆周等分：北约制 6400 mil=360°（1mil=0.05625°），华约制 6000 mil（1mil=0.06°），真毫弧度 mrad：6283.19/圆周（1mrad≈0.0573°）。三种密位数值不同，混用会偏靶。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "6400"
+  },
+  {
+   "id": "from",
+   "label": "从",
+   "type": "select",
+   "def": "mil6400",
+   "options": [
+    {
+     "v": "deg",
+     "t": "度(°)"
+    },
+    {
+     "v": "rad",
+     "t": "弧度(rad)"
+    },
+    {
+     "v": "mil6400",
+     "t": "密位 北约6400"
+    },
+    {
+     "v": "mil6000",
+     "t": "密位 华约6000"
+    },
+    {
+     "v": "mrad",
+     "t": "毫弧度(mrad)"
+    },
+    {
+     "v": "grad",
+     "t": "梯度(grad)"
+    }
+   ]
+  },
+  {
+   "id": "to",
+   "label": "到",
+   "type": "select",
+   "def": "deg",
+   "options": [
+    {
+     "v": "deg",
+     "t": "度(°)"
+    },
+    {
+     "v": "rad",
+     "t": "弧度(rad)"
+    },
+    {
+     "v": "mil6400",
+     "t": "密位 北约6400"
+    },
+    {
+     "v": "mil6000",
+     "t": "密位 华约6000"
+    },
+    {
+     "v": "mrad",
+     "t": "毫弧度(mrad)"
+    },
+    {
+     "v": "grad",
+     "t": "梯度(grad)"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};if(!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e12)return {ok:false,msg:'数值过大'};var K={\"deg\": 1, \"rad\": 57.29577951308232, \"mil6400\": 0.05625, \"mil6000\": 0.06, \"mrad\": 0.05729577951308232, \"grad\": 0.9};var LB={\"deg\": \"\\u5ea6(\\u00b0)\", \"rad\": \"\\u5f27\\u5ea6(rad)\", \"mil6400\": \"\\u5bc6\\u4f4d(6400\\u5236)\", \"mil6000\": \"\\u5bc6\\u4f4d(6000\\u5236)\", \"mrad\": \"\\u6beb\\u5f27\\u5ea6(mrad)\", \"grad\": \"\\u68af\\u5ea6(grad)\"};if(K[from]===undefined||K[to]===undefined)return {ok:false,msg:'请选择单位'};var r=x*K[from]/K[to];return {ok:true,html:'<div class=\"big\">'+F(x)+' '+LB[from]+' = '+F(r)+' '+LB[to]+'</div><div class=\"row\">北约 6400 制与华约 6000 制不可混用；瞄具点击值常以 mrad 标示</div>'};",
+ "test": {
+  "inputs": {
+   "v": 6400,
+   "from": "mil6400",
+   "to": "deg"
+  },
+  "expect": "360"
+ }
+},
+{
+ "id": "dwlumber",
+ "cat": "dwhs",
+ "icon": "🪵",
+ "name": "木材板英尺换算",
+ "desc": "板英尺board foot与立方米/立方英尺互转，或按长宽厚(英寸)算板英尺",
+ "formula": "1板英尺(bf)=1英尺×1英尺×1英寸的材积=144立方英寸=0.002359737m³。按尺寸：bf=长(in)×宽(in)×厚(in)÷144。北美木材交易常用，名义尺寸与实际尺寸有差异，下单留意。",
+ "inputs": [
+  {
+   "id": "mode",
+   "label": "模式",
+   "type": "select",
+   "def": "conv",
+   "options": [
+    {
+     "v": "conv",
+     "t": "单位换算"
+    },
+    {
+     "v": "dims",
+     "t": "按尺寸算板英尺"
+    }
+   ]
+  },
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "100",
+   "when": "mode=conv"
+  },
+  {
+   "id": "from",
+   "label": "从",
+   "when": "mode=conv",
+   "type": "select",
+   "def": "bf",
+   "options": [
+    {
+     "v": "bf",
+     "t": "板英尺(bf)"
+    },
+    {
+     "v": "m3",
+     "t": "立方米(m³)"
+    },
+    {
+     "v": "ft3",
+     "t": "立方英尺(ft³)"
+    },
+    {
+     "v": "L",
+     "t": "升(L)"
+    }
+   ]
+  },
+  {
+   "id": "to",
+   "label": "到",
+   "when": "mode=conv",
+   "type": "select",
+   "def": "m3",
+   "options": [
+    {
+     "v": "bf",
+     "t": "板英尺(bf)"
+    },
+    {
+     "v": "m3",
+     "t": "立方米(m³)"
+    },
+    {
+     "v": "ft3",
+     "t": "立方英尺(ft³)"
+    },
+    {
+     "v": "L",
+     "t": "升(L)"
+    }
+   ]
+  },
+  {
+   "id": "len",
+   "label": "长",
+   "unit": "in",
+   "def": "96",
+   "when": "mode=dims"
+  },
+  {
+   "id": "wid",
+   "label": "宽",
+   "unit": "in",
+   "def": "6",
+   "when": "mode=dims"
+  },
+  {
+   "id": "thk",
+   "label": "厚",
+   "unit": "in",
+   "def": "2",
+   "when": "mode=dims"
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}if(mode==='dims'){var L=Number(len),W=Number(wid),T=Number(thk);if(!(L>0)||!(W>0)||!(T>0))return {ok:false,msg:'长宽厚须大于 0'};if(L>1e6||W>1e6||T>1e6)return {ok:false,msg:'尺寸过大'};var bf=L*W*T/144;return {ok:true,html:'<div class=\"big\">'+F(bf)+' 板英尺(bf) = '+F(bf*0.002359737216)+' m³</div><div class=\"row\">bf = 长×宽×厚(in) ÷ 144</div>'};}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};if(!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e12)return {ok:false,msg:'数值过大'};var K={bf:0.002359737216,m3:1,ft3:0.028316846592,L:0.001};var LB={bf:'板英尺(bf)',m3:'立方米(m³)',ft3:'立方英尺(ft³)',L:'升(L)'};if(K[from]===undefined||K[to]===undefined)return {ok:false,msg:'请选择单位'};var r=x*K[from]/K[to];return {ok:true,html:'<div class=\"big\">'+F(x)+' '+LB[from]+' = '+F(r)+' '+LB[to]+'</div><div class=\"row\">1 板英尺 = 144 立方英寸</div>'};",
+ "test": {
+  "inputs": {
+   "mode": "conv",
+   "v": 100,
+   "from": "bf",
+   "to": "m3"
+  },
+  "expect": "0.2359737216"
+ }
+},
+{
+ "id": "dwland",
+ "cat": "dwhs",
+ "icon": "🌾",
+ "name": "土地面积换算（亩/坪/分/甲）",
+ "desc": "亩/公顷与台湾坪·分·甲及英亩互转，地政与农地口径",
+ "formula": "1坪=3.305785㎡（日式坪，台湾地政沿用）；1分=293.4坪≈969.92㎡；1甲=10分=2934坪≈9699.17㎡；1亩=666.67㎡；1公顷=10000㎡；1英亩=4046.86㎡。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "1"
+  },
+  {
+   "id": "from",
+   "label": "从",
+   "type": "select",
+   "def": "jia",
+   "options": [
+    {
+     "v": "m2",
+     "t": "平方米(㎡)"
+    },
+    {
+     "v": "mu",
+     "t": "亩"
+    },
+    {
+     "v": "ha",
+     "t": "公顷"
+    },
+    {
+     "v": "ping",
+     "t": "坪"
+    },
+    {
+     "v": "fen",
+     "t": "分(台)"
+    },
+    {
+     "v": "jia",
+     "t": "甲(台)"
+    },
+    {
+     "v": "acre",
+     "t": "英亩"
+    }
+   ]
+  },
+  {
+   "id": "to",
+   "label": "到",
+   "type": "select",
+   "def": "m2",
+   "options": [
+    {
+     "v": "m2",
+     "t": "平方米(㎡)"
+    },
+    {
+     "v": "mu",
+     "t": "亩"
+    },
+    {
+     "v": "ha",
+     "t": "公顷"
+    },
+    {
+     "v": "ping",
+     "t": "坪"
+    },
+    {
+     "v": "fen",
+     "t": "分(台)"
+    },
+    {
+     "v": "jia",
+     "t": "甲(台)"
+    },
+    {
+     "v": "acre",
+     "t": "英亩"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};if(!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e12)return {ok:false,msg:'数值过大'};var K={\"m2\": 1, \"mu\": 666.6666667, \"ha\": 10000, \"ping\": 3.305785124, \"fen\": 969.9175537, \"jia\": 9699.175537, \"acre\": 4046.8564224};var LB={\"m2\": \"\\u5e73\\u65b9\\u7c73(\\u33a1)\", \"mu\": \"\\u4ea9\", \"ha\": \"\\u516c\\u9877\", \"ping\": \"\\u576a\", \"fen\": \"\\u5206\", \"jia\": \"\\u7532\", \"acre\": \"\\u82f1\\u4ea9\"};if(K[from]===undefined||K[to]===undefined)return {ok:false,msg:'请选择单位'};var r=x*K[from]/K[to];return {ok:true,html:'<div class=\"big\">'+F(x)+' '+LB[from]+' = '+F(r)+' '+LB[to]+'</div><div class=\"row\">台湾 1 甲 = 10 分 = 2934 坪；大陆亩与台分/甲口径完全不同</div>'};",
+ "test": {
+  "inputs": {
+   "v": 1,
+   "from": "jia",
+   "to": "m2"
+  },
+  "expect": "9699.1755"
+ }
+},
+{
+ "id": "dwkarat",
+ "cat": "dwhs",
+ "icon": "✨",
+ "name": "黄金成色换算（K金/千分比）",
+ "desc": "开金K/千分比‰/百分比互转，附足金·千足金口径",
+ "formula": "纯金=24K；含金量=K/24。18K=750‰，14K≈585‰；足金≥990‰，千足金≥999‰（国标已取消千足金称谓，最高称足金999）。K 指成色 karat，与宝石重量克拉 carat 同音不同义。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "18"
+  },
+  {
+   "id": "from",
+   "label": "从",
+   "type": "select",
+   "def": "k",
+   "options": [
+    {
+     "v": "k",
+     "t": "开(K)"
+    },
+    {
+     "v": "permille",
+     "t": "千分比(‰)"
+    },
+    {
+     "v": "pct",
+     "t": "百分比(%)"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};var f;if(from==='k'){if(x<0||x>24)return {ok:false,msg:'K 值须在 0~24'};f=x/24;}else if(from==='permille'){if(x<0||x>1000)return {ok:false,msg:'千分比须在 0~1000'};f=x/1000;}else{if(x<0||x>100)return {ok:false,msg:'百分比须在 0~100'};f=x/100;}var note=f>=0.999?'千足金级别（999‰）':f>=0.99?'足金（≥990‰）':f>=0.916?'22K 常用成色':f>=0.75?'18K 常用成色':f>=0.585?'14K 常用成色':'低于常用饰品成色';return {ok:true,html:'<div class=\"big\">'+F(f*24)+' K · '+F(f*1000)+' ‰ · '+F(f*100)+' %</div><div class=\"row\">含金量口径：'+note+'</div>'};",
+ "test": {
+  "inputs": {
+   "v": 18,
+   "from": "k"
+  },
+  "expect": "750"
+ }
+},
+{
+ "id": "dwknit",
+ "cat": "dwhs",
+ "icon": "🧶",
+ "name": "编织针号对照（mm/US/UK）",
+ "desc": "棒针针径毫米与美制US、英制旧号对照（英号越大针越细）",
+ "formula": "对照表（常用棒针）：5.0mm=US 8=UK 6；英制旧号与毫米反向（号越大针越细），美制号越大针越粗。各品牌略有差异，以针径毫米为准最可靠。",
+ "inputs": [
+  {
+   "id": "mm",
+   "label": "针径",
+   "type": "select",
+   "def": "5",
+   "options": [
+    {
+     "v": "2",
+     "t": "2.0 mm"
+    },
+    {
+     "v": "2.25",
+     "t": "2.25 mm"
+    },
+    {
+     "v": "2.75",
+     "t": "2.75 mm"
+    },
+    {
+     "v": "3.25",
+     "t": "3.25 mm"
+    },
+    {
+     "v": "3.75",
+     "t": "3.75 mm"
+    },
+    {
+     "v": "4",
+     "t": "4.0 mm"
+    },
+    {
+     "v": "4.5",
+     "t": "4.5 mm"
+    },
+    {
+     "v": "5",
+     "t": "5.0 mm"
+    },
+    {
+     "v": "5.5",
+     "t": "5.5 mm"
+    },
+    {
+     "v": "6",
+     "t": "6.0 mm"
+    },
+    {
+     "v": "6.5",
+     "t": "6.5 mm"
+    },
+    {
+     "v": "8",
+     "t": "8.0 mm"
+    },
+    {
+     "v": "9",
+     "t": "9.0 mm"
+    },
+    {
+     "v": "10",
+     "t": "10.0 mm"
+    }
+   ]
+  }
+ ],
+ "run": "var T={'2':['0','14'],'2.25':['1','13'],'2.75':['2','12'],'3.25':['3','10'],'3.75':['5','9'],'4':['6','8'],'4.5':['7','7'],'5':['8','6'],'5.5':['9','5'],'6':['10','4'],'6.5':['10.5','3'],'8':['11','0'],'9':['13','00'],'10':['15','000']};var r=T[String(mm)];if(!r)return {ok:false,msg:'请选择针径'};return {ok:true,html:'<div class=\"big\">'+String(mm)+' mm = US '+r[0]+' 号 · UK '+r[1]+' 号</div><div class=\"row\">英制旧号越大针越细，与美制方向相反；钩针号制另有体系</div>'};",
+ "test": {
+  "inputs": {
+   "mm": "5"
+  },
+  "expect": "US 8"
+ }
+},
+{
+ "id": "dwsyringe",
+ "cat": "dwhs",
+ "icon": "💉",
+ "name": "胰岛素单位换算（U-40/U-100）",
+ "desc": "胰岛素IU与毫升按浓度互转，宠物U-40与人用U-100不可混用针具",
+ "formula": "U-100：100 IU/mL（人用）；U-40：40 IU/mL（兽用常见）。体积(mL)=IU÷浓度。用错浓度针具会成倍过量或不足——本工具只做单位换算，剂量请遵医嘱。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "30"
+  },
+  {
+   "id": "conc",
+   "label": "浓度",
+   "type": "select",
+   "def": "u100",
+   "options": [
+    {
+     "v": "u100",
+     "t": "U-100 (100 IU/mL)"
+    },
+    {
+     "v": "u40",
+     "t": "U-40 (40 IU/mL)"
+    }
+   ]
+  },
+  {
+   "id": "dir",
+   "label": "方向",
+   "type": "select",
+   "def": "iu2ml",
+   "options": [
+    {
+     "v": "iu2ml",
+     "t": "IU → mL"
+    },
+    {
+     "v": "ml2iu",
+     "t": "mL → IU"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x)||!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e6)return {ok:false,msg:'数值过大'};var c=conc==='u40'?40:100;var cn=conc==='u40'?'U-40':'U-100';if(dir==='iu2ml'){var ml=x/c;return {ok:true,html:'<div class=\"big\">'+F(x)+' IU（'+cn+'）= '+F(ml)+' mL</div><div class=\"row\">对应 '+cn+' 注射器上 '+F(x)+' 个刻度单位；针具浓度必须与胰岛素一致</div>'};}var iu=x*c;return {ok:true,html:'<div class=\"big\">'+F(x)+' mL（'+cn+'）= '+F(iu)+' IU</div><div class=\"row\">剂量请遵医嘱，本工具只做单位换算</div>'};",
+ "test": {
+  "inputs": {
+   "v": 30,
+   "conc": "u100",
+   "dir": "iu2ml"
+  },
+  "expect": "0.3"
+ }
+},
+{
+ "id": "dwtire2",
+ "cat": "dwhs",
+ "icon": "🛞",
+ "name": "轮胎规格解析与时速误差",
+ "desc": "由胎宽/扁平比/轮毂算胎侧高、外径、周长、每公里转数，可选与旧胎对比时速表误差",
+ "formula": "胎侧高=胎宽×扁平比%；外径=轮毂(in)×25.4+2×胎侧高；周长=π×外径；换胎后实际车速=表显×新外径/旧外径。外径差建议控制在 ±3% 内。",
+ "inputs": [
+  {
+   "id": "w",
+   "label": "胎宽",
+   "unit": "mm",
+   "def": "205",
+   "min": 50,
+   "max": 500
+  },
+  {
+   "id": "ar",
+   "label": "扁平比",
+   "unit": "%",
+   "def": "55",
+   "min": 10,
+   "max": 100
+  },
+  {
+   "id": "rim",
+   "label": "轮毂直径",
+   "unit": "in",
+   "def": "16",
+   "min": 10,
+   "max": 30
+  },
+  {
+   "id": "old",
+   "label": "旧胎外径（0=不对比）",
+   "unit": "mm",
+   "def": "0",
+   "min": 0,
+   "max": 1200
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var W=Number(w),A=Number(ar),R=Number(rim),O=Number(old);if(!(W>=50&&W<=500))return {ok:false,msg:'胎宽须在 50~500 mm'};if(!(A>=10&&A<=100))return {ok:false,msg:'扁平比须在 10~100%'};if(!(R>=10&&R<=30))return {ok:false,msg:'轮毂须在 10~30 英寸'};if(!(O>=0&&O<=1200))return {ok:false,msg:'旧胎外径须在 0~1200 mm'};var side=W*A/100;var dia=R*25.4+2*side;var circ=Math.PI*dia;var rev=1e6/circ;var h='<div class=\"big\">外径 '+F(dia)+' mm · 周长 '+F(Math.round(circ))+' mm</div><div class=\"row\">胎侧高 '+F(side)+' mm · 每公里转 '+F(Math.round(rev))+' 圈</div>';if(O>0){var err=(dia/O-1)*100;h+='<div class=\"row\">与旧胎外径差 '+F(Math.round(err*100)/100)+'%：表显 100 km/h 时实际 '+F(Math.round(100*dia/O*10)/10)+' km/h'+(Math.abs(err)>3?'（已超 ±3%，不建议）':'（在 ±3% 内）')+'</div>';}return {ok:true,html:h};",
+ "test": {
+  "inputs": {
+   "w": 205,
+   "ar": 55,
+   "rim": 16,
+   "old": 0
+  },
+  "expect": "631.9"
+ }
+},
+{
+ "id": "dwshoe2",
+ "cat": "dwhs",
+ "icon": "🧦",
+ "name": "童鞋鞋码换算（脚长→欧码）",
+ "desc": "按儿童脚长毫米估算童鞋欧码与中国码（dwshoe 只有成人码，本工具补童鞋）",
+ "formula": "童鞋欧码≈(脚长mm+15)/6.67（巴黎钉口径，鞋内长预留约 10~15mm 成长空间），结果取 0.5 档；中国童鞋码以脚长 mm 标示。儿童长得快，建议按实测脚长+10mm 选内长。",
+ "inputs": [
+  {
+   "id": "foot",
+   "label": "脚长",
+   "unit": "mm",
+   "def": "165",
+   "min": 80,
+   "max": 220
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(foot);if(!isFinite(x)||x<80||x>220)return {ok:false,msg:'童鞋脚长须在 80~220 mm'};var eu=Math.round(((x+15)/6.67)*2)/2;return {ok:true,html:'<div class=\"big\">约 EU '+F(eu)+' 码 · 中国码 '+F(x)+'（脚长mm）</div><div class=\"row\">建议选内长约 '+F(x+10)+' mm 的鞋（预留约 10mm）；各品牌童鞋楦型差异大，以内长实测为准</div>'};",
+ "test": {
+  "inputs": {
+   "foot": 165
+  },
+  "expect": "EU 27"
+ }
+},
+{
+ "id": "dwfishline",
+ "cat": "dwhs",
+ "icon": "🎣",
+ "name": "钓线号数与线径对照",
+ "desc": "尼龙线号数↔标准线径毫米对照（PE线号制不同，单独注明）",
+ "formula": "尼龙/碳线标准线径（节选）：1号=0.165mm，2号=0.235mm，3号=0.285mm，4号=0.330mm，6号=0.405mm，8号=0.470mm。PE 编织线号数按纱支体系，与尼龙线径不一一对应，勿混用。",
+ "inputs": [
+  {
+   "id": "no",
+   "label": "线号",
+   "type": "select",
+   "def": "3",
+   "options": [
+    {
+     "v": "0.6",
+     "t": "0.6 号"
+    },
+    {
+     "v": "0.8",
+     "t": "0.8 号"
+    },
+    {
+     "v": "1",
+     "t": "1 号"
+    },
+    {
+     "v": "1.5",
+     "t": "1.5 号"
+    },
+    {
+     "v": "2",
+     "t": "2 号"
+    },
+    {
+     "v": "2.5",
+     "t": "2.5 号"
+    },
+    {
+     "v": "3",
+     "t": "3 号"
+    },
+    {
+     "v": "3.5",
+     "t": "3.5 号"
+    },
+    {
+     "v": "4",
+     "t": "4 号"
+    },
+    {
+     "v": "5",
+     "t": "5 号"
+    },
+    {
+     "v": "6",
+     "t": "6 号"
+    },
+    {
+     "v": "7",
+     "t": "7 号"
+    },
+    {
+     "v": "8",
+     "t": "8 号"
+    },
+    {
+     "v": "10",
+     "t": "10 号"
+    },
+    {
+     "v": "12",
+     "t": "12 号"
+    }
+   ]
+  }
+ ],
+ "run": "var T={'0.6':0.128,'0.8':0.148,'1':0.165,'1.5':0.205,'2':0.235,'2.5':0.260,'3':0.285,'3.5':0.310,'4':0.330,'5':0.370,'6':0.405,'7':0.435,'8':0.470,'10':0.520,'12':0.570};var d=T[String(no)];if(d===undefined)return {ok:false,msg:'请选择线号'};return {ok:true,html:'<div class=\"big\">'+String(no)+' 号 ≈ '+d.toFixed(3)+' mm</div><div class=\"row\">尼龙线标准线径；拉力值随材质与品牌差异很大，选线以厂家标示拉力为准</div>'};",
+ "test": {
+  "inputs": {
+   "no": "3"
+  },
+  "expect": "0.285"
+ }
+},
+{
+ "id": "dwmomme",
+ "cat": "dwhs",
+ "icon": "🧣",
+ "name": "丝绸姆米与克重换算",
+ "desc": "姆米momme↔克重g/㎡↔盎司/平方码，丝绸面料交易口径",
+ "formula": "1姆米(mm)=4.340 g/㎡（定义：45英寸×100码一匹布重 1 磅为 1 姆米换算得 4.340g/㎡）；1 oz/yd²=33.9057 g/㎡。真丝睡衣常用 19 姆米≈82.5 g/㎡，22 姆米更厚实。",
+ "inputs": [
+  {
+   "id": "v",
+   "label": "数值",
+   "def": "19"
+  },
+  {
+   "id": "from",
+   "label": "从",
+   "type": "select",
+   "def": "momme",
+   "options": [
+    {
+     "v": "momme",
+     "t": "姆米(momme)"
+    },
+    {
+     "v": "gsm",
+     "t": "克重(g/㎡)"
+    },
+    {
+     "v": "ozyd",
+     "t": "盎司/平方码(oz/yd²)"
+    }
+   ]
+  },
+  {
+   "id": "to",
+   "label": "到",
+   "type": "select",
+   "def": "gsm",
+   "options": [
+    {
+     "v": "momme",
+     "t": "姆米(momme)"
+    },
+    {
+     "v": "gsm",
+     "t": "克重(g/㎡)"
+    },
+    {
+     "v": "ozyd",
+     "t": "盎司/平方码(oz/yd²)"
+    }
+   ]
+  }
+ ],
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};if(!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e12)return {ok:false,msg:'数值过大'};var K={\"momme\": 4.34, \"gsm\": 1, \"ozyd\": 33.905747};var LB={\"momme\": \"\\u59c6\\u7c73(momme)\", \"gsm\": \"\\u514b\\u91cd(g/\\u33a1)\", \"ozyd\": \"\\u76ce\\u53f8/\\u5e73\\u65b9\\u7801(oz/yd\\u00b2)\"};if(K[from]===undefined||K[to]===undefined)return {ok:false,msg:'请选择单位'};var r=x*K[from]/K[to];return {ok:true,html:'<div class=\"big\">'+F(x)+' '+LB[from]+' = '+F(r)+' '+LB[to]+'</div><div class=\"row\">姆米只用于丝绸计重，与毫米 mm 同缩写不同义，注意区分</div>'};",
+ "test": {
+  "inputs": {
+   "v": 19,
+   "from": "momme",
+   "to": "gsm"
+  },
+  "expect": "82.46"
+ }
+}
+);
+/* ===== R3-WB3 文本工具第三轮（25） ===== */
+TOOLS.push(
+{"id": "wbspeak", "cat": "wb", "icon": "🗣️", "name": "朗读时长估算", "desc": "按朗读语速分档 + 停顿系数估算念完一段文字要多久", "formula": "中英混排分开计速：中文按汉字数（慢速 160 / 正常 200 / 快速 260 字/分钟），英文按词数（慢速 110 / 正常 140 / 快速 180 词/分钟）；总时长 =（汉字÷中文速 + 英文词÷英文速）× 停顿系数（无停顿 1.0 / 正常停顿 1.15 / 多停顿 1.3）。与「阅读时长估算」分工：彼为默读速度，本工具为出声朗读并计停顿。汉字按码点计 CJK 区段", "inputs": [{"id": "rate", "label": "语速档", "type": "select", "def": "normal", "options": [{"v": "slow", "t": "慢速（教学/播音练习）"}, {"v": "normal", "t": "正常（日常朗读）"}, {"v": "fast", "t": "快速（赶时间）"}]}, {"id": "pause", "label": "停顿系数", "type": "select", "def": "normal", "options": [{"v": "none", "t": "无停顿 ×1.0"}, {"v": "normal", "t": "正常停顿 ×1.15"}, {"v": "more", "t": "多停顿 ×1.3"}]}, {"id": "t", "label": "文本", "type": "textarea", "ph": "粘贴要朗读的文本"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(s.split('\\n').length>10000)return {ok:false,msg:'行数过多（上限 10000 行）'};if(!s.trim())return {ok:false,msg:'请输入文本'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var R={slow:[160,110],normal:[200,140],fast:[260,180]}[String(rate)]||[200,140];var P={none:1,normal:1.15,more:1.3}[String(pause)];if(P===undefined)P=1.15;var cn=(s.match(/[\\u3400-\\u9fff\\uf900-\\ufaff]/g)||[]).length;var en=(s.match(/[A-Za-z]+(?:'[A-Za-z]+)?/g)||[]).length;var mins=(cn/R[0]+en/R[1])*P;var secs=Math.round(mins*60);var mm=Math.floor(secs/60),ss=secs%60;return {ok:true,html:'<div class=\"big\">约 '+mm+' 分 '+ss+' 秒</div><div class=\"row\">汉字 '+cn+' 个（'+R[0]+' 字/分），英文 '+en+' 词（'+R[1]+' 词/分），停顿系数 ×'+P+'</div><div class=\"row\">纯朗读 '+(Math.round((cn/R[0]+en/R[1])*60))+' 秒，含停顿 '+secs+' 秒</div>'};", "test": {"inputs": {"rate": "normal", "pause": "none", "t": "中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中"}, "expect": "约 1 分 0 秒"}},
+{"id": "wbgrade", "cat": "wb", "icon": "📚", "name": "可读性进阶（Flesch 双分支）", "desc": "英文用标准 Flesch 公式、中文用句长口径，分别给出分数与年级", "formula": "英文分支（标准公式）：Flesch Reading Ease = 206.835 − 1.015×(词数÷句数) − 84.6×(音节数÷词数)；Flesch–Kincaid Grade = 0.39×(词数÷句数) + 11.8×(音节数÷词数) − 15.59；音节按元音群启发式估算（注明近似）。中文分支：得分 = 100 − max(0, 平均句长−20)×1.5 − 长句（>40 字）占比×0.3（截断 0~100）。与「文本可读性估算」分工：彼为自研综合经验分，本工具英文走国际标准 Flesch 量表、中文单独成支", "inputs": [{"id": "mode", "label": "语言分支", "type": "select", "def": "en", "options": [{"v": "en", "t": "英文（Flesch 标准公式）"}, {"v": "cn", "t": "中文（句长口径）"}]}, {"id": "t", "label": "文本", "type": "textarea", "ph": "粘贴文本"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(s.split('\\n').length>10000)return {ok:false,msg:'行数过多（上限 10000 行）'};if(!s.trim())return {ok:false,msg:'请输入文本'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}function syl(w){w=w.toLowerCase().replace(/[^a-z]/g,'');if(!w)return 0;var EX={beautiful:3,business:2,every:2,chocolate:2,evening:2,wednesday:2};if(EX[w])return EX[w];var g=w.match(/[aeiouy]+/g);var n=g?g.length:1;if(/[^aeiouy]e$/.test(w)&&!/le$/.test(w)&&n>1)n--;if(/[^aeiouy]le$/.test(w)&&n===1)n=1;return Math.max(1,n);}if(String(mode)==='en'){var words=s.match(/[A-Za-z]+(?:'[A-Za-z]+)?/g)||[];if(words.length<3)return {ok:false,msg:'英文词数不足 3 个，无法估算'};var sents=s.split(/[.!?]+/).filter(function(x){return /[A-Za-z]/.test(x);});var ns=Math.max(1,sents.length);var sy=0;words.forEach(function(w){sy+=syl(w);});var wps=words.length/ns,sylpw=sy/words.length;var fre=206.835-1.015*wps-84.6*sylpw;var fk=0.39*wps+11.8*sylpw-15.59;var band=fre>=90?'非常易读（美国 5 年级）':fre>=80?'易读（6 年级）':fre>=70?'较易读（7 年级）':fre>=60?'标准（8~9 年级）':fre>=50?'较难（10~12 年级）':fre>=30?'难（大学）':'非常难（大学毕业以上）';return {ok:true,html:'<div class=\"big\">Flesch 易读度 '+fre.toFixed(1)+' 分</div><div class=\"row\">Flesch–Kincaid 年级 '+fk.toFixed(1)+'（'+band+'）</div><div class=\"row\">词数 '+words.length+'，句数 '+ns+'，音节约 '+sy+'（启发式估算），词/句 '+wps.toFixed(2)+'，音节/词 '+sylpw.toFixed(2)+'</div>'};}var parts=s.split(/[。！？!?；;]+/).map(function(x){return x.replace(/[\\s，。、：:,.·…—\"\"''「」（）()《》]/g,'');}).filter(function(x){return x;});if(!parts.length)return {ok:false,msg:'没有可分析的中文句子'};var tot=0,longN=0;parts.forEach(function(p){var L=Array.from(p).length;tot+=L;if(L>40)longN++;});var avg=tot/parts.length;var score=100-Math.max(0,avg-20)*1.5-(longN/parts.length*100)*0.3;score=Math.max(0,Math.min(100,score));var g2=score>=90?'小学高年级参考':score>=75?'初中参考':score>=60?'高中参考':'大学及以上参考';return {ok:true,html:'<div class=\"big\">中文可读性 '+score.toFixed(1)+' 分</div><div class=\"row\">'+g2+'；共 '+parts.length+' 句，总字数（去标点）'+tot+'，平均句长 '+avg.toFixed(2)+' 字，长句 '+longN+' 句</div><div class=\"row\">中文无公认标准量表，此为句长经验口径，仅供参考</div>'};", "test": {"inputs": {"mode": "en", "t": "The cat sat."}, "expect": "119.2"}},
+{"id": "wblevenshtein2", "cat": "wb", "icon": "🧮", "name": "编辑距离进阶（多串 + Damerau）", "desc": "多段文本两两距离矩阵、最近一对，并可计相邻换位", "formula": "每行一段（2~10 段，每段 ≤200 码点）。标准模式为 Levenshtein（增删替各 1）；Damerau 模式用 Optimal String Alignment，相邻两字符换位计 1（如 ab→ba 距离 1，标准模式为 2）。输出全部两两距离与最近一对。与「编辑距离 Levenshtein」分工：彼为两段文本 + 操作明细，本工具为多段矩阵 + 换位口径；与「文本相似度」分工：彼给相似度百分比，本工具给距离矩阵", "inputs": [{"id": "mode", "label": "距离口径", "type": "select", "def": "lev", "options": [{"v": "lev", "t": "Levenshtein（增删替）"}, {"v": "dam", "t": "Damerau（另计相邻换位）"}]}, {"id": "t", "label": "文本列表（每行一段）", "type": "textarea", "ph": "每行一段，2~10 行"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(s.split('\\n').length>10000)return {ok:false,msg:'行数过多（上限 10000 行）'};if(!s.trim())return {ok:false,msg:'请输入文本'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var lines=s.split('\\n').map(function(x){return x.trim();}).filter(function(x){return x;});if(lines.length<2)return {ok:false,msg:'至少需要 2 行文本'};if(lines.length>10)return {ok:false,msg:'最多 10 行'};for(var q=0;q<lines.length;q++){if(Array.from(lines[q]).length>200)return {ok:false,msg:'第 '+(q+1)+' 行超过 200 字'};}var dam=String(mode)==='dam';function dist(A,B){var m=A.length,n=B.length,dp=[],i,j;for(i=0;i<=m;i++){dp.push([i]);}for(j=1;j<=n;j++)dp[0].push(j);for(i=1;i<=m;i++){for(j=1;j<=n;j++){var c=A[i-1]===B[j-1]?0:1;var v=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+c);if(dam&&i>1&&j>1&&A[i-1]===B[j-2]&&A[i-2]===B[j-1])v=Math.min(v,dp[i-2][j-2]+1);dp[i].push(v);}}return dp[m][n];}var arrs=lines.map(function(x){return Array.from(x);});var best=null,rows=[];for(var i2=0;i2<lines.length;i2++){for(var j2=i2+1;j2<lines.length;j2++){var d=dist(arrs[i2],arrs[j2]);rows.push('「'+e(lines[i2])+'」 ↔ 「'+e(lines[j2])+'」：'+d);if(!best||d<best[2])best=[lines[i2],lines[j2],d];}}return {ok:true,html:'<div class=\"big\">最近一对：「'+e(best[0])+'」 ↔ 「'+e(best[1])+'」，距离 '+best[2]+'</div><div class=\"row\" style=\"white-space:pre-wrap;word-break:break-all\">'+rows.join('\\n')+'</div><div class=\"row\">口径：'+(dam?'Damerau（相邻换位计 1）':'Levenshtein（增删替各 1）')+'，共 '+lines.length+' 段、'+rows.length+' 对</div>'};", "test": {"inputs": {"mode": "dam", "t": "ab\nba\nabc"}, "expect": "距离 1"}},
+{"id": "wbjaccard", "cat": "wb", "icon": "🧩", "name": "集合相似度三口径", "desc": "词集 / 字符双字组粒度的 Jaccard、Dice 与余弦相似度", "formula": "词集粒度：分词单元 = 英文词（小写）+ 每个汉字各 1 单元；字符双字组粒度：按码点取相邻 2 字组（去空白）。Jaccard = |交|÷|并|；Dice = 2|交|÷(|A|+|B|)；余弦 = 词频向量点积 ÷ 模长之积。三者同为 1 表示单元完全一致。与「文本相似度」分工：彼为字符集合 + 编辑距离的综合分，本工具为词/双字组集合口径并列三指标；与「集合运算」分工：彼做集合运算，本工具做相似度", "inputs": [{"id": "mode", "label": "粒度", "type": "select", "def": "word", "options": [{"v": "word", "t": "词集（英文词 + 汉字单字）"}, {"v": "char2", "t": "字符双字组（bigram）"}]}, {"id": "a", "label": "文本一", "type": "textarea", "ph": "第一段文本"}, {"id": "b", "label": "文本二", "type": "textarea", "ph": "第二段文本"}], "run": "var sa=String(a==null?'':a),sb=String(b==null?'':b);if(sa.length>100000||sb.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}function units(x){if(String(mode)==='char2'){var c=Array.from(x.replace(/\\s+/g,''));var o=[];for(var i=0;i+1<c.length;i++)o.push(c[i]+c[i+1]);return o;}var o2=[];var mm=x.toLowerCase().match(/[a-z0-9]+|[\\u3400-\\u9fff]/g)||[];return mm;}var A=units(sa),B=units(sb);if(!A.length||!B.length)return {ok:false,msg:'某一文本没有可比较的单元（词集需英文词或汉字；双字组需至少 2 字）'};function freq(u){var m=Object.create(null);u.forEach(function(k){m[k]=(m[k]||0)+1;});return m;}var fa=freq(A),fb=freq(B);var setA=Object.keys(fa),setB=Object.keys(fb);var inter=0;setA.forEach(function(k){if(k in fb)inter++;});var uni=setA.length+setB.length-inter;var jac=uni?inter/uni:1;var dice=(setA.length+setB.length)?2*inter/(setA.length+setB.length):1;var dot=0,na=0,nb=0;setA.forEach(function(k){na+=fa[k]*fa[k];if(k in fb)dot+=fa[k]*fb[k];});setB.forEach(function(k){nb+=fb[k]*fb[k];});var cos=(na&&nb)?dot/(Math.sqrt(na)*Math.sqrt(nb)):0;return {ok:true,html:'<div class=\"big\">Jaccard '+jac.toFixed(3)+'</div><div class=\"row\">Dice '+dice.toFixed(3)+'；余弦（词频向量）'+cos.toFixed(3)+'</div><div class=\"row\">单元种数：文本一 '+setA.length+'，文本二 '+setB.length+'，交集 '+inter+'，并集 '+uni+'（粒度：'+(String(mode)==='char2'?'字符双字组':'词集')+'）</div>'};", "test": {"inputs": {"mode": "word", "a": "the cat sat", "b": "the cat ran"}, "expect": "Jaccard 0.500"}},
+{"id": "wbsentiment2", "cat": "wb", "icon": "💗", "name": "情感词频粗筛", "desc": "用正负情感词表节选统计词频，给出倾向粗判（非模型）", "formula": "内置情感词表节选（正面 20 词 / 负面 20 词，均为常见情感词）；逐词在全文中统计不重叠出现次数，正面总次数 P、负面总次数 N，得分 = P − N：>0 偏积极、<0 偏消极、=0 中性或无命中。不处理否定与反讽（如「不开心」仍计入开心），仅为词频粗筛，不是情感模型结论", "inputs": [{"id": "t", "label": "文本", "type": "textarea", "ph": "粘贴文本"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(s.split('\\n').length>10000)return {ok:false,msg:'行数过多（上限 10000 行）'};if(!s.trim())return {ok:false,msg:'请输入文本'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var POS=[\"开心\", \"快乐\", \"喜欢\", \"美好\", \"幸福\", \"成功\", \"优秀\", \"美丽\", \"希望\", \"感动\", \"温暖\", \"骄傲\", \"满意\", \"惊喜\", \"幸运\", \"勇敢\", \"健康\", \"胜利\", \"热爱\", \"精彩\"],NEG=[\"难过\", \"伤心\", \"讨厌\", \"糟糕\", \"失败\", \"痛苦\", \"愤怒\", \"失望\", \"恐惧\", \"焦虑\", \"悲伤\", \"丑陋\", \"懒惰\", \"生病\", \"抱怨\", \"后悔\", \"孤独\", \"疲惫\", \"危险\", \"哭泣\"];function cnt(w){var c=0,from=0,ix;while((ix=s.indexOf(w,from))>=0){c++;from=ix+w.length;}return c;}var P=0,N=0,hitP=[],hitN=[];POS.forEach(function(w){var c=cnt(w);if(c){P+=c;hitP.push(w+'×'+c);}});NEG.forEach(function(w){var c=cnt(w);if(c){N+=c;hitN.push(w+'×'+c);}});var d=P-N;var lab=d>0?'偏积极':d<0?'偏消极':'中性 / 无明显倾向';return {ok:true,html:'<div class=\"big\">'+lab+'（得分 '+(d>0?'+':'')+d+'）</div><div class=\"row\">正面词 '+P+' 次'+(hitP.length?('：'+e(hitP.join('、'))):'')+'</div><div class=\"row\">负面词 '+N+' 次'+(hitN.length?('：'+e(hitN.join('、'))):'')+'</div><div class=\"row\">词表节选粗筛，不处理否定/反讽，结果仅供参考</div>'};", "test": {"inputs": {"t": "今天很开心，天气美好，我很喜欢"}, "expect": "偏积极"}},
+{"id": "wbtitlecase", "cat": "wb", "icon": "🔠", "name": "英文标题大小写规范", "desc": "按 AP / Chicago 规则把普通句子转成规范标题大小写", "formula": "小词表（冠词 a/an/the、并列连词 and/but/or/nor/for/so/yet、常用短介词 at/by/for/in/of/on/to/up/per/via/with? 等，见规则）：AP 规则——小词仅当少于 4 个字母时小写（with 长 4 须大写），首词、尾词、冒号后首词一律大写，实词大写；Chicago 规则——冠词/连词/介词不论长短一律小写（首尾词除外）。连字符复合词逐段同规则。与「命名与大小写转换」的标题模式分工：彼为每词首字母一律大写，本工具按出版规范处理小词", "inputs": [{"id": "style", "label": "规范", "type": "select", "def": "ap", "options": [{"v": "ap", "t": "AP（美联社）"}, {"v": "chicago", "t": "Chicago（芝加哥手册）"}]}, {"id": "t", "label": "标题文本", "type": "text", "ph": "如 the lord of the rings"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(!s.trim())return {ok:false,msg:'请输入标题'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var MINOR={'a':1,'an':1,'the':1,'and':1,'but':1,'or':1,'nor':1,'for':1,'so':1,'yet':1,'at':1,'by':1,'in':1,'of':1,'on':1,'to':1,'up':1,'per':1,'via':1,'with':1,'from':1,'over':1,'into':1,'upon':1,'as':1};var ap=String(style)!=='chicago';function capw(w,isEdge,afterColon){var lw=w.toLowerCase();var core=lw.replace(/^[^a-z]+|[^a-z]+$/g,'');if(!isEdge&&!afterColon&&MINOR[core]&&(ap?core.length<4:true)){return w.toLowerCase();}var i=w.search(/[A-Za-z]/);if(i<0)return w;return w.slice(0,i)+w.charAt(i).toUpperCase()+w.slice(i+1).toLowerCase();}var words=s.trim().split(/\\s+/);var out=words.map(function(w,idx){var edge=(idx===0||idx===words.length-1);var ac=(idx>0&&/:$/.test(words[idx-1]));var parts=w.split('-');return parts.map(function(p,pi){return capw(p,edge||pi>0,ac&&pi===0);}).join('-');});var res=out.join(' ');return {ok:true,html:'<div class=\"big\" style=\"word-break:break-all\">'+e(res)+'</div><div class=\"row\">规范：'+(ap?'AP（小词 <4 字母才小写）':'Chicago（小词不论长短小写）')+'；首尾词与冒号后首词必大写</div>'};", "test": {"inputs": {"style": "ap", "t": "the lord of the rings"}, "expect": "The Lord of the Rings"}},
+{"id": "wbacronym2", "cat": "wb", "icon": "�", "name": "首字母缩略词生成", "desc": "由英文短语生成缩略词（可跳过小词），与藏头提取分工", "formula": "逐词取首字母拼成缩略词：全取模式每个词（含小词）都取；跳小词模式跳过 a/an/the/of/and/for/in/on/to/by/with 等小词；首尾词模式只取首词与尾词首字母。数字开头的词取其数字。与「藏头藏尾提取」分工：彼从既有诗文逐行提取藏字，本工具由短语主动生成缩略词；与拼音首字母提取分工：彼处理汉字，本工具处理英文短语", "inputs": [{"id": "mode", "label": "生成方式", "type": "select", "def": "skip", "options": [{"v": "skip", "t": "跳过小词（of/the/and 等）"}, {"v": "all", "t": "全部词都取首字母"}, {"v": "edge", "t": "只取首词 + 尾词"}]}, {"id": "t", "label": "英文短语", "type": "text", "ph": "如 National Aeronautics and Space Administration"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长'};if(!s.trim())return {ok:false,msg:'请输入英文短语'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var SKIP={'a':1,'an':1,'the':1,'of':1,'and':1,'for':1,'in':1,'on':1,'to':1,'by':1,'with':1,'or':1};var words=s.trim().split(/[^A-Za-z0-9]+/).filter(function(x){return x;});if(words.length<2)return {ok:false,msg:'至少需要 2 个词'};if(words.length>50)return {ok:false,msg:'词数过多（上限 50）'};var m=String(mode);var pick=[];words.forEach(function(w,i){if(m==='all')pick.push(w);else if(m==='edge'){if(i===0||i===words.length-1)pick.push(w);}else{if(!SKIP[w.toLowerCase()])pick.push(w);}});if(pick.length<2)return {ok:false,msg:'跳过小词后不足 2 个词，请换全取模式'};var ac=pick.map(function(w){return w.charAt(0).toUpperCase();}).join('');return {ok:true,html:'<div class=\"big\">'+e(ac)+'</div><div class=\"row\">取自 '+pick.length+' 个词：'+e(pick.join(' / '))+'</div>'};", "test": {"inputs": {"mode": "skip", "t": "National Aeronautics and Space Administration"}, "expect": "NASA"}},
+{"id": "wbplural", "cat": "wb", "icon": "🔤", "name": "英文复数 / 单数互转", "desc": "按规则 + 不规则节选表把英文名词单复数互转", "formula": "优先级：不规则表节选（child→children 等 20 对）> 不变化词（sheep/deer/fish 等 10 词）> 辅音+y → ies（元音+y 直接 +s）> s/x/z/ch/sh 结尾 +es > f/fe 变 ves 仅限节选表（knife/leaf 等 12 词，其余 +s，如 roof→roofs）> o 结尾 +es 仅限节选表（hero/potato 等 7 词，其余 +s）> 默认 +s。单数方向为逆规则。专有名词与表外生僻词结果请人工复核", "inputs": [{"id": "mode", "label": "方向", "type": "select", "def": "pl", "options": [{"v": "pl", "t": "单数 → 复数"}, {"v": "sg", "t": "复数 → 单数"}]}, {"id": "t", "label": "英文单词", "type": "text", "ph": "如 knife"}], "run": "var s=String(t==null?'':t).trim().toLowerCase();if(!s)return {ok:false,msg:'请输入单词'};if(s.length>100)return {ok:false,msg:'单词过长'};if(!/^[a-z][a-z-]*$/.test(s))return {ok:false,msg:'请输入单个英文单词（仅字母）'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var IRR={\"child\": \"children\", \"man\": \"men\", \"woman\": \"women\", \"person\": \"people\", \"tooth\": \"teeth\", \"foot\": \"feet\", \"mouse\": \"mice\", \"goose\": \"geese\", \"ox\": \"oxen\", \"die\": \"dice\", \"louse\": \"lice\", \"cactus\": \"cacti\", \"fungus\": \"fungi\", \"nucleus\": \"nuclei\", \"analysis\": \"analyses\", \"crisis\": \"crises\", \"thesis\": \"theses\", \"phenomenon\": \"phenomena\", \"criterion\": \"criteria\"},INV=[\"sheep\", \"deer\", \"fish\", \"series\", \"species\", \"aircraft\", \"salmon\", \"trout\", \"shrimp\", \"offspring\"],VES=[\"knife\", \"life\", \"wife\", \"leaf\", \"wolf\", \"half\", \"shelf\", \"calf\", \"loaf\", \"thief\", \"elf\", \"self\"],OES=[\"hero\", \"potato\", \"tomato\", \"echo\", \"torpedo\", \"veto\", \"mango\"];var REV={};Object.keys(IRR).forEach(function(k){REV[IRR[k]]=k;});function plural(w){if(REV[w]&&IRR[w]===undefined&&Object.keys(IRR).indexOf(w)<0){} if(IRR[w])return IRR[w];if(INV.indexOf(w)>=0)return w;if(/(s|x|z|ch|sh)$/.test(w))return w+'es';if(/[^aeiou]y$/.test(w))return w.slice(0,-1)+'ies';if(VES.indexOf(w)>=0)return w.replace(/fe?$/,'ves');if(OES.indexOf(w)>=0)return w+'es';return w+'s';}function singular(w){if(REV[w])return REV[w];if(INV.indexOf(w)>=0)return w;if(/ies$/.test(w)&&w.length>3)return w.slice(0,-3)+'y';if(/ves$/.test(w)){var stem=w.slice(0,-3);var cand1=stem+'fe',cand2=stem+'f';if(VES.indexOf(cand1)>=0)return cand1;if(VES.indexOf(cand2)>=0)return cand2;return cand2;}if(/(ches|shes|ses|xes|zes)$/.test(w))return w.slice(0,-2);if(/oes$/.test(w)&&OES.indexOf(w.slice(0,-2))>=0)return w.slice(0,-2);if(/s$/.test(w)&&!/ss$/.test(w))return w.slice(0,-1);return w;}var pl=String(mode)==='pl';var out=pl?plural(s):singular(s);var note=IRR[s]||REV[s]?'不规则节选表命中':(INV.indexOf(s)>=0?'单复数同形（节选表）':'按拼写规则推导');return {ok:true,html:'<div class=\"big\">'+e(s)+' → '+e(out)+'</div><div class=\"row\">'+note+'；不规则表节选 20 对，同形词 10 个，ves 表 12 词，oes 表 7 词</div>'};", "test": {"inputs": {"mode": "pl", "t": "knife"}, "expect": "knives"}},
+{"id": "wbarticle", "cat": "wb", "icon": "🅰️", "name": "英文冠词 a / an 建议", "desc": "按读音（非拼写）判断下一个词前该用 a 还是 an", "formula": "按读音判断：元音音素开头用 an，辅音音素开头用 a。拼写陷阱表：h 不发音词（hour/honest/honor/heir）用 an；字母 u/y/w 读辅音 /juː/、/w/ 的词（university/unicorn/European/one/once）用 a。全大写缩略词按首字母的字母名读音判断：字母名以元音起头（A E F H I L M N O R S X）用 an，其余用 a。仅给建议，专有名词读音请以词典为准", "inputs": [{"id": "t", "label": "后面的英文单词", "type": "text", "ph": "如 hour / university / FBI"}], "run": "var s=String(t==null?'':t).trim();if(!s)return {ok:false,msg:'请输入单词'};if(s.length>100)return {ok:false,msg:'单词过长'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var w=s.split(/\\s+/)[0];var lw=w.toLowerCase().replace(/[^a-z]/g,'');if(!lw)return {ok:false,msg:'未识别到英文单词'};var ANW={'hour':1,'hours':1,'honest':1,'honestly':1,'honor':1,'honour':1,'honorable':1,'heir':1,'heirs':1,'herb':1};var AW={'university':1,'unicorn':1,'uniform':1,'unique':1,'unit':1,'united':1,'union':1,'useful':1,'user':1,'usual':1,'european':1,'one':1,'once':1,'eulogy':1,'ufo':1};var art,why;if(/^[A-Z]{2,}$/.test(w)){var L=w.charAt(0);if('AEFHILMNORSX'.indexOf(L)>=0){art='an';why='缩略词首字母 '+L+' 的字母名以元音起头';}else{art='a';why='缩略词首字母 '+L+' 的字母名以辅音起头';}}else if(ANW[lw]){art='an';why='该词 h 不发音，实际以元音起头（拼写陷阱表）';}else if(AW[lw]){art='an'==='an'&&false?'':'a';why='该词虽以元音字母开头，但读作 /juː/ 或 /w/ 辅音起头（拼写陷阱表）';}else if(/^[aeiou]/.test(lw)){art='an';why='以元音字母开头且按元音读音';}else{art='a';why='以辅音起头';}return {ok:true,html:'<div class=\"big\">'+art+' '+e(w)+'</div><div class=\"row\">判断依据：'+why+'</div><div class=\"row\">口径：按读音而非拼写；the 的使用取决于特指语境，本工具不判断</div>'};", "test": {"inputs": {"t": "university"}, "expect": "a university"}},
+{"id": "wbtranslit", "cat": "wb", "icon": "🔡", "name": "俄语拉丁转写互转", "desc": "按 ALA-LC 风格映射表在西里尔字母与拉丁转写间互转", "formula": "映射节选自 ALA-LC 俄语转写常用口径：ж→zh、х→kh、ц→ts、ч→ch、ш→sh、щ→shch、ю→yu、я→ya、ё→ë、й→ĭ、э→ė、ъ→\"、ь→'，其余单字母直映。大写字母转写时仅首字母大写（Щ→Shch）。拉丁→俄语按最长优先解析多字母组合；ë/ĭ/ė 若键盘难输入，可先按 e/i 写再人工校订——故逆向不完全可逆，й 的 ĭ 缺失时 i 默认对应 и", "inputs": [{"id": "mode", "label": "方向", "type": "select", "def": "r2l", "options": [{"v": "r2l", "t": "俄语 → 拉丁"}, {"v": "l2r", "t": "拉丁 → 俄语"}]}, {"id": "t", "label": "文本", "type": "textarea", "ph": "如 Москва"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(s.split('\\n').length>10000)return {ok:false,msg:'行数过多（上限 10000 行）'};if(!s.trim())return {ok:false,msg:'请输入文本'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var M={\"а\": \"a\", \"б\": \"b\", \"в\": \"v\", \"г\": \"g\", \"д\": \"d\", \"е\": \"e\", \"ё\": \"ë\", \"ж\": \"zh\", \"з\": \"z\", \"и\": \"i\", \"й\": \"ĭ\", \"к\": \"k\", \"л\": \"l\", \"м\": \"m\", \"н\": \"n\", \"о\": \"o\", \"п\": \"p\", \"р\": \"r\", \"с\": \"s\", \"т\": \"t\", \"у\": \"u\", \"ф\": \"f\", \"х\": \"kh\", \"ц\": \"ts\", \"ч\": \"ch\", \"ш\": \"sh\", \"щ\": \"shch\", \"ъ\": \"\\\"\", \"ы\": \"y\", \"ь\": \"'\", \"э\": \"ė\", \"ю\": \"yu\", \"я\": \"ya\"};var out='';if(String(mode)==='r2l'){Array.from(s).forEach(function(ch){var lo=ch.toLowerCase();if(M[lo]!==undefined){var v=M[lo];if(ch!==lo)v=v.charAt(0).toUpperCase()+v.slice(1);out+=v;}else out+=ch;});}else{var REV={};Object.keys(M).forEach(function(k){REV[M[k]]=k;});var KEYS=Object.keys(REV).sort(function(x,y){return y.length-x.length;});var low=s;var i=0;while(i<low.length){var hit=null;for(var k2=0;k2<KEYS.length;k2++){var kk=KEYS[k2];var seg=low.slice(i,i+kk.length);if(seg.toLowerCase()===kk){hit=[kk,seg];break;}}if(hit){var cyr=REV[hit[0]];if(/[A-Z]/.test(hit[1].charAt(0)))cyr=cyr.toUpperCase();out+=cyr;i+=hit[0].length;}else{out+=low[i];i++;}}}return {ok:true,html:'<div class=\"big\" style=\"word-break:break-all\">'+e(out)+'</div><div class=\"row\">ALA-LC 风格节选映射（33 个俄文字母全覆盖）；非俄文字母原样保留</div>'};", "test": {"inputs": {"mode": "r2l", "t": "Москва"}, "expect": "Moskva"}},
+{"id": "wbpoem", "cat": "wb", "icon": "🎋", "name": "五七言格律粗检", "desc": "逐行核对字数，并粗查末字是否同韵（节选韵表）", "formula": "逐行去标点空白后按码点计字数，与五言 5 / 七言 7（或自动取众数行长）比对；押韵粗检：末字查内置节选韵母表（9 组约 90 字），同组判为同韵，表外字标「未覆盖」不下结论。平仄、粘对等真格律不在本粗检范围", "inputs": [{"id": "form", "label": "体裁", "type": "select", "def": "wu", "options": [{"v": "wu", "t": "五言（每行 5 字）"}, {"v": "qi", "t": "七言（每行 7 字）"}, {"v": "auto", "t": "自动（取最常见行长）"}]}, {"id": "t", "label": "诗文（每行一句）", "type": "textarea", "ph": "每行一句"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(s.split('\\n').length>10000)return {ok:false,msg:'行数过多（上限 10000 行）'};if(!s.trim())return {ok:false,msg:'请输入诗文'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var RH={\"光\": \"ang\", \"霜\": \"ang\", \"长\": \"ang\", \"江\": \"ang\", \"香\": \"ang\", \"乡\": \"ang\", \"望\": \"ang\", \"黄\": \"ang\", \"杨\": \"ang\", \"堂\": \"ang\", \"阳\": \"ang\", \"东\": \"ong\", \"风\": \"ong\", \"中\": \"ong\", \"红\": \"ong\", \"空\": \"ong\", \"同\": \"ong\", \"梦\": \"ong\", \"龙\": \"ong\", \"钟\": \"ong\", \"冬\": \"ong\", \"流\": \"ou\", \"秋\": \"ou\", \"舟\": \"ou\", \"楼\": \"ou\", \"愁\": \"ou\", \"游\": \"ou\", \"头\": \"ou\", \"州\": \"ou\", \"牛\": \"ou\", \"收\": \"ou\", \"花\": \"a\", \"家\": \"a\", \"霞\": \"a\", \"沙\": \"a\", \"茶\": \"a\", \"麻\": \"a\", \"夏\": \"a\", \"马\": \"a\", \"画\": \"a\", \"他\": \"a\", \"山\": \"an\", \"寒\": \"an\", \"残\": \"an\", \"烟\": \"an\", \"年\": \"an\", \"天\": \"an\", \"边\": \"an\", \"前\": \"an\", \"莲\": \"an\", \"还\": \"an\", \"衣\": \"i\", \"归\": \"i\", \"飞\": \"i\", \"微\": \"i\", \"辉\": \"i\", \"非\": \"i\", \"扉\": \"i\", \"围\": \"i\", \"威\": \"i\", \"吹\": \"i\", \"心\": \"in\", \"今\": \"in\", \"音\": \"in\", \"林\": \"in\", \"深\": \"in\", \"金\": \"in\", \"琴\": \"in\", \"寻\": \"in\", \"阴\": \"in\", \"春\": \"in\", \"高\": \"ao\", \"桃\": \"ao\", \"桥\": \"ao\", \"笑\": \"ao\", \"遥\": \"ao\", \"飘\": \"ao\", \"涛\": \"ao\", \"毛\": \"ao\", \"刀\": \"ao\", \"朝\": \"ao\"};var lines=s.split('\\n').map(function(x){return x.trim();}).filter(function(x){return x;});if(lines.length<2)return {ok:false,msg:'至少需要 2 行'};if(lines.length>100)return {ok:false,msg:'行数过多（上限 100 行）'};var cleaned=lines.map(function(x){return Array.from(x.replace(/[，。！？；：、,.!?;:\\s\"\"''「」]/g,''));});var lens=cleaned.map(function(a){return a.length;});var want=String(form)==='wu'?5:(String(form)==='qi'?7:0);if(!want){var fq={};lens.forEach(function(L){fq[L]=(fq[L]||0)+1;});var bk=Object.keys(fq).sort(function(x,y){return fq[y]-fq[x]||Number(y)-Number(x);});want=Number(bk[0]);}var rows=[],bad=0;cleaned.forEach(function(a,i){var ok=a.length===want;if(!ok)bad++;var last=a[a.length-1];rows.push('第 '+(i+1)+' 行：'+a.length+' 字'+(ok?' ✓':' ✗（应为 '+want+' 字）')+'，末字「'+e(last||'')+'」'+(RH[last]?('属 '+RH[last]+' 韵组'):('韵组未覆盖')));});var lasts=cleaned.map(function(a){return a[a.length-1];});var grp=lasts.map(function(c){return RH[c]||null;});var covered=grp.filter(function(x){return x;});var rhyme='未覆盖';if(covered.length>=2){rhyme=covered.every(function(x){return x===covered[0];})?('同韵（'+covered[0]+' 组）'):('不同韵（'+covered.join('/')+'）');}return {ok:true,html:'<div class=\"big\">'+(bad===0?'字数全合':'字数不合 '+bad+' 行')+'；押韵粗检：'+rhyme+'</div><div class=\"row\" style=\"white-space:pre-wrap\">'+rows.join('\\n')+'</div><div class=\"row\">目标行长 '+want+' 字；韵表节选 9 组约 90 字，平仄不在粗检范围</div>'};", "test": {"inputs": {"form": "wu", "t": "床前明月光\n疑是地上霜"}, "expect": "同韵（ang 组）"}},
+{"id": "wbrhyme", "cat": "wb", "icon": "🎵", "name": "押韵字查询（节选韵表）", "desc": "输入一个汉字，查它所在的韵组与同韵字节选", "formula": "内置节选韵表 8 组共 80 字（按常见押韵分组，非十三辙全表）：输入单字命中则给出同组全部节选字；未收录会明确提示。此表按现代普通话读音的押韵近似分组，古体诗押韵（平水韵）口径不同，请勿混用", "inputs": [{"id": "t", "label": "汉字（单个）", "type": "text", "ph": "如 花"}], "run": "var s=String(t==null?'':t).trim();if(!s)return {ok:false,msg:'请输入一个汉字'};var A=Array.from(s);if(A.length!==1)return {ok:false,msg:'一次只查一个字'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var G={\"花\": \"a 家花韵\", \"家\": \"a 家花韵\", \"霞\": \"a 家花韵\", \"沙\": \"a 家花韵\", \"茶\": \"a 家花韵\", \"麻\": \"a 家花韵\", \"夏\": \"a 家花韵\", \"马\": \"a 家花韵\", \"画\": \"a 家花韵\", \"他\": \"a 家花韵\", \"光\": \"ang 江阳韵\", \"霜\": \"ang 江阳韵\", \"长\": \"ang 江阳韵\", \"江\": \"ang 江阳韵\", \"香\": \"ang 江阳韵\", \"乡\": \"ang 江阳韵\", \"望\": \"ang 江阳韵\", \"黄\": \"ang 江阳韵\", \"杨\": \"ang 江阳韵\", \"堂\": \"ang 江阳韵\", \"东\": \"ong 东钟韵\", \"风\": \"ong 东钟韵\", \"中\": \"ong 东钟韵\", \"红\": \"ong 东钟韵\", \"空\": \"ong 东钟韵\", \"同\": \"ong 东钟韵\", \"梦\": \"ong 东钟韵\", \"龙\": \"ong 东钟韵\", \"钟\": \"ong 东钟韵\", \"冬\": \"ong 东钟韵\", \"流\": \"ou 尤侯韵\", \"秋\": \"ou 尤侯韵\", \"舟\": \"ou 尤侯韵\", \"楼\": \"ou 尤侯韵\", \"愁\": \"ou 尤侯韵\", \"游\": \"ou 尤侯韵\", \"头\": \"ou 尤侯韵\", \"州\": \"ou 尤侯韵\", \"牛\": \"ou 尤侯韵\", \"收\": \"ou 尤侯韵\", \"山\": \"an 先天韵\", \"寒\": \"an 先天韵\", \"残\": \"an 先天韵\", \"烟\": \"an 先天韵\", \"年\": \"an 先天韵\", \"天\": \"an 先天韵\", \"边\": \"an 先天韵\", \"前\": \"an 先天韵\", \"莲\": \"an 先天韵\", \"还\": \"an 先天韵\", \"衣\": \"ui 微归韵\", \"归\": \"ui 微归韵\", \"飞\": \"ui 微归韵\", \"微\": \"ui 微归韵\", \"辉\": \"ui 微归韵\", \"非\": \"ui 微归韵\", \"扉\": \"ui 微归韵\", \"围\": \"ui 微归韵\", \"威\": \"ui 微归韵\", \"吹\": \"ui 微归韵\", \"心\": \"in 真侵韵\", \"今\": \"in 真侵韵\", \"音\": \"in 真侵韵\", \"林\": \"in 真侵韵\", \"深\": \"in 真侵韵\", \"金\": \"in 真侵韵\", \"琴\": \"in 真侵韵\", \"寻\": \"in 真侵韵\", \"阴\": \"in 真侵韵\", \"春\": \"in 真侵韵\", \"高\": \"ao 豪高韵\", \"桃\": \"ao 豪高韵\", \"桥\": \"ao 豪高韵\", \"笑\": \"ao 豪高韵\", \"遥\": \"ao 豪高韵\", \"飘\": \"ao 豪高韵\", \"涛\": \"ao 豪高韵\", \"毛\": \"ao 豪高韵\", \"刀\": \"ao 豪高韵\", \"朝\": \"ao 豪高韵\"},GRP={\"a 家花韵\": [\"花\", \"家\", \"霞\", \"沙\", \"茶\", \"麻\", \"夏\", \"马\", \"画\", \"他\"], \"ang 江阳韵\": [\"光\", \"霜\", \"长\", \"江\", \"香\", \"乡\", \"望\", \"黄\", \"杨\", \"堂\"], \"ong 东钟韵\": [\"东\", \"风\", \"中\", \"红\", \"空\", \"同\", \"梦\", \"龙\", \"钟\", \"冬\"], \"ou 尤侯韵\": [\"流\", \"秋\", \"舟\", \"楼\", \"愁\", \"游\", \"头\", \"州\", \"牛\", \"收\"], \"an 先天韵\": [\"山\", \"寒\", \"残\", \"烟\", \"年\", \"天\", \"边\", \"前\", \"莲\", \"还\"], \"ui 微归韵\": [\"衣\", \"归\", \"飞\", \"微\", \"辉\", \"非\", \"扉\", \"围\", \"威\", \"吹\"], \"in 真侵韵\": [\"心\", \"今\", \"音\", \"林\", \"深\", \"金\", \"琴\", \"寻\", \"阴\", \"春\"], \"ao 豪高韵\": [\"高\", \"桃\", \"桥\", \"笑\", \"遥\", \"飘\", \"涛\", \"毛\", \"刀\", \"朝\"]};var g=G[A[0]];if(!g)return {ok:false,msg:'「'+e(A[0])+'」未收录于节选韵表（8 组共 80 字）'};var list=GRP[g];return {ok:true,html:'<div class=\"big\">「'+e(A[0])+'」属 '+e(g)+' 组</div><div class=\"row\">同韵节选字（'+list.length+' 个）：'+e(list.join(' '))+'</div><div class=\"row\">节选韵表，非平水韵全表；同组字在普通话中大体可押韵</div>'};", "test": {"inputs": {"t": "花"}, "expect": "a 家花韵"}},
+{"id": "wbidiom", "cat": "wb", "icon": "📚", "name": "成语查询（节选表）", "desc": "按首字 / 尾字 / 含某字查内置节选成语表", "formula": "内置节选成语 40 条（常用成语，非词典全量）：按首字、尾字或任意位置含某字三种模式匹配单个汉字。查不到会明确提示未收录，不代表该字没有成语", "inputs": [{"id": "mode", "label": "查询模式", "type": "select", "def": "head", "options": [{"v": "head", "t": "首字是它"}, {"v": "tail", "t": "尾字是它"}, {"v": "in", "t": "任意位置含它"}]}, {"id": "q", "label": "汉字（单个）", "type": "text", "ph": "如 画"}], "run": "var s=String(q==null?'':q).trim();if(!s)return {ok:false,msg:'请输入一个汉字'};var A=Array.from(s);if(A.length!==1)return {ok:false,msg:'一次只查一个字'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var TAB=[\"画龙点睛\", \"画蛇添足\", \"守株待兔\", \"亡羊补牢\", \"掩耳盗铃\", \"刻舟求剑\", \"狐假虎威\", \"井底之蛙\", \"对牛弹琴\", \"水落石出\", \"一鸣惊人\", \"半途而废\", \"胸有成竹\", \"纸上谈兵\", \"完璧归赵\", \"负荆请罪\", \"破釜沉舟\", \"卧薪尝胆\", \"三顾茅庐\", \"望梅止渴\", \"画饼充饥\", \"守望相助\", \"雪中送炭\", \"锦上添花\", \"一帆风顺\", \"万紫千红\", \"春暖花开\", \"秋高气爽\", \"山清水秀\", \"鸟语花香\", \"人山人海\", \"车水马龙\", \"龙飞凤舞\", \"虎头蛇尾\", \"鹤立鸡群\", \"狼吞虎咽\", \"风和日丽\", \"天长地久\", \"海阔天空\", \"星火燎原\"];var m=String(mode);var hit=TAB.filter(function(w){var a=Array.from(w);if(m==='head')return a[0]===A[0];if(m==='tail')return a[a.length-1]===A[0];return a.indexOf(A[0])>=0;});if(!hit.length)return {ok:false,msg:'节选表（40 条）中未找到符合的成语'};return {ok:true,html:'<div class=\"big\">命中 '+hit.length+' 条</div><div class=\"row\" style=\"white-space:pre-wrap\">'+e(hit.join('、'))+'</div><div class=\"row\">内置节选 40 条常用成语，非词典全量</div>'};", "test": {"inputs": {"mode": "head", "q": "画"}, "expect": "画龙点睛"}},
+{"id": "wbcharinfo", "cat": "wb", "icon": "🈯", "name": "汉字信息查询", "desc": "查字符的 Unicode 码位与节选表中的拼音 / 笔画 / 部首", "formula": "任意字符均可给出：Unicode 码位（U+ 十六进制与十进制）、UTF-8 字节数、字符类别粗判（汉字/字母/数字/标点/符号/其他）。内置节选表 50 个常用汉字另给拼音、笔画、部首（以《新华字典》常用口径为准）；表外汉字明确标注未收录，不臆测拼音笔画", "inputs": [{"id": "t", "label": "字符（1~10 个）", "type": "text", "ph": "如 光 / 拾光"}], "run": "var s=String(t==null?'':t).trim();if(!s)return {ok:false,msg:'请输入字符'};var A=Array.from(s);if(A.length>10)return {ok:false,msg:'一次最多查 10 个字符'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var TAB={\"人\": [\"rén\", 2, \"人\"], \"山\": [\"shān\", 3, \"山\"], \"水\": [\"shuǐ\", 4, \"氵\"], \"火\": [\"huǒ\", 4, \"火\"], \"木\": [\"mù\", 4, \"木\"], \"日\": [\"rì\", 4, \"日\"], \"月\": [\"yuè\", 4, \"月\"], \"心\": [\"xīn\", 4, \"心\"], \"手\": [\"shǒu\", 4, \"手\"], \"口\": [\"kǒu\", 3, \"口\"], \"田\": [\"tián\", 5, \"田\"], \"目\": [\"mù\", 5, \"目\"], \"天\": [\"tiān\", 4, \"大\"], \"地\": [\"dì\", 6, \"土\"], \"风\": [\"fēng\", 4, \"风\"], \"云\": [\"yún\", 4, \"二\"], \"雨\": [\"yǔ\", 8, \"雨\"], \"雪\": [\"xuě\", 11, \"雨\"], \"光\": [\"guāng\", 6, \"小\"], \"明\": [\"míng\", 8, \"日\"], \"星\": [\"xīng\", 9, \"日\"], \"春\": [\"chūn\", 9, \"日\"], \"秋\": [\"qiū\", 9, \"禾\"], \"冬\": [\"dōng\", 5, \"冫\"], \"夏\": [\"xià\", 9, \"夂\"], \"花\": [\"huā\", 7, \"艹\"], \"草\": [\"cǎo\", 9, \"艹\"], \"鸟\": [\"niǎo\", 5, \"鸟\"], \"鱼\": [\"yú\", 8, \"鱼\"], \"马\": [\"mǎ\", 3, \"马\"], \"龙\": [\"lóng\", 5, \"龙\"], \"书\": [\"shū\", 4, \"乙\"], \"文\": [\"wén\", 4, \"文\"], \"字\": [\"zì\", 6, \"子\"], \"学\": [\"xué\", 8, \"子\"], \"生\": [\"shēng\", 5, \"生\"], \"师\": [\"shī\", 6, \"巾\"], \"友\": [\"yǒu\", 4, \"又\"], \"爱\": [\"ài\", 10, \"爪\"], \"国\": [\"guó\", 8, \"囗\"], \"家\": [\"jiā\", 10, \"宀\"], \"拾\": [\"shí\", 9, \"扌\"], \"时\": [\"shí\", 7, \"日\"], \"空\": [\"kōng\", 8, \"穴\"], \"海\": [\"hǎi\", 10, \"氵\"], \"河\": [\"hé\", 8, \"氵\"], \"江\": [\"jiāng\", 6, \"氵\"]};function cat(ch,cp){if(cp>=0x3400&&cp<=0x9fff)return '汉字';if(/[A-Za-z]/.test(ch))return '拉丁字母';if(/[0-9]/.test(ch))return '数字';if(cp>=0x1f300)return '符号/表情';if(/[，。！？；：、,.!?;:'\"\"''「」（）()《》…—·]/.test(ch))return '标点';return '其他';}var rows=A.map(function(ch){var cp=ch.codePointAt(0);var enc=encodeURIComponent(ch);var bytes=enc.split('%').length-1;var base='「'+e(ch)+'」U+'+cp.toString(16).toUpperCase().padStart(4,'0')+'（'+cp+'），UTF-8 '+bytes+' 字节，'+cat(ch,cp);var inf=TAB[ch];if(inf)base+='；拼音 '+inf[0]+'，'+inf[1]+' 画，部首 '+inf[2];else if(cat(ch,cp)==='汉字')base+='；拼音/笔画/部首未收录于节选表（50 字）';return base;});return {ok:true,html:'<div class=\"big\">共 '+A.length+' 个字符</div><div class=\"row\" style=\"white-space:pre-wrap\">'+rows.join('\\n')+'</div>'};", "test": {"inputs": {"t": "光"}, "expect": "U+5149"}},
+{"id": "wbstruck", "cat": "wb", "icon": "🏗️", "name": "文本结构分析", "desc": "段落 / 句子 / 对话占比与标点分布的结构体检", "formula": "段落按空行（连续换行）切分；句子按。！？!?…与英文句点切分；对话占比 = 中文引号「」与「」内字符数（按码点）÷ 全文码点数；标点分布统计，。！？；：、…— 八种标点的出现次数。均为结构口径统计，不做语义判断", "inputs": [{"id": "t", "label": "文本", "type": "textarea", "ph": "粘贴文本"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(s.split('\\n').length>10000)return {ok:false,msg:'行数过多（上限 10000 行）'};if(!s.trim())return {ok:false,msg:'请输入文本'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var total=Array.from(s).length;var paras=s.split(/\\n\\s*\\n/).filter(function(x){return x.trim();});if(paras.length===0)paras=[s];var sents=s.split(/[。！？!?…]+|\\.\\s+/).filter(function(x){return x.trim();});var dlg=0;var mm=s.match(/“[^”]*”|「[^」]*」/g)||[];mm.forEach(function(x){dlg+=Array.from(x).length-2;});var dr=total?dlg/total*100:0;var PUN=['，','。','！','？','；','：','、','…'];var pc=PUN.map(function(p){var c=s.split(p).length-1;return p+' '+c;});var plen=paras.map(function(p){return Array.from(p.trim()).length;});var mx=Math.max.apply(null,plen);var avg=plen.reduce(function(x,y){return x+y;},0)/paras.length;return {ok:true,html:'<div class=\"big\">段落 '+paras.length+' 段，句子 '+sents.length+' 句</div><div class=\"row\">全文 '+total+' 字（码点）；对话 '+dlg+' 字，占比 '+dr.toFixed(1)+'%</div><div class=\"row\">平均段长 '+avg.toFixed(1)+' 字，最长段 '+mx+' 字</div><div class=\"row\">标点分布：'+pc.join('，')+'</div>'};", "test": {"inputs": {"t": "他说：“你好。”我点头。\n\n第二段来了。"}, "expect": "段落 2 段"}},
+{"id": "wbchecklist", "cat": "wb", "icon": "✅", "name": "文案校对清单（节选错词表）", "desc": "扫描常见错别字组合节选表，并提示标点与引号配对问题", "formula": "错词节选表 30 组（错形→正形，如 按装→安装、再接再励→再接再厉），逐组统计不重叠出现次数并给出正形建议；另检：中文语境半角标点（,.?!）出现次数、引号 \"\" 与括号（）是否成对、连续重复标点。本表只覆盖高频错形，查不到不等于全文无错别字；的/地/得 等语境相关用法不在自动判定范围", "inputs": [{"id": "t", "label": "文本", "type": "textarea", "ph": "粘贴待校对的文案"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(s.split('\\n').length>10000)return {ok:false,msg:'行数过多（上限 10000 行）'};if(!s.trim())return {ok:false,msg:'请输入文本'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var TAB=[[\"按装\", \"安装\"], [\"报怨\", \"抱怨\"], [\"布署\", \"部署\"], [\"脉博\", \"脉搏\"], [\"沉缅\", \"沉湎\"], [\"粗旷\", \"粗犷\"], [\"渡假\", \"度假\"], [\"防碍\", \"妨碍\"], [\"幅射\", \"辐射\"], [\"甘败下风\", \"甘拜下风\"], [\"黄梁美梦\", \"黄粱美梦\"], [\"竭泽而鱼\", \"竭泽而渔\"], [\"兰天\", \"蓝天\"], [\"迷漫\", \"弥漫\"], [\"莫明其妙\", \"莫名其妙\"], [\"一愁莫展\", \"一筹莫展\"], [\"再接再励\", \"再接再厉\"], [\"世外桃园\", \"世外桃源\"], [\"谈笑风声\", \"谈笑风生\"], [\"相形见拙\", \"相形见绌\"], [\"直接了当\", \"直截了当\"], [\"坐无虚席\", \"座无虚席\"], [\"急燥\", \"急躁\"], [\"烦燥\", \"烦躁\"], [\"观摹\", \"观摩\"], [\"一如继往\", \"一如既往\"], [\"不径而走\", \"不胫而走\"], [\"美仑美奂\", \"美轮美奂\"], [\"鬼鬼崇崇\", \"鬼鬼祟祟\"], [\"走头无路\", \"走投无路\"]];var issues=[];TAB.forEach(function(pr){var c=0,from=0,ix;while((ix=s.indexOf(pr[0],from))>=0){c++;from=ix+pr[0].length;}if(c)issues.push('疑似错词「'+e(pr[0])+'」×'+c+' → 建议「'+e(pr[1])+'」');});var half=(s.match(/[,\\.?!](?=[\\u3400-\\u9fff])|[\\u3400-\\u9fff][,\\.?!]/g)||[]).length;if(half)issues.push('中文旁出现半角标点约 '+half+' 处（建议用全角，。？！）');var oq=(s.match(/“/g)||[]).length,cq=(s.match(/”/g)||[]).length;if(oq!==cq)issues.push('中文双引号不成对（“ '+oq+' 个 / ” '+cq+' 个）');var ob=(s.match(/（/g)||[]).length,cb=(s.match(/）/g)||[]).length;if(ob!==cb)issues.push('中文括号不成对（（ '+ob+' 个 / ） '+cb+' 个）');var rep=(s.match(/([！？。，])\\1+/g)||[]).length;if(rep)issues.push('连续重复标点 '+rep+' 处（！！/？？等，请确认是否为强调笔法）');if(!issues.length)return {ok:true,html:'<div class=\"big\">清单内未发现问题 ✓</div><div class=\"row\">已查：错词节选 30 组、半角标点、引号/括号配对、重复标点。未覆盖项不代表全文无误</div>'};return {ok:true,html:'<div class=\"big\">发现 '+issues.length+' 类问题</div><div class=\"row\" style=\"white-space:pre-wrap\">'+issues.join('\\n')+'</div><div class=\"row\">错词表为节选 30 组；语境相关用法（的/地/得）请人工复核</div>'};", "test": {"inputs": {"t": "他按装了新软件，学习再接再励。"}, "expect": "安装"}},
+{"id": "wbformat2", "cat": "wb", "icon": "📄", "name": "公文格式要素模板", "desc": "由标题 / 发文机关 / 字号 / 主送 / 日期生成公文版式要素稿", "formula": "按 GB/T 9704 党政机关公文常用要素顺序拼版：发文机关标志（占位行）→ 发文字号 → 标题 → 主送机关 → 正文占位 → 落款（发文机关 + 成日期）。只生成要素文本稿供套用，不含红色版头与字体字号渲染；签发人、抄送等要素请按本单位规范增删", "inputs": [{"id": "org", "label": "发文机关", "type": "text", "def": "拾光办公室"}, {"id": "docno", "label": "发文字号（可空）", "type": "text", "def": "拾办〔2026〕1号"}, {"id": "title", "label": "标题", "type": "text", "def": "关于开展文本规范检查的通知"}, {"id": "main", "label": "主送机关", "type": "text", "def": "各部门"}, {"id": "date", "label": "成文日期", "type": "text", "def": "2026年10月21日"}], "run": "function F(x){return String(x==null?'':x).trim();}var o=F(org),d=F(docno),ti=F(title),ma=F(main),da=F(date);if(!o||!ti||!ma||!da)return {ok:false,msg:'发文机关、标题、主送机关、成文日期为必填'};if(o.length>100||ti.length>200||ma.length>200||da.length>50||d.length>100)return {ok:false,msg:'某要素过长，请精简'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var lines=[];lines.push(o+'文件');if(d)lines.push(d);lines.push('');lines.push(ti);lines.push('');lines.push(ma+'：');lines.push('（正文在此填写：导语—事项—要求—结语）');lines.push('');lines.push('特此通知。');lines.push('');lines.push(o);lines.push(da);var out=lines.join('\\n');return {ok:true,html:'<div class=\"big\">公文要素稿已生成</div><div class=\"row\" style=\"white-space:pre-wrap;word-break:break-all\">'+e(out)+'</div><div class=\"row\">要素顺序按 GB/T 9704 常用口径；红头、字体字号与页边距请在 Word/WPS 公文模板中套用</div>'};", "test": {"inputs": {"org": "拾光办公室", "docno": "拾办〔2026〕1号", "title": "关于开展文本规范检查的通知", "main": "各部门", "date": "2026年10月21日"}, "expect": "关于开展文本规范检查的通知"}},
+{"id": "wbtranslate2", "cat": "wb", "icon": "🧮", "name": "量词搭配查询（节选表）", "desc": "输入名词查常用量词，或输入量词反查可搭配的名词节选", "formula": "内置节选搭配表约 50 条（一本 书、一匹 马 等常用口径）。正查：名词 → 常用量词（一个名词有多种量词时本表只给最常用的一种）；反查：量词 → 表内用该量词的名词列表。表外名词明确提示未收录", "inputs": [{"id": "mode", "label": "查询方向", "type": "select", "def": "n2m", "options": [{"v": "n2m", "t": "名词 → 量词"}, {"v": "m2n", "t": "量词 → 名词"}]}, {"id": "q", "label": "名词或量词", "type": "text", "ph": "如 书 / 本"}], "run": "var s=String(q==null?'':q).trim();if(!s)return {ok:false,msg:'请输入查询词'};if(Array.from(s).length>4)return {ok:false,msg:'查询词过长（≤4 字）'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var TAB={\"书\": \"本\", \"马\": \"匹\", \"牛\": \"头\", \"羊\": \"只\", \"猪\": \"头\", \"鱼\": \"条\", \"鸟\": \"只\", \"猫\": \"只\", \"狗\": \"只\", \"蛇\": \"条\", \"树\": \"棵\", \"花\": \"朵\", \"草\": \"棵\", \"纸\": \"张\", \"画\": \"幅\", \"诗\": \"首\", \"歌\": \"首\", \"信\": \"封\", \"车\": \"辆\", \"船\": \"条\", \"飞机\": \"架\", \"枪\": \"支\", \"桌子\": \"张\", \"椅子\": \"把\", \"床\": \"张\", \"门\": \"扇\", \"镜子\": \"面\", \"刀\": \"把\", \"伞\": \"把\", \"钥匙\": \"把\", \"星星\": \"颗\", \"珠子\": \"颗\", \"米粒\": \"粒\", \"房子\": \"座\", \"桥\": \"座\", \"山\": \"座\", \"塔\": \"座\", \"楼房\": \"栋\", \"河\": \"条\", \"路\": \"条\", \"绳子\": \"根\", \"头发\": \"根\", \"针\": \"枚\", \"云\": \"朵\", \"月亮\": \"轮\", \"太阳\": \"轮\", \"问题\": \"个\", \"人\": \"位\"};if(String(mode)==='n2m'){var v=TAB[s];if(!v)return {ok:false,msg:'「'+e(s)+'」未收录于节选表（约 50 条）'};return {ok:true,html:'<div class=\"big\">一'+e(v)+' '+e(s)+'</div><div class=\"row\">常用量词：'+e(v)+'（本表取最常用搭配；部分名词有多个量词，如船可用只/条/艘）</div>'};}var hit=Object.keys(TAB).filter(function(k){return TAB[k]===s;});if(!hit.length)return {ok:false,msg:'量词「'+e(s)+'」在节选表中无搭配记录'};return {ok:true,html:'<div class=\"big\">量词「'+e(s)+'」可搭配 '+hit.length+' 个表内名词</div><div class=\"row\">'+hit.map(function(k){return '一'+e(s)+' '+e(k);}).join('、')+'</div>'};", "test": {"inputs": {"mode": "n2m", "q": "书"}, "expect": "一本 书"}},
+{"id": "wbmeasure", "cat": "wb", "icon": "📏", "name": "数字 + 单位中文读法", "desc": "把 12.5 km 这类计量数值读成规范的中文读法", "formula": "整数部分按中文正式读法（十/百/千/万，含零与整万处理，上限 999,999,999），小数部分逐位读（点后读零不省略），单位按所选给中文名（km 千米、㎡ 平方米等）。与「阿拉伯转中文数字」分工：彼为纯数字转换，本工具专做计量场景的数值+单位连读；与「金额转中文大写」分工：彼为财务大写口径", "inputs": [{"id": "num", "label": "数值", "def": "12.5"}, {"id": "unit", "label": "单位", "type": "select", "def": "km", "options": [{"v": "km", "t": "km 千米"}, {"v": "m", "t": "m 米"}, {"v": "cm", "t": "cm 厘米"}, {"v": "mm", "t": "mm 毫米"}, {"v": "kg", "t": "kg 千克"}, {"v": "g", "t": "g 克"}, {"v": "t", "t": "t 吨"}, {"v": "L", "t": "L 升"}, {"v": "mL", "t": "mL 毫升"}, {"v": "s", "t": "s 秒"}, {"v": "min", "t": "min 分钟"}, {"v": "h", "t": "h 小时"}, {"v": "m2", "t": "㎡ 平方米"}, {"v": "kmh", "t": "km/h 千米每时"}]}], "run": "var raw=String(num==null?'':num).trim();if(!/^-?\\d+(\\.\\d+)?$/.test(raw))return {ok:false,msg:'请输入数值（如 12.5，可带负号）'};var neg=raw.charAt(0)==='-';var body=neg?raw.slice(1):raw;var parts=body.split('.');var iv=parseInt(parts[0],10);if(iv>999999999)return {ok:false,msg:'整数部分上限 999999999'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var D=['零','一','二','三','四','五','六','七','八','九'];var U=String(unit);var UN={km:'千米',m:'米',cm:'厘米',mm:'毫米',kg:'千克',g:'克',t:'吨',L:'升',mL:'毫升',s:'秒',min:'分钟',h:'小时',m2:'平方米',kmh:'千米每时'};function sec(x){var d=['','十','百','千'];var str=String(x),out='',zero=false;for(var i=0;i<str.length;i++){var n=+str[i],pos=str.length-1-i;if(n===0){zero=true;}else{if(zero){out+='零';zero=false;}if(!(n===1&&pos===1&&out===''&&str.length===2))out+=D[n];out+=d[pos];}}return out;}function intRead(x){if(x===0)return '零';var hi=Math.floor(x/10000),lo=x%10000;var out='';if(hi)out+=sec(hi)+'万';if(lo){if(hi&&lo<1000)out+='零';out+=sec(lo);}return out;}var r=(neg?'负':'')+intRead(iv);if(parts[1]!==undefined){r+='点';for(var i=0;i<parts[1].length;i++)r+=D[+parts[1][i]];}return {ok:true,html:'<div class=\"big\">'+r+(UN[U]||'')+'</div><div class=\"row\">原文：'+e(raw)+' '+e(U)+'；计量连读口径，小数逐位读出</div>'};", "test": {"inputs": {"num": "12.5", "unit": "km"}, "expect": "十二点五千米"}},
+{"id": "wbsyllable", "cat": "wb", "icon": "🎶", "name": "英文音节计数", "desc": "按元音群启发式估算英文单词与全文的音节数", "formula": "逐词估算：数元音群（aeiouy 连续段）；词尾不发音 e 去掉一段（-le 且前为辅音时保留）；最少 1 音节。例外词表节选 6 词（beautiful 3、business 2、every 2、chocolate 2、evening 2、wednesday 2）优先。启发式近似，缩写与专名可能偏差", "inputs": [{"id": "t", "label": "英文文本", "type": "textarea", "ph": "如 beautiful day"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(s.split('\\n').length>10000)return {ok:false,msg:'行数过多（上限 10000 行）'};if(!s.trim())return {ok:false,msg:'请输入英文文本'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var EX={beautiful:3,business:2,every:2,chocolate:2,evening:2,wednesday:2};function syl(w){var lw=w.toLowerCase();if(EX[lw])return EX[lw];var g=lw.match(/[aeiouy]+/g);var n=g?g.length:1;if(/[^aeiouy]e$/.test(lw)&&!/[^aeiouy]le$/.test(lw)&&n>1)n--;return Math.max(1,n);}var words=s.match(/[A-Za-z]+(?:'[A-Za-z]+)?/g)||[];if(!words.length)return {ok:false,msg:'未识别到英文单词'};if(words.length>2000)return {ok:false,msg:'单词过多（上限 2000）'};var tot=0;var det=words.slice(0,30).map(function(w){var n=syl(w);tot+=n;return e(w)+' '+n;});if(words.length>30){for(var i=30;i<words.length;i++)tot+=syl(words[i]);}return {ok:true,html:'<div class=\"big\">总音节约 '+tot+' 个</div><div class=\"row\">共 '+words.length+' 词，平均 '+(tot/words.length).toFixed(2)+' 音节/词</div><div class=\"row\" style=\"white-space:pre-wrap\">'+det.join('，')+(words.length>30?'…（仅列前 30 词明细）':'')+'</div><div class=\"row\">元音群启发式 + 6 词例外表，属近似估算</div>'};", "test": {"inputs": {"t": "beautiful day"}, "expect": "总音节约 4 个"}},
+{"id": "wbpassive", "cat": "wb", "icon": "🔄", "name": "英文被动语态粗检", "desc": "按 be/get + 过去分词模式粗查疑似被动句", "formula": "模式匹配：be 动词（am/is/are/was/were/be/been/being）或 get/got 后 0~2 个词内出现过去分词（-ed 规则形或不规则分词节选表 45 词）即记为疑似被动，并按句统计。形容词化分词（如 was tired/was closed 表状态）可能误报，故称粗检；不处理进行时被动外的复杂时态辨义", "inputs": [{"id": "t", "label": "英文文本", "type": "textarea", "ph": "粘贴英文段落"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(s.split('\\n').length>10000)return {ok:false,msg:'行数过多（上限 10000 行）'};if(!s.trim())return {ok:false,msg:'请输入英文文本'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var PART=[\"bought\", \"broken\", \"brought\", \"built\", \"caught\", \"chosen\", \"cut\", \"done\", \"drawn\", \"driven\", \"eaten\", \"forgotten\", \"found\", \"given\", \"grown\", \"held\", \"hidden\", \"kept\", \"known\", \"led\", \"left\", \"lost\", \"made\", \"met\", \"paid\", \"put\", \"read\", \"seen\", \"sent\", \"set\", \"shown\", \"sold\", \"spent\", \"spoken\", \"stolen\", \"taken\", \"taught\", \"told\", \"won\", \"written\"];var sents=s.split(/(?<=[.!?])\\s+/).filter(function(x){return x.trim();});if(!sents.length)sents=[s];var BE={'am':1,'is':1,'are':1,'was':1,'were':1,'be':1,'been':1,'being':1,'get':1,'got':1,'gets':1};var hits=[];sents.forEach(function(sn,si){var ws=sn.match(/[A-Za-z']+/g)||[];var lw=ws.map(function(x){return x.toLowerCase();});for(var i=0;i<lw.length;i++){if(BE[lw[i]]){for(var j=i+1;j<=Math.min(i+3,lw.length-1);j++){var w=lw[j];if(PART.indexOf(w)>=0||/ed$/.test(w)){hits.push('第 '+(si+1)+' 句：'+e(ws.slice(i,j+1).join(' ')));i=j;break;}}}}});return {ok:true,html:'<div class=\"big\">疑似被动 '+hits.length+' 处（涉及句子见下）</div><div class=\"row\">共 '+sents.length+' 句</div>'+(hits.length?('<div class=\"row\" style=\"white-space:pre-wrap\">'+hits.slice(0,20).join('\\n')+'</div>'):'<div class=\"row\">未检出 be/get + 过去分词模式</div>')+'<div class=\"row\">模式粗检：状态形容词（如 was tired）可能误报，请人工复核</div>'};", "test": {"inputs": {"t": "The letter was written by Tom. He wrote a book."}, "expect": "was written"}},
+{"id": "wbpunctcheck", "cat": "wb", "icon": "🔍", "name": "标点使用体检", "desc": "查中文文本里的半角标点、重复标点与引号括号配对", "formula": "逐项体检：① 中文字符相邻的半角标点,.?!;: 计数；② 连续重复标点（！！？？。。）处数；③ 直引号/中文引号与中英文括号的左右配对差；④ 三个以上英文点冒充省略号（...）处数；⑤ 句末缺标点的行（以字母或汉字结尾的非空行，仅提示）。输出问题清单，无问题明确说明。与「引号标点规范化」分工：彼做转换，本工具只诊断不改文", "inputs": [{"id": "t", "label": "文本", "type": "textarea", "ph": "粘贴文本"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(s.split('\\n').length>10000)return {ok:false,msg:'行数过多（上限 10000 行）'};if(!s.trim())return {ok:false,msg:'请输入文本'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var issues=[];var half=(s.match(/[\\u3400-\\u9fff][,.?!;:]|[,.?!;:]\\s*[\\u3400-\\u9fff]/g)||[]).length;if(half)issues.push('半角标点与汉字相邻约 '+half+' 处（中文语境建议全角，。？！；：）');var rep=(s.match(/([！？。，、；：])\\1/g)||[]).length;if(rep)issues.push('连续重复标点 '+rep+' 处（请确认是否强调笔法）');var dots=(s.match(/\\.{3,}/g)||[]).length;if(dots)issues.push('英文点号省略号 '+dots+' 处（中文应为 …… 六点两格）');function diff(a,b){return (s.split(a).length-1)-(s.split(b).length-1);}var dq=diff('\"','\"');if(diff('“','”')!==0)issues.push('中文双引号不成对（差 '+Math.abs(diff('“','”'))+' 个）');if(diff('（','）')!==0)issues.push('中文括号不成对（差 '+Math.abs(diff('（','）'))+' 个）');if(diff('《','》')!==0)issues.push('书名号不成对（差 '+Math.abs(diff('《','》'))+' 个）');var lines=s.split('\\n').filter(function(x){return x.trim();});var noend=lines.filter(function(x){return /[\\u3400-\\u9fffA-Za-z0-9]$/.test(x.trim());}).length;if(noend&&lines.length>1)issues.push('有 '+noend+' 行以文字结尾、无句末标点（分行文案可忽略）');if(!issues.length)return {ok:true,html:'<div class=\"big\">标点体检通过 ✓</div><div class=\"row\">已查半角混用、重复标点、省略号、引号/括号/书名号配对</div>'};return {ok:true,html:'<div class=\"big\">发现 '+issues.length+' 类标点问题</div><div class=\"row\" style=\"white-space:pre-wrap\">'+issues.join('\\n')+'</div>'};", "test": {"inputs": {"t": "你好,世界!!这是什么..."}, "expect": "半角标点"}},
+{"id": "wbexcerpt", "cat": "wb", "icon": "✂️", "name": "抽取式摘要", "desc": "按词频给句子打分，抽出最重要的 N 句组成摘要", "formula": "抽取式（不改写原文）：按句末标点切句；分词单元 = 英文词（小写）+ 中文双字组；句分 = 单元词频之和 ÷ 单元数（平均词频，同分取靠前句）；取前 N 句后按原文顺序输出。词频口径对主题词集中的文本效果较好，叙事文本仅供参考", "inputs": [{"id": "n", "label": "摘要句数", "def": "1", "hint": "1~10"}, {"id": "t", "label": "文本", "type": "textarea", "ph": "粘贴长文本"}], "run": "var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(s.split('\\n').length>10000)return {ok:false,msg:'行数过多（上限 10000 行）'};if(!s.trim())return {ok:false,msg:'请输入文本'};var N=Number(n);if(!isFinite(N)||Math.floor(N)!==N||N<1||N>10)return {ok:false,msg:'句数须为 1~10 的整数'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var sents=s.split(/(?<=[。！？!?…])\\s*|(?<=\\.)\\s+/).map(function(x){return x.trim();}).filter(function(x){return x;});if(sents.length<2)return {ok:false,msg:'至少需要 2 句文本'};if(sents.length>500)return {ok:false,msg:'句子过多（上限 500 句）'};function units(x){var o=[];var en=x.toLowerCase().match(/[a-z0-9]+/g)||[];en.forEach(function(w){o.push(w);});var cn=Array.from(x.replace(/[A-Za-z0-9\\s]/g,''));for(var i=0;i+1<cn.length;i++)o.push(cn[i]+cn[i+1]);return o;}var freq=Object.create(null);var su=sents.map(units);su.forEach(function(u){u.forEach(function(k){freq[k]=(freq[k]||0)+1;});});var scored=sents.map(function(sn,i){var u=su[i];if(!u.length)return [i,0];var sum=0;u.forEach(function(k){sum+=freq[k];});return [i,sum/u.length];});var top=scored.slice().sort(function(x,y){return y[1]-x[1]||x[0]-y[0];}).slice(0,Math.min(N,sents.length)).map(function(x){return x[0];}).sort(function(x,y){return x-y;});var out=top.map(function(i){return sents[i];}).join('');return {ok:true,html:'<div class=\"big\">摘要（'+top.length+' 句 / 共 '+sents.length+' 句）</div><div class=\"row\" style=\"white-space:pre-wrap;word-break:break-all\">'+e(out)+'</div><div class=\"row\">抽取式摘要：按平均词频选句并保持原文顺序，未改写文字</div>'};", "test": {"inputs": {"n": 1, "t": "Cats are small animals. Cats sleep all day. Quantum physics studies particles."}, "expect": "Cats are small animals"}},
+{"id": "wbfamous", "cat": "wb", "icon": "📜", "name": "名言警句节选", "desc": "按主题与序号取一条内置节选名言（确定性选取）", "formula": "内置节选 12 条（励志/学习/友谊/时间 各 3 条，均为广为流传的古典名句与俗语，标明出处）；按主题 + 序号（1~3，超界回绕）确定性选取，不用随机数——同参数必得同结果。与「引号标点规范化」（wbquote）无关：彼处理标点，本工具是名言条目库", "inputs": [{"id": "theme", "label": "主题", "type": "select", "def": "study", "options": [{"v": "exc", "t": "励志"}, {"v": "study", "t": "学习"}, {"v": "friend", "t": "友谊"}, {"v": "time", "t": "惜时"}]}, {"id": "idx", "label": "序号（1~3）", "def": "1"}], "run": "var T2={\"exc\": [{\"q\": \"天行健，君子以自强不息。\", \"a\": \"《周易》\"}, {\"q\": \"路漫漫其修远兮，吾将上下而求索。\", \"a\": \"屈原《离骚》\"}, {\"q\": \"不积跬步，无以至千里。\", \"a\": \"《荀子·劝学》\"}], \"study\": [{\"q\": \"学而不思则罔，思而不学则殆。\", \"a\": \"《论语》\"}, {\"q\": \"读书破万卷，下笔如有神。\", \"a\": \"杜甫\"}, {\"q\": \"纸上得来终觉浅，绝知此事要躬行。\", \"a\": \"陆游\"}], \"friend\": [{\"q\": \"海内存知己，天涯若比邻。\", \"a\": \"王勃\"}, {\"q\": \"桃花潭水深千尺，不及汪伦送我情。\", \"a\": \"李白\"}, {\"q\": \"莫愁前路无知己，天下谁人不识君。\", \"a\": \"高适\"}], \"time\": [{\"q\": \"盛年不重来，一日难再晨。\", \"a\": \"陶渊明\"}, {\"q\": \"黑发不知勤学早，白首方悔读书迟。\", \"a\": \"颜真卿\"}, {\"q\": \"一寸光阴一寸金，寸金难买寸光阴。\", \"a\": \"俗语\"}]};var list=T2[String(theme)];if(!list)return {ok:false,msg:'未知主题'};var N=Number(idx);if(!isFinite(N)||Math.floor(N)!==N||N<1)return {ok:false,msg:'序号须为正整数'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var it=list[(N-1)%list.length];return {ok:true,html:'<div class=\"big\" style=\"font-size:17px\">'+e(it.q)+'</div><div class=\"row\">—— '+e(it.a)+'（主题第 '+(((N-1)%list.length)+1)+' 条；内置节选共 12 条）</div>'};", "test": {"inputs": {"theme": "study", "idx": 1}, "expect": "学而不思则罔"}},
+{"id": "wbwordladder", "cat": "wb", "icon": "🪜", "name": "词梯 Word Ladder", "desc": "在节选词表中找每次改一个字母的最短词梯路径", "formula": "BFS 最短路径：节点为节选词表（3 字母约 90 词 / 4 字母约 20 词）中与起止同长度的词，边 = 只差一个字母。起止词须同长且在词表内；无路可达时明确说明。词表为常用词节选，非完整词典", "inputs": [{"id": "a", "label": "起始词", "type": "text", "def": "cat"}, {"id": "b", "label": "目标词", "type": "text", "def": "dog"}], "run": "var A0=String(a==null?'':a).trim().toLowerCase(),B0=String(b==null?'':b).trim().toLowerCase();if(!/^[a-z]+$/.test(A0)||!/^[a-z]+$/.test(B0))return {ok:false,msg:'请输入纯英文单词'};if(A0.length!==B0.length)return {ok:false,msg:'两词须等长（词梯每次只改一个字母）'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var D=[\"bag\", \"bat\", \"bet\", \"big\", \"bog\", \"bot\", \"bug\", \"cab\", \"can\", \"cap\", \"car\", \"card\", \"cat\", \"cog\", \"cold\", \"cord\", \"cot\", \"cow\", \"cry\", \"cup\", \"cut\", \"day\", \"dig\", \"dim\", \"dip\", \"dog\", \"dot\", \"dry\", \"dye\", \"ear\", \"eat\", \"egg\", \"elf\", \"elm\", \"end\", \"era\", \"eve\", \"eye\", \"fan\", \"far\", \"fat\", \"fax\", \"fee\", \"few\", \"fig\", \"fin\", \"fir\", \"fit\", \"fix\", \"fly\", \"fog\", \"for\", \"fox\", \"fry\", \"fun\", \"fur\", \"gap\", \"gas\", \"gem\", \"get\", \"gift\", \"girl\", \"give\", \"goat\", \"gold\", \"golf\", \"good\", \"hair\", \"half\", \"hall\", \"hand\", \"hard\", \"harm\", \"hat\", \"hot\", \"ward\", \"warm\", \"word\", \"work\", \"worm\"];var SET={};D.forEach(function(w){SET[w]=1;});if(!SET[A0]||!SET[B0])return {ok:false,msg:'起止词须都在节选词表内（3 字母约 90 词 / 4 字母约 20 词），如 cat/dog/cold/warm'};if(A0===B0)return {ok:true,html:'<div class=\"big\">0 步：'+e(A0)+'</div>'};function diff1(x,y){var d=0;for(var i=0;i<x.length;i++)if(x[i]!==y[i])d++;return d===1;}var prev={};prev[A0]='';var queue=[A0],found=false;while(queue.length&&!found){var cur=queue.shift();for(var k=0;k<D.length;k++){var w=D[k];if(w.length!==cur.length||prev[w]!==undefined)continue;if(diff1(cur,w)){prev[w]=cur;if(w===B0){found=true;break;}queue.push(w);}}}if(!found)return {ok:false,msg:'节选词表内无可达路径（可换同长度常用词再试）'};var path=[];var c=B0;while(c){path.unshift(c);c=prev[c];}return {ok:true,html:'<div class=\"big\">'+(path.length-1)+' 步：'+e(path.join(' → '))+'</div><div class=\"row\">BFS 最短路径；每步只改一个字母，中间词均在节选词表内</div>'};", "test": {"inputs": {"a": "cat", "b": "dog"}, "expect": "3 步"}}
+);
+/* ===== R3-KF3 开发工具第三轮（25）· 子任务产出，未并入 lab-site ===== */
+TOOLS.push(
+{"id": "kfsnowflake2", "cat": "kf", "icon": "❄️", "name": "雪花ID生成与自定义解析", "desc": "按自定义纪元生成雪花 ID，或按纪元反解时间/worker/序列", "formula": "布局 1 符号 + 41 时间差(ms) + 10 worker + 12 序列：ID = ((ts − epoch) << 22) | (worker << 12) | seq；与 kfsnow 分工：kfsnow 只按 Twitter 固定纪元解析，本工具可生成且纪元/worker 位宽口径可校验", "inputs": [{"id": "mode", "label": "模式", "type": "select", "def": "gen", "options": [{"v": "gen", "t": "生成 ID"}, {"v": "parse", "t": "解析 ID"}]}, {"id": "epoch", "label": "纪元 epoch（毫秒）", "type": "text", "def": "1288834974657"}, {"id": "tsms", "label": "时间戳（毫秒）", "type": "text", "def": "1700000000000", "when": "mode=gen"}, {"id": "worker", "label": "workerId（0~1023）", "def": "3", "when": "mode=gen"}, {"id": "seq", "label": "毫秒内序列（0~4095）", "def": "5", "when": "mode=gen"}, {"id": "sid", "label": "雪花 ID", "type": "text", "def": "1724551110456258565", "when": "mode=parse"}], "run": "function iso(ms){var d=new Date(ms);return isNaN(d.getTime())?'—':d.toISOString();}\nvar epS=String(epoch).trim();if(!/^\\d{1,16}$/.test(epS))return {ok:false,msg:'纪元 epoch 须为不小于 0 的整数（毫秒）'};var ep=BigInt(epS);\nif(String(mode)==='gen'){\n var tsS=String(tsms).trim();if(!/^\\d{1,16}$/.test(tsS))return {ok:false,msg:'时间戳须为不小于 0 的整数（毫秒）'};\n var delta=BigInt(tsS)-ep;if(delta<0n)return {ok:false,msg:'时间戳早于纪元，差值不能为负'};if(delta>=(1n<<41n))return {ok:false,msg:'时间戳超出 41 位范围（纪元起约 69 年）'};\n var wk=Number(worker),sq=Number(seq);if(!(wk>=0&&wk<=1023)||Math.floor(wk)!==wk)return {ok:false,msg:'workerId 须为 0~1023 的整数（10 位）'};if(!(sq>=0&&sq<=4095)||Math.floor(sq)!==sq)return {ok:false,msg:'序列号须为 0~4095 的整数（12 位）'};\n var id=(delta<<22n)|(BigInt(wk)<<12n)|BigInt(sq);\n return {ok:true,html:'<div class=\"big\">'+id.toString()+'</div><div class=\"row\">时间 '+iso(Number(tsS))+'（差值 '+delta.toString()+' ms），worker '+wk+'，序列 '+sq+'；布局 41 时间 + 10 worker + 12 序列</div>'};\n}\nvar s=String(sid).trim();if(!/^\\d{1,19}$/.test(s))return {ok:false,msg:'雪花 ID 须为十进制整数串'};\nvar v=BigInt(s);if(v>=(1n<<63n))return {ok:false,msg:'超出 63 位雪花 ID 范围（符号位须为 0）'};\nvar d2=v>>22n,w2=Number((v>>12n)&1023n),q2=Number(v&4095n);var tms=d2+ep;\nreturn {ok:true,html:'<div class=\"big\">'+iso(Number(tms))+'</div><div class=\"row\">毫秒时间戳 '+tms.toString()+'（距纪元 '+d2.toString()+' ms），worker '+w2+'，序列 '+q2+'</div>'};", "test": {"inputs": {"mode": "gen", "epoch": "1288834974657", "tsms": "1700000000000", "worker": 3, "seq": 5, "sid": "1724551110456258565"}, "expect": "1724551110456258565"}},
+{"id": "kfulid", "cat": "kf", "icon": "🔤", "name": "ULID解析与生成", "desc": "解析 ULID 的时间戳与随机段，或按时间戳生成 ULID", "formula": "ULID = 48 位毫秒时间戳 + 80 位随机数，Crockford Base32（0-9A-Z 去 I/L/O/U）编码为 26 字符，前 10 字符为时间；首字符须 ≤ 7（48 位上限）。生成用 Math.random，非密码学安全", "inputs": [{"id": "mode", "label": "模式", "type": "select", "def": "parse", "options": [{"v": "parse", "t": "解析 ULID"}, {"v": "gen", "t": "生成 ULID"}]}, {"id": "ulid", "label": "ULID", "type": "text", "def": "01ARZ3NDEKTSV4RRFFQ69G5FAV", "when": "mode=parse"}, {"id": "tsms", "label": "时间戳（毫秒）", "type": "text", "def": "1469922850259", "when": "mode=gen"}], "run": "var A='0123456789ABCDEFGHJKMNPQRSTVWXYZ';\nif(String(mode)==='gen'){\n var tsS=String(tsms).trim();if(!/^\\d{1,16}$/.test(tsS))return {ok:false,msg:'时间戳须为不小于 0 的整数（毫秒）'};\n var tsv=Number(tsS);if(tsv>=281474976710656)return {ok:false,msg:'超出 ULID 48 位时间戳范围'};\n var enc='',x=tsv;for(var i=0;i<10;i++){enc=A[x%32]+enc;x=Math.floor(x/32);}\n var rnd='';for(var j=0;j<16;j++)rnd+=A[Math.floor(Math.random()*32)];\n return {ok:true,html:'<div class=\"big\">'+enc+rnd+'</div><div class=\"row\">时间段 '+enc+' = '+tsv+' ms；随机段由 Math.random 生成（非密码学安全，仅演示/非安全场景）</div>'};\n}\nvar s=String(ulid).trim().toUpperCase();if(s.length!==26)return {ok:false,msg:'ULID 须为 26 个字符（当前 '+s.length+'）'};\nfor(var i2=0;i2<26;i2++){if(A.indexOf(s[i2])<0)return {ok:false,msg:'含 Crockford Base32 之外的字符（字母表不含 I、L、O、U）'};}\nif(A.indexOf(s[0])>7)return {ok:false,msg:'首字符大于 7，超出 48 位时间戳范围'};\nvar ms=0;for(var k=0;k<10;k++)ms=ms*32+A.indexOf(s[k]);\nvar d=new Date(ms);\nreturn {ok:true,html:'<div class=\"big\">'+d.toISOString()+'</div><div class=\"row\">时间戳 '+ms+' ms；随机段 '+s.slice(10)+'（80 位）</div>'};", "test": {"inputs": {"mode": "parse", "ulid": "01ARZ3NDEKTSV4RRFFQ69G5FAV", "tsms": "1469922850259"}, "expect": "1469922850259"}},
+{"id": "kfksuid", "cat": "kf", "icon": "🪪", "name": "KSUID解析与生成", "desc": "解析 KSUID 的时间戳与 128 位载荷，或按时间与载荷生成", "formula": "KSUID 共 160 位：前 32 位为距纪元 1400000000（2014-05-13）的秒数偏移，后 128 位为载荷；整体按大整数 Base62 编码并左补 0 至 27 字符。生成时载荷留空用 Math.random，非密码学安全", "inputs": [{"id": "mode", "label": "模式", "type": "select", "def": "parse", "options": [{"v": "parse", "t": "解析 KSUID"}, {"v": "gen", "t": "生成 KSUID"}]}, {"id": "ksuid", "label": "KSUID", "type": "text", "def": "0ujtsYcgvSTl8PAuAdqWYSMnLOv", "when": "mode=parse"}, {"id": "tssec", "label": "时间戳（Unix 秒）", "type": "text", "def": "1507608047", "when": "mode=gen"}, {"id": "payloadhex", "label": "载荷（32 位 hex，留空随机）", "type": "text", "def": "", "when": "mode=gen"}], "run": "var B='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';\nif(String(mode)==='gen'){\n var tsS=String(tssec).trim();if(!/^-?\\d{1,12}$/.test(tsS))return {ok:false,msg:'时间戳须为整数（Unix 秒）'};\n var off=BigInt(tsS)-1400000000n;if(off<0n||off>4294967295n)return {ok:false,msg:'时间须在 KSUID 纪元 1400000000 起的 2^32 秒内'};\n var ph=String(payloadhex).trim().toLowerCase();var payload;\n if(ph===''){var bs=[];for(var i=0;i<16;i++)bs.push(Math.floor(Math.random()*256));payload=0n;for(var j=0;j<16;j++)payload=(payload<<8n)|BigInt(bs[j]);}\n else{if(!/^[0-9a-f]{32}$/.test(ph))return {ok:false,msg:'载荷须为 32 个十六进制字符（16 字节），或留空随机生成'};payload=BigInt('0x'+ph);}\n var v=(off<<128n)|payload;var out='';if(v===0n)out='0';while(v>0n){out=B[Number(v%62n)]+out;v/=62n;}\n while(out.length<27)out='0'+out;\n return {ok:true,html:'<div class=\"big\">'+out+'</div><div class=\"row\">时间 '+tsS+' 秒（偏移 '+off.toString()+'）；载荷留空时由 Math.random 生成（非密码学安全）</div>'};\n}\nvar s=String(ksuid).trim();if(s.length!==27)return {ok:false,msg:'KSUID 须为 27 个字符（当前 '+s.length+'）'};\nvar v2=0n;for(var k=0;k<27;k++){var ix=B.indexOf(s[k]);if(ix<0)return {ok:false,msg:'含 Base62 之外的字符'};v2=v2*62n+BigInt(ix);}\nif(v2>=(1n<<160n))return {ok:false,msg:'数值超出 160 位 KSUID 范围'};\nvar off2=Number(v2>>128n);var sec=off2+1400000000;var pl=(v2&((1n<<128n)-1n)).toString(16);while(pl.length<32)pl='0'+pl;\nvar d=new Date(sec*1000);\nreturn {ok:true,html:'<div class=\"big\">'+d.toISOString()+'</div><div class=\"row\">Unix 时间 '+sec+' 秒（偏移 '+off2+'）；载荷（16 字节）'+pl+'</div>'};", "test": {"inputs": {"mode": "parse", "ksuid": "0ujtsYcgvSTl8PAuAdqWYSMnLOv", "tssec": "1507608047", "payloadhex": ""}, "expect": "1507608047"}},
+{"id": "kfnanoid", "cat": "kf", "icon": "🎲", "name": "NanoID碰撞概率估算", "desc": "按字母表、长度与生成量估算 NanoID 的碰撞概率与安全量级", "formula": "空间大小 = 字母表^长度，空间熵 = 长度 × log₂(字母表) 位；生日近似 p ≈ 1 − exp(−n(n−1) ÷ (2×空间))（均匀随机口径）；50%/1% 碰撞量级 = √(2×空间×(−ln(1−p)))。仅估算概率，不生成 ID", "inputs": [{"id": "alpha", "label": "字母表大小", "def": "64", "hint": "NanoID 默认字母表 64 字符（A-Za-z0-9_-）"}, {"id": "len", "label": "ID 长度", "def": "21"}, {"id": "n", "label": "计划生成数量", "def": "1000000"}], "run": "var al=Number(alpha),ln=Number(len),nn=Number(n);\nif(!(al>=2&&al<=256)||Math.floor(al)!==al)return {ok:false,msg:'字母表大小须为 2~256 的整数'};\nif(!(ln>=1&&ln<=1024)||Math.floor(ln)!==ln)return {ok:false,msg:'ID 长度须为 1~1024 的整数'};\nif(!(nn>=0)||nn>1e18||!isFinite(nn))return {ok:false,msg:'生成数量须在 [0, 1e18]'};\nvar bits=ln*Math.log2(al);\nfunction fmt(x){if(x===0)return '0';if(!isFinite(x))return '∞';if(x>=1e15||x<1e-4)return x.toPrecision(4);return String(Math.round(x*100)/100);}\nvar p;\nif(nn<2)p=0;else{var lr=Math.log(nn)+Math.log(nn-1)-Math.LN2-bits*Math.LN2;var ratio=lr>40?Infinity:Math.exp(lr);p=ratio===Infinity?1:-Math.expm1(-ratio);}\nvar n50=Math.exp(0.5*(Math.LN2+bits*Math.LN2+Math.log(Math.LN2)));\nvar n1=Math.exp(0.5*(Math.LN2+bits*Math.LN2+Math.log(-Math.log(0.99))));\nreturn {ok:true,html:'<div class=\"big\">碰撞概率 ≈ '+(p*100).toFixed(2)+'%</div><div class=\"row\">空间熵 '+bits.toFixed(1)+' 位（'+ln+' 字符 × log₂ '+al+'）；生成 '+fmt(nn)+' 个时至少一对碰撞的概率约 '+(p*100).toPrecision(3)+'%</div><div class=\"row\">50% 碰撞量级约 '+fmt(n50)+' 个，1% 碰撞量级约 '+fmt(n1)+' 个；均匀随机口径的生日近似</div>'};", "test": {"inputs": {"alpha": 64, "len": 10, "n": 1000000000}, "expect": "35.19"}},
+{"id": "kfjwt2", "cat": "kf", "icon": "🎟️", "name": "JWT结构与时效校验", "desc": "在解码之外校验三段结构、alg 与 exp/nbf/iat 时效声明", "formula": "与 kfjwt（仅解码）分工：本工具校验三段结构与 Header alg（none 告警、签名段为空告警），并按给定校验时刻判定 exp（过期）/nbf（未生效）/iat（签发时间）与剩余秒数；不验证签名，签名有效性须由服务端按密钥验签", "inputs": [{"id": "tok", "label": "JWT 令牌", "type": "textarea", "def": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1MSIsImV4cCI6MjAwMDAwMDAwMCwibmJmIjoxNjAwMDAwMDAwLCJpYXQiOjE2MDAwMDAwMDB9.sig"}, {"id": "nowsec", "label": "校验时刻（Unix 秒）", "type": "text", "def": "1700000000"}], "run": "function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}\nfunction dec(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4!==0)s+='=';return decodeURIComponent(escape(atob(s)));}\nvar tk=String(tok).trim();if(tk.length>20000)return {ok:false,msg:'令牌过长（上限 20000 字符）'};\nvar parts=tk.split('.');if(parts.length!==3)return {ok:false,msg:'结构不符：JWT 应为 Header.Payload.Signature 三段（当前 '+parts.length+' 段）'};\nvar nowS=String(nowsec).trim();if(!/^\\d{1,15}$/.test(nowS))return {ok:false,msg:'校验时刻须为不小于 0 的整数（Unix 秒）'};var now=Number(nowS);\nvar h,b;try{h=JSON.parse(dec(parts[0]));b=JSON.parse(dec(parts[1]));}catch(err){return {ok:false,msg:'解码失败：前两段不是合法的 Base64URL 编码 JSON'};}\nif(!h||typeof h!=='object'||Array.isArray(h)||!b||typeof b!=='object'||Array.isArray(b))return {ok:false,msg:'Header 与 Payload 须为 JSON 对象'};\nvar rows='';var status='结构合法';var expired=false,pending=false;\nif(!h.alg)rows+='<div class=\"row\">⚠️ Header 缺少 alg</div>';else if(String(h.alg).toLowerCase()==='none')rows+='<div class=\"row\">⚠️ alg=none（无签名），生产环境切勿接受</div>';\nif(parts[2]==='')rows+='<div class=\"row\">⚠️ 签名段为空</div>';\nvar exp=b.exp,nbf=b.nbf,iat=b.iat;\nif(exp!==undefined){if(typeof exp!=='number'||!isFinite(exp))return {ok:false,msg:'exp 声明不是数字'};if(now>=exp){expired=true;rows+='<div class=\"row\">exp '+exp+'：已于 '+new Date(exp*1000).toISOString()+' 过期（'+(now-exp)+' 秒前）</div>';}else{rows+='<div class=\"row\">exp '+exp+'：'+new Date(exp*1000).toISOString()+' 过期，还剩 '+(exp-now)+' 秒</div>';}}\nelse rows+='<div class=\"row\">无 exp 声明：按规范不会过期（长期令牌风险自担）</div>';\nif(nbf!==undefined){if(typeof nbf!=='number'||!isFinite(nbf))return {ok:false,msg:'nbf 声明不是数字'};if(now<nbf){pending=true;rows+='<div class=\"row\">nbf '+nbf+'：'+new Date(nbf*1000).toISOString()+' 才生效（还差 '+(nbf-now)+' 秒）</div>';}else rows+='<div class=\"row\">nbf '+nbf+'：已生效</div>';}\nif(iat!==undefined){if(typeof iat!=='number'||!isFinite(iat))return {ok:false,msg:'iat 声明不是数字'};rows+='<div class=\"row\">iat '+iat+'：签发于 '+new Date(iat*1000).toISOString()+'</div>';}\nstatus=expired?'已过期':(pending?'尚未生效':(exp!==undefined?'在有效期内':'结构合法'));\nreturn {ok:true,html:'<div class=\"big\">'+status+'</div>'+rows+'<pre>Header '+e(JSON.stringify(h))+'</pre><pre>Payload '+e(JSON.stringify(b))+'</pre><div class=\"row\">本工具只做结构与时效检查，不验证签名；校验时刻 '+now+'（'+new Date(now*1000).toISOString()+'）</div>'};", "test": {"inputs": {"tok": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1MSIsImV4cCI6MjAwMDAwMDAwMCwibmJmIjoxNjAwMDAwMDAwLCJpYXQiOjE2MDAwMDAwMDB9.sig", "nowsec": "1700000000"}, "expect": "300000000"}},
+{"id": "kfsetcookie", "cat": "kf", "icon": "🍪", "name": "Set-Cookie属性解析", "desc": "解析 Set-Cookie 响应头的属性与实际过期时刻（Max-Age 优先）", "formula": "与 kfcookie（请求头 Cookie 串拆键值）分工：本工具解析 Set-Cookie 响应头：首段 name=value，其后 Expires/Max-Age/Domain/Path/Secure/HttpOnly/SameSite 属性；RFC 6265 口径 Max-Age 优先于 Expires 定实际过期时刻", "inputs": [{"id": "header", "label": "Set-Cookie 头", "type": "textarea", "def": "session=abc123; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Max-Age=3600; Domain=example.com; Path=/; Secure; HttpOnly; SameSite=Lax"}, {"id": "nowsec", "label": "当前时刻（Unix 秒，留空取现在）", "type": "text", "def": "1445408880"}], "run": "function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}\nvar s=String(header);if(s.length>100000)return {ok:false,msg:'输入过长（上限 100000 字符）'};\nvar nowS=String(nowsec).trim();var now;\nif(nowS==='')now=Math.floor(Date.now()/1000);else{if(!/^\\d{1,15}$/.test(nowS))return {ok:false,msg:'当前时刻须为不小于 0 的整数（Unix 秒）'};now=Number(nowS);}\nvar segs=s.split(';');var first=segs[0].trim();var eq=first.indexOf('=');if(eq<=0)return {ok:false,msg:'首段应为 name=value'};\nvar name=first.slice(0,eq).trim(),value=first.slice(eq+1).trim();\nif(!/^[!#$%&'*+\\-.^_`|~0-9A-Za-z]+$/.test(name))return {ok:false,msg:'Cookie 名不合法（须为 token 字符）'};\nvar attrs={};var flags=[];\nfor(var i=1;i<segs.length;i++){var seg=segs[i].trim();if(!seg)continue;var e2=seg.indexOf('=');if(e2<0)flags.push(seg);else attrs[seg.slice(0,e2).trim().toLowerCase()]=seg.slice(e2+1).trim();}\nvar rows='<div class=\"row\">'+e(name)+' = '+e(value)+'</div>';\nvar eff=null,effWhy='';\nif(attrs['max-age']!==undefined){if(!/^-?\\d+$/.test(attrs['max-age']))return {ok:false,msg:'Max-Age 不是整数'};var ma=Number(attrs['max-age']);eff=now+ma;effWhy='Max-Age '+ma+' 秒（RFC 6265：Max-Age 优先于 Expires）';}\nif(attrs['expires']){var ep2=Date.parse(attrs['expires']);if(!isNaN(ep2)){rows+='<div class=\"row\">Expires：'+e(attrs['expires'])+'（Unix '+Math.floor(ep2/1000)+'）</div>';if(eff===null){eff=Math.floor(ep2/1000);effWhy='Expires';}}else rows+='<div class=\"row\">Expires 无法解析：'+e(attrs['expires'])+'</div>';}\nif(attrs['domain'])rows+='<div class=\"row\">Domain：'+e(attrs['domain'])+'</div>';\nif(attrs['path'])rows+='<div class=\"row\">Path：'+e(attrs['path'])+'</div>';\nif(attrs['samesite'])rows+='<div class=\"row\">SameSite：'+e(attrs['samesite'])+'</div>';\nif(flags.length)rows+='<div class=\"row\">标志：'+e(flags.join('、'))+'</div>';\nvar big;\nif(eff===null)big='会话 Cookie（无过期属性，浏览器关闭即失效）';\nelse{var rem=eff-now;big=rem>0?('有效，剩余 '+rem+' 秒'):('已过期 '+(0-rem)+' 秒');rows+='<div class=\"row\">生效过期口径：'+effWhy+'；过期时刻 '+new Date(eff*1000).toISOString()+'</div>';}\nreturn {ok:true,html:'<div class=\"big\">'+big+'</div>'+rows};", "test": {"inputs": {"header": "session=abc123; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Max-Age=3600; Domain=example.com; Path=/; Secure; HttpOnly; SameSite=Lax", "nowsec": "1445408880"}, "expect": "3600"}},
+{"id": "kfheader", "cat": "kf", "icon": "🧾", "name": "HTTP头部字段速查", "desc": "常见 HTTP 请求/响应头字段的类别、用途与示例速查", "formula": "查表（节选 26 个常用字段）；与 kfhttp（状态码）分工：本工具查头部字段。缓存解析用 kfcache、条件请求用 kfetag、CORS 用 kfcors、Set-Cookie 用 kfsetcookie", "inputs": [{"id": "name", "label": "头部字段", "type": "select", "def": "Content-Type", "options": [{"v": "Accept", "t": "Accept"}, {"v": "Accept-Encoding", "t": "Accept-Encoding"}, {"v": "Authorization", "t": "Authorization"}, {"v": "Cache-Control", "t": "Cache-Control"}, {"v": "Content-Length", "t": "Content-Length"}, {"v": "Content-Type", "t": "Content-Type"}, {"v": "Cookie", "t": "Cookie"}, {"v": "Date", "t": "Date"}, {"v": "ETag", "t": "ETag"}, {"v": "Expires", "t": "Expires"}, {"v": "Host", "t": "Host"}, {"v": "If-Match", "t": "If-Match"}, {"v": "If-Modified-Since", "t": "If-Modified-Since"}, {"v": "If-None-Match", "t": "If-None-Match"}, {"v": "Last-Modified", "t": "Last-Modified"}, {"v": "Location", "t": "Location"}, {"v": "Origin", "t": "Origin"}, {"v": "Referer", "t": "Referer"}, {"v": "Retry-After", "t": "Retry-After"}, {"v": "Server", "t": "Server"}, {"v": "Set-Cookie", "t": "Set-Cookie"}, {"v": "User-Agent", "t": "User-Agent"}, {"v": "Vary", "t": "Vary"}, {"v": "WWW-Authenticate", "t": "WWW-Authenticate"}, {"v": "Access-Control-Allow-Origin", "t": "Access-Control-Allow-Origin"}, {"v": "X-Forwarded-For", "t": "X-Forwarded-For"}]}], "run": "var T={\"Accept\": [\"请求头\", \"告知服务器可接受的响应内容类型（协商内容）\", \"Accept: application/json\"], \"Accept-Encoding\": [\"请求头\", \"告知可接受的压缩编码（gzip/br 等）\", \"Accept-Encoding: gzip, br\"], \"Authorization\": [\"请求头\", \"携带凭据，如 Bearer 令牌或 Basic 账密\", \"Authorization: Bearer <token>\"], \"Cache-Control\": [\"请求/响应头\", \"缓存指令（max-age、no-store 等），解析推算用 kfcache 工具\", \"Cache-Control: max-age=3600\"], \"Content-Length\": [\"实体头\", \"消息体字节长度\", \"Content-Length: 128\"], \"Content-Type\": [\"实体头\", \"表示请求/响应体的媒体类型（MIME）与字符集\", \"Content-Type: application/json; charset=utf-8\"], \"Cookie\": [\"请求头\", \"客户端回送的 Cookie 键值对，拆分解析用 kfcookie 工具\", \"Cookie: a=1; b=2\"], \"Date\": [\"通用头\", \"消息发送的日期时间（GMT）\", \"Date: Wed, 21 Oct 2015 07:28:00 GMT\"], \"ETag\": [\"响应头\", \"资源版本标识，配合条件请求判定（见 kfetag 工具）\", \"ETag: \\\"abc123\\\"\"], \"Expires\": [\"响应头\", \"响应过期时刻（HTTP/1.0 口径，已被 Cache-Control 优先覆盖）\", \"Expires: Wed, 21 Oct 2015 07:28:00 GMT\"], \"Host\": [\"请求头\", \"目标主机与端口（HTTP/1.1 必备，虚拟主机路由依据）\", \"Host: example.com:8080\"], \"If-Match\": [\"请求头\", \"条件请求：ETag 强比较命中才继续，否则 412（见 kfetag）\", \"If-Match: \\\"abc123\\\"\"], \"If-Modified-Since\": [\"请求头\", \"条件请求：资源在此后未修改则 304\", \"If-Modified-Since: Wed, 21 Oct 2015 07:28:00 GMT\"], \"If-None-Match\": [\"请求头\", \"条件请求：ETag 弱比较命中时 GET/HEAD 返回 304（见 kfetag）\", \"If-None-Match: W/\\\"abc123\\\"\"], \"Last-Modified\": [\"响应头\", \"资源最后修改时刻，配合 If-Modified-Since 做条件请求\", \"Last-Modified: Wed, 21 Oct 2015 07:28:00 GMT\"], \"Location\": [\"响应头\", \"重定向目标 URL（配合 3xx 状态码）\", \"Location: https://example.com/new\"], \"Origin\": [\"请求头\", \"跨源请求的来源（协议+主机+端口），CORS 判定核心（见 kfcors）\", \"Origin: https://a.com\"], \"Referer\": [\"请求头\", \"发起请求的来源页面 URL（拼写为约定俗成的 Referer）\", \"Referer: https://a.com/page\"], \"Retry-After\": [\"响应头\", \"建议客户端多久后重试（秒数或日期，常配合 429/503）\", \"Retry-After: 120\"], \"Server\": [\"响应头\", \"服务器软件标识\", \"Server: nginx\"], \"Set-Cookie\": [\"响应头\", \"下发 Cookie 及其属性，解析过期口径用 kfsetcookie 工具\", \"Set-Cookie: id=1; Max-Age=3600; HttpOnly\"], \"User-Agent\": [\"请求头\", \"客户端软件标识串，解析用 kfua 工具\", \"User-Agent: Mozilla/5.0 ...\"], \"Vary\": [\"响应头\", \"声明响应随哪些请求头变化（缓存与内容协商关键）\", \"Vary: Accept-Encoding\"], \"WWW-Authenticate\": [\"响应头\", \"声明认证方式（配合 401），如 Basic/Bearer realm\", \"WWW-Authenticate: Bearer realm=\\\"api\\\"\"], \"Access-Control-Allow-Origin\": [\"响应头\", \"CORS：允许读取响应的来源，* 或具体 Origin（见 kfcors）\", \"Access-Control-Allow-Origin: *\"], \"X-Forwarded-For\": [\"请求头\", \"经代理时记录的原始客户端 IP 链（非标准、约定俗成）\", \"X-Forwarded-For: 203.0.113.1, 10.0.0.1\"]};var k=String(name);var r=T[k];if(!r)return {ok:false,msg:'未知头部字段'};return {ok:true,html:'<div class=\"big\">'+k+'</div><div class=\"row\">类别：'+r[0]+'</div><div class=\"row\">用途：'+r[1]+'</div><div class=\"row\">示例：'+r[2].replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div>'};", "test": {"inputs": {"name": "Content-Type"}, "expect": "媒体类型"}},
+{"id": "kfcache", "cat": "kf", "icon": "🗄️", "name": "Cache-Control解析与新鲜期", "desc": "解析 Cache-Control 指令并按 Age 推算剩余新鲜期", "formula": "新鲜期 lifetime：共享缓存优先 s-maxage，否则 max-age；是否新鲜 = Age < lifetime；剩余 = lifetime − Age；no-store 禁止存储、no-cache 新鲜期视为 0 须再验证；stale-while-revalidate 给出过期后可先行返回的宽限窗", "inputs": [{"id": "cc", "label": "Cache-Control 值", "type": "text", "def": "max-age=3600, public, stale-while-revalidate=60"}, {"id": "age", "label": "Age（已缓存秒数）", "def": "600"}, {"id": "shared", "label": "缓存类型", "type": "select", "def": "n", "options": [{"v": "n", "t": "私有缓存（浏览器）"}, {"v": "y", "t": "共享缓存（CDN/代理）"}]}], "run": "function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}\nvar s=String(cc);if(s.length>10000)return {ok:false,msg:'Cache-Control 过长（上限 10000 字符）'};\nvar ag=Number(age);if(!(ag>=0)||ag>1e12)return {ok:false,msg:'Age 须在 [0, 1e12] 秒'};\nvar dirs={};var unknown=[];var parts=s.split(',');\nfor(var i=0;i<parts.length;i++){var seg=parts[i].trim();if(!seg)continue;var eq=seg.indexOf('=');var nm=(eq<0?seg:seg.slice(0,eq)).trim().toLowerCase();var vl=eq<0?true:seg.slice(eq+1).trim().replace(/^\"|\"$/g,'');if(dirs[nm]===undefined&&['max-age','s-maxage','no-cache','no-store','must-revalidate','public','private','immutable','stale-while-revalidate','min-fresh'].indexOf(nm)<0)unknown.push(nm);dirs[nm]=vl;}\nfunction numDir(nm){if(dirs[nm]===undefined)return null;var v=Number(dirs[nm]);if(!isFinite(v)||v<0)return 'bad';return v;}\nvar ma=numDir('max-age'),sm=numDir('s-maxage'),swr=numDir('stale-while-revalidate');\nif(ma==='bad'||sm==='bad'||swr==='bad')return {ok:false,msg:'max-age / s-maxage / stale-while-revalidate 须为不小于 0 的数字（秒）'};\nvar notes='';\nif(dirs['must-revalidate']!==undefined)notes+='<div class=\"row\">must-revalidate：过期后不得擅自返回旧值，须先验证</div>';\nif(dirs['immutable']!==undefined)notes+='<div class=\"row\">immutable：新鲜期内内容不会变更，可跳过再验证</div>';\nif(unknown.length)notes+='<div class=\"row\">未识别指令：'+e(unknown.join('、'))+'</div>';\nif(dirs['no-store']!==undefined)return {ok:true,html:'<div class=\"big\">no-store：禁止存储</div><div class=\"row\">响应不得写入任何缓存，新鲜期概念不适用</div>'+notes};\nif(dirs['no-cache']!==undefined)return {ok:true,html:'<div class=\"big\">no-cache：每次使用前必须再验证</div><div class=\"row\">可以存储，但新鲜期视为 0（常配合 ETag 使用）</div>'+notes};\nvar isShared=String(shared)==='y';\nvar life=(isShared&&sm!==null)?sm:ma;\nif(life===null)return {ok:false,msg:'缺少 max-age'+(isShared?' / s-maxage':'')+'，无法推算新鲜期（可能走启发式缓存）'};\nvar rem=life-ag;var big,extra='';\nif(rem>0)big='新鲜，剩余 '+rem+' 秒';\nelse{big='已陈旧 '+(0-rem)+' 秒';if(swr!==null&&(0-rem)<=swr)extra='<div class=\"row\">仍在 stale-while-revalidate='+swr+' 秒宽限内：可先返回旧值、后台再验证</div>';}\nreturn {ok:true,html:'<div class=\"big\">'+big+'</div><div class=\"row\">新鲜期 '+life+' 秒（'+(isShared&&sm!==null?'s-maxage':'max-age')+'）− Age '+ag+' 秒 = '+(rem>0?rem+' 秒剩余':(0-rem)+' 秒前过期')+'</div>'+extra+notes};", "test": {"inputs": {"cc": "max-age=3600, public, stale-while-revalidate=60", "age": 600, "shared": "n"}, "expect": "3000"}},
+{"id": "kfcors", "cat": "kf", "icon": "🔀", "name": "CORS请求分类与预检判定", "desc": "按方法、Content-Type 与请求头判定简单请求还是需要预检", "formula": "CORS 规范口径：简单请求 = 方法为 GET/HEAD/POST，且只带 CORS 安全列表请求头，且 Content-Type 仅为 text/plain、application/x-www-form-urlencoded、multipart/form-data 之一；任一不满足（JSON 体、PUT/DELETE、Authorization、自定义头）即先发 OPTIONS 预检", "inputs": [{"id": "method", "label": "请求方法", "type": "select", "def": "POST", "options": [{"v": "GET", "t": "GET"}, {"v": "HEAD", "t": "HEAD"}, {"v": "POST", "t": "POST"}, {"v": "PUT", "t": "PUT"}, {"v": "DELETE", "t": "DELETE"}, {"v": "PATCH", "t": "PATCH"}]}, {"id": "ctype", "label": "Content-Type", "type": "select", "def": "application/json", "options": [{"v": "none", "t": "无请求体"}, {"v": "text/plain", "t": "text/plain"}, {"v": "application/x-www-form-urlencoded", "t": "application/x-www-form-urlencoded"}, {"v": "multipart/form-data", "t": "multipart/form-data"}, {"v": "application/json", "t": "application/json"}, {"v": "other", "t": "其他类型"}]}, {"id": "custom", "label": "带自定义请求头（如 X-Token）", "type": "select", "def": "n", "options": [{"v": "n", "t": "否"}, {"v": "y", "t": "是"}]}, {"id": "auth", "label": "带 Authorization 头", "type": "select", "def": "n", "options": [{"v": "n", "t": "否"}, {"v": "y", "t": "是"}]}], "run": "var m=String(method),ct=String(ctype);\nvar reasons=[];\nif(m!=='GET'&&m!=='HEAD'&&m!=='POST')reasons.push('方法 '+m+' 不在简单方法（GET/HEAD/POST）内');\nif(!(ct==='none'||ct==='text/plain'||ct==='application/x-www-form-urlencoded'||ct==='multipart/form-data'))reasons.push('Content-Type '+ct+' 不在 CORS 安全列表内');\nif(String(custom)==='y')reasons.push('带有非安全列表的自定义请求头');\nif(String(auth)==='y')reasons.push('带有 Authorization 头（非安全列表）');\nif(!reasons.length)return {ok:true,html:'<div class=\"big\">简单请求（不触发预检）</div><div class=\"row\">浏览器直接发送跨源请求并附带 Origin；服务器返回 Access-Control-Allow-Origin 后脚本才可读响应</div>'};\nreturn {ok:true,html:'<div class=\"big\">需要预检（Preflight）</div><div class=\"row\">原因：'+reasons.join('；')+'</div><div class=\"row\">浏览器先自动发送 OPTIONS 请求，携带 Origin、Access-Control-Request-Method'+(String(custom)==='y'||String(auth)==='y'?' 与 Access-Control-Request-Headers':'')+'；预检通过后才发实际请求，预检结果可被 Access-Control-Max-Age 缓存</div>'};", "test": {"inputs": {"method": "POST", "ctype": "application/json", "custom": "n", "auth": "n"}, "expect": "预检"}},
+{"id": "kfetag", "cat": "kf", "icon": "🏷️", "name": "ETag条件请求判定", "desc": "按 If-None-Match / If-Match 与弱/强比较判定 200/304/412", "formula": "与 kfcache（新鲜期）分工：本工具判条件请求结果。If-None-Match 用弱比较（忽略 W/ 前缀，比不透明标签）：命中时 GET/HEAD → 304、其他方法 → 412；If-Match 用强比较（双方都须非弱且标签相同）：未命中 → 412；* 表示任意现存版本（当前 ETag 留空表示资源不存在）", "inputs": [{"id": "method", "label": "请求方法", "type": "select", "def": "GET", "options": [{"v": "GET", "t": "GET"}, {"v": "HEAD", "t": "HEAD"}, {"v": "POST", "t": "POST"}, {"v": "PUT", "t": "PUT"}, {"v": "DELETE", "t": "DELETE"}]}, {"id": "hdr", "label": "条件头", "type": "select", "def": "inm", "options": [{"v": "inm", "t": "If-None-Match"}, {"v": "im", "t": "If-Match"}]}, {"id": "cur", "label": "当前 ETag（留空=资源不存在）", "type": "text", "def": "\"abc\""}, {"id": "val", "label": "请求头中的值", "type": "text", "def": "W/\"abc\""}], "run": "function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}\nfunction parseEt(x){var t=String(x).trim();var weak=false;if(t.indexOf('W/')===0){weak=true;t=t.slice(2).trim();}if(t.length<2||t[0]!=='\"'||t[t.length-1]!=='\"')return null;return {weak:weak,opaque:t.slice(1,-1)};}\nvar m=String(method),hd=String(hdr);\nvar curS=String(cur).trim(),valS=String(val).trim();\nif(curS.length>2000||valS.length>2000)return {ok:false,msg:'ETag 过长（上限 2000 字符）'};\nvar star=(valS==='*');\nvar c=curS===''?null:parseEt(curS);if(curS!==''&&!c)return {ok:false,msg:'当前 ETag 格式不合法（应为 \"…\" 或 W/\"…\"）'};\nvar v=star?null:parseEt(valS);if(!star&&!v)return {ok:false,msg:'请求头中的 ETag 格式不合法（应为 \"…\"、W/\"…\" 或 *）'};\nvar match;\nif(star)match=(c!==null);\nelse if(!c)match=false;\nelse if(hd==='im')match=(!c.weak&&!v.weak&&c.opaque===v.opaque);\nelse match=(c.opaque===v.opaque);\nvar code,why;\nif(hd==='inm'){if(match){code=(m==='GET'||m==='HEAD')?304:412;why='弱比较命中';}else{code=200;why='未命中，正常处理并返回完整响应';}}\nelse{if(match){code=200;why='强比较命中，前置条件通过，继续处理';}else{code=412;why='强比较未命中，前置条件失败';}}\nreturn {ok:true,html:'<div class=\"big\">'+code+'</div><div class=\"row\">'+(hd==='inm'?'If-None-Match':'If-Match')+'：当前 '+e(curS||'（资源不存在）')+' 与请求值 '+e(valS)+' → '+why+'（'+(hd==='inm'?'弱比较：忽略 W/ 前缀，比不透明标签':'强比较：双方都须非弱且不透明标签相同')+'）</div>'};", "test": {"inputs": {"method": "GET", "hdr": "inm", "cur": "\"abc\"", "val": "W/\"abc\""}, "expect": "304"}},
+{"id": "kfgzip", "cat": "kf", "icon": "🗜️", "name": "文本压缩率估算（熵口径）", "desc": "按香农熵估算文本 gzip 后的下限体积与压缩率", "formula": "一阶香农熵 H = −Σ pᵢ·log₂pᵢ（bit/字节，按 UTF-8 字节统计）；理想体积 ≈ H×字节数÷8 + 18 字节 gzip 固定开销（头 10 + CRC32 4 + ISIZE 4）。口径注明：这是熵下限估算，未计 DEFLATE 块/Huffman 表开销（真实 gzip 利用跨字节重复，通常可低于一阶熵下限），仅作量级参考", "inputs": [{"id": "text", "label": "文本", "type": "textarea", "def": "hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world "}], "run": "var s=String(text);if(s.length===0)return {ok:false,msg:'文本为空'};if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};\nvar bs=new TextEncoder().encode(s);var n=bs.length;var cnt={};\nfor(var i=0;i<n;i++)cnt[bs[i]]=(cnt[bs[i]]||0)+1;\nvar H=0,kinds=0;for(var k in cnt){var p=cnt[k]/n;H-=p*Math.log2(p);kinds++;}\nvar ideal=H*n/8;var est=Math.ceil(ideal)+18;var ratio=est/n*100;\nfunction F(x){return String(Math.round(x*1000)/1000);}\nreturn {ok:true,html:'<div class=\"big\">估算约 '+est+' 字节（原 '+n+' 字节，约 '+F(ratio)+'%）</div><div class=\"row\">香农熵 '+F(H)+' bit/字节，不同字节 '+kinds+' 种；熵下限 '+F(ideal)+' 字节 + gzip 固定开销 18 字节</div><div class=\"row\">一阶熵口径下限估算：未计 DEFLATE 块开销，且真实 gzip 利用跨字节重复可低于此下限；短文本估算可能大于原文</div>'};", "test": {"inputs": {"text": "hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world hello world "}, "expect": "104"}},
+{"id": "kfbloom", "cat": "kf", "icon": "🌸", "name": "布隆过滤器参数计算", "desc": "由元素数与误判率算位数组大小 m 与哈希数 k，或反算误判率", "formula": "m = ⌈−n·ln p ÷ (ln2)²⌉ 位；最优 k = round((m÷n)·ln2)；给定 m/k/n 时实际误判率 p̂ = (1 − e^(−kn/m))^k（均匀哈希口径）", "inputs": [{"id": "mode", "label": "模式", "type": "select", "def": "mk", "options": [{"v": "mk", "t": "n、p → m、k"}, {"v": "check", "t": "m、k、n → 实际误判率"}]}, {"id": "n", "label": "元素数 n", "def": "10000"}, {"id": "p", "label": "目标误判率 p", "def": "0.01", "when": "mode=mk"}, {"id": "m", "label": "位数组大小 m（位）", "def": "95851", "when": "mode=check"}, {"id": "k", "label": "哈希函数数 k", "def": "7", "when": "mode=check"}], "run": "function F(x){if(x>=1e15||(x>0&&x<1e-6))return x.toPrecision(4);return String(Math.round(x*1e6)/1e6);}\nvar nn=Number(n);\nif(!(nn>=1)||Math.floor(nn)!==nn||nn>1e12)return {ok:false,msg:'元素数 n 须为 1~10^12 的整数'};\nif(String(mode)==='mk'){\n var pp=Number(p);if(!(pp>0&&pp<1))return {ok:false,msg:'误判率 p 须在 (0,1) 之间，如 0.01'};\n var mm=Math.ceil(-nn*Math.log(pp)/(Math.LN2*Math.LN2));var kk=Math.max(1,Math.round(mm/nn*Math.LN2));\n var pa=Math.pow(1-Math.exp(-kk*nn/mm),kk);\n return {ok:true,html:'<div class=\"big\">m = '+mm+' 位 · k = '+kk+'</div><div class=\"row\">m = ⌈−n·ln p ÷ (ln2)²⌉ = '+mm+' 位（'+F(mm/8)+' 字节，'+F(mm/8/1024)+' KiB）；k = round((m/n)·ln2) = '+kk+'；按此参数实际误判率约 '+F(pa)+'</div>'};\n}\nvar mm2=Number(m),kk2=Number(k);\nif(!(mm2>=1)||mm2>1e15)return {ok:false,msg:'位数组 m 须在 [1, 1e15] 位'};\nif(!(kk2>=1)||Math.floor(kk2)!==kk2||kk2>1000)return {ok:false,msg:'哈希数 k 须为 1~1000 的整数'};\nvar pa2=Math.pow(1-Math.exp(-kk2*nn/mm2),kk2);\nreturn {ok:true,html:'<div class=\"big\">误判率 ≈ '+F(pa2)+'</div><div class=\"row\">p̂ = (1 − e^(−kn/m))^k，m = '+mm2+' 位，k = '+kk2+'，n = '+nn+'；负载 n/m = '+F(nn/mm2)+'</div>'};", "test": {"inputs": {"mode": "mk", "n": 10000, "p": 0.01, "m": 95851, "k": 7}, "expect": "95851"}},
+{"id": "kfconsistent", "cat": "kf", "icon": "⭕", "name": "一致性哈希环模拟", "desc": "虚拟节点哈希环上模拟键的节点分布（FNV-1a 环）", "formula": "环位置 = FNV-1a 32 位哈希（节点虚拟点命名 节点名#序号）；键顺时针落到第一个 ≥ 其哈希的虚拟节点所属物理节点，无则回绕环首。条目上限：节点 ≤50、每节点虚拟点 ≤200（总点 ≤5000）、键 ≤1000；FNV-1a 为演示哈希，生产常用 Ketama/MD5 环口径不同", "inputs": [{"id": "nodes", "label": "节点（逗号分隔）", "type": "text", "def": "A,B,C"}, {"id": "vnodes", "label": "每节点虚拟点数", "def": "3"}, {"id": "keys", "label": "键（逗号或换行分隔）", "type": "textarea", "def": "key1,key2,key3,user:1,user:2,file.txt,session-9,alpha,beta,gamma"}], "run": "function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}\nvar nodeStrs=String(nodes).split(',').map(function(x){return x.trim();}).filter(function(x){return x!=='';});\nif(!nodeStrs.length)return {ok:false,msg:'请至少填写一个节点'};\nif(nodeStrs.length>50)return {ok:false,msg:'节点过多（上限 50）'};\nvar seenN={};for(var a=0;a<nodeStrs.length;a++){if(seenN[nodeStrs[a]])return {ok:false,msg:'节点名重复：'+e(nodeStrs[a])};seenN[nodeStrs[a]]=1;}\nvar vn=Number(vnodes);if(!(vn>=1)||Math.floor(vn)!==vn||vn>200)return {ok:false,msg:'虚拟点数须为 1~200 的整数'};\nif(nodeStrs.length*vn>5000)return {ok:false,msg:'虚拟点总数超上限 5000，请减小节点数或虚拟点数'};\nvar rawKeys=String(keys).split(/[\\n,]+/).map(function(x){return x.trim();}).filter(function(x){return x!=='';});\nif(!rawKeys.length)return {ok:false,msg:'请至少填写一个键'};\nif(rawKeys.length>1000)return {ok:false,msg:'键过多（上限 1000）'};\nvar enc=new TextEncoder();\nfunction fnv(str){var bs=enc.encode(str);var h=2166136261;for(var i=0;i<bs.length;i++){h^=bs[i];h=Math.imul(h,16777619);}return h>>>0;}\nvar ring=[];\nfor(var b=0;b<nodeStrs.length;b++)for(var j=0;j<vn;j++)ring.push([fnv(nodeStrs[b]+'#'+j),nodeStrs[b]]);\nring.sort(function(x,y){return x[0]-y[0];});\nvar counts={};for(var c=0;c<nodeStrs.length;c++)counts[nodeStrs[c]]=0;\nfor(var q=0;q<rawKeys.length;q++){var h=fnv(rawKeys[q]);var owner=ring[0][1];for(var r=0;r<ring.length;r++){if(ring[r][0]>=h){owner=ring[r][1];break;}}counts[owner]++;}\nvar rows='';var total=rawKeys.length;\nfor(var d=0;d<nodeStrs.length;d++){var nd=nodeStrs[d];rows+='<div class=\"row\">节点 '+e(nd)+'：'+counts[nd]+' 个键（'+(counts[nd]/total*100).toFixed(1)+'%）</div>';}\nreturn {ok:true,html:'<div class=\"big\">共 '+total+' 个键 · '+ring.length+' 个虚拟点</div>'+rows+'<div class=\"row\">FNV-1a 32 位环演示口径；虚拟点越多分布越均匀，增删节点只迁移约 1/节点数 的键</div>'};", "test": {"inputs": {"nodes": "A,B,C", "vnodes": 3, "keys": "key1,key2,key3,user:1,user:2,file.txt,session-9,alpha,beta,gamma"}, "expect": "B：6"}},
+{"id": "kfsliding", "cat": "kf", "icon": "🪟", "name": "滑动窗口与漏桶限流判定", "desc": "滑动窗口日志计数判定，或漏桶漏出后的水位判定", "formula": "与 kftokenbucket（令牌桶）分工：滑动窗口日志：统计 (now−window, now] 内的历史请求数 used，放行条件 used < limit，超限等待 = 窗口内最早请求 + window − now；漏桶：水位先按速率漏出 level' = max(0, level − rate×elapsed)，再判 level' + cost ≤ capacity", "inputs": [{"id": "mode", "label": "算法", "type": "select", "def": "log", "options": [{"v": "log", "t": "滑动窗口日志"}, {"v": "leaky", "t": "漏桶"}]}, {"id": "limit", "label": "窗口内上限 limit", "def": "5", "when": "mode=log"}, {"id": "win", "label": "窗口长度（秒）", "def": "60", "when": "mode=log"}, {"id": "nowsec", "label": "当前时刻（Unix 秒）", "type": "text", "def": "160", "when": "mode=log"}, {"id": "past", "label": "历史请求时刻（Unix 秒，逗号/空格分隔）", "type": "textarea", "def": "100,120,150", "when": "mode=log"}, {"id": "cap", "label": "桶容量", "def": "10", "when": "mode=leaky"}, {"id": "rate", "label": "漏出速率（单位/秒）", "def": "2", "when": "mode=leaky"}, {"id": "level", "label": "当前水位", "def": "8", "when": "mode=leaky"}, {"id": "elapsed", "label": "距上次结算（秒）", "def": "2", "when": "mode=leaky"}, {"id": "cost", "label": "本次请求量", "def": "3", "when": "mode=leaky"}], "run": "if(String(mode)==='log'){\n var lim=Number(limit),win=Number(win);\n if(!(lim>=1)||Math.floor(lim)!==lim||lim>1000000)return {ok:false,msg:'上限 limit 须为 1~1000000 的整数'};\n if(!(win>0)||win>1e9)return {ok:false,msg:'窗口长度须在 (0, 1e9] 秒'};\n var nowS=String(nowsec).trim();if(!/^\\d{1,15}$/.test(nowS))return {ok:false,msg:'当前时刻须为不小于 0 的整数（Unix 秒）'};var now=Number(nowS);\n var toks=String(past).split(/[\\s,;]+/).filter(function(x){return x!=='';});\n if(toks.length>10000)return {ok:false,msg:'历史请求过多（上限 10000 条）'};\n var ts=[];for(var i=0;i<toks.length;i++){if(!/^\\d{1,15}$/.test(toks[i]))return {ok:false,msg:'历史时刻须为整数秒：'+toks[i].slice(0,20)};var tv=Number(toks[i]);if(tv>now)return {ok:false,msg:'含晚于当前时刻的历史时间戳'};ts.push(tv);}\n var used=0,oldest=null;\n for(var j=0;j<ts.length;j++){if(ts[j]>now-win&&ts[j]<=now){used++;if(oldest===null||ts[j]<oldest)oldest=ts[j];}}\n var rem=Math.max(0,lim-used);\n if(used<lim)return {ok:true,html:'<div class=\"big\">✅ 放行（窗口内已用 '+used+' / '+lim+'）</div><div class=\"row\">窗口 ('+(now-win)+', '+now+'] 内共 '+used+' 次，剩余配额 '+rem+' 次（本次放行后 '+(rem-1)+' 次）</div>'};\n var wait=oldest+win-now;\n return {ok:true,html:'<div class=\"big\">❌ 超限，需等待 '+wait+' 秒</div><div class=\"row\">窗口内已用 '+used+' / '+lim+'；最早的窗口内请求在 '+oldest+'，将于 '+(oldest+win)+' 滑出窗口</div>'};\n}\nvar cp=Number(cap),rt=Number(rate),lv=Number(level),el=Number(elapsed),cs=Number(cost);\nif(!(cp>0)||cp>1e12)return {ok:false,msg:'桶容量须在 (0, 1e12]'};\nif(!(rt>=0)||rt>1e12)return {ok:false,msg:'漏出速率须在 [0, 1e12]'};\nif(!(lv>=0)||lv>cp)return {ok:false,msg:'当前水位须在 [0, 桶容量]'};\nif(!(el>=0)||el>1e12)return {ok:false,msg:'经过时间须在 [0, 1e12] 秒'};\nif(!(cs>=0)||cs>1e15)return {ok:false,msg:'本次请求量须在 [0, 1e15]'};\nvar after=Math.max(0,lv-rt*el);var room=cp-after;\nif(cs<=room)return {ok:true,html:'<div class=\"big\">✅ 放行，放行后水位 '+(after+cs)+'</div><div class=\"row\">漏出后水位 '+after+'（'+lv+' − '+rt+'×'+el+'，下限 0），剩余空间 '+room+'，本次 '+cs+' 放入后 '+(after+cs)+' / '+cp+'</div>'};\nvar wait2=rt>0?((cs-room)/rt):-1;\nreturn {ok:true,html:'<div class=\"big\">❌ 拒绝'+(wait2>=0?('，需等待 '+(Math.round(wait2*1000)/1000)+' 秒漏出足够空间'):'（速率为 0，水位不再下降）')+'</div><div class=\"row\">漏出后水位 '+after+'，剩余空间 '+room+'，本次需要 '+cs+'</div>'};", "test": {"inputs": {"mode": "log", "limit": 5, "win": 60, "nowsec": "160", "past": "100,120,150", "cap": 10, "rate": 2, "level": 8, "elapsed": 2, "cost": 3}, "expect": "已用 2"}},
+{"id": "kfretry2", "cat": "kf", "icon": "🔂", "name": "重试策略期望分析", "desc": "按单次成功率算总成功率、期望尝试次数与期望总耗时", "formula": "与 kfbackoff（列每次等待时长）分工：本工具算期望口径。总成功率 = 1 − (1−p)^N；期望尝试次数 = (1 − (1−p)^N) ÷ p（p=0 时为 N）；第 i 次重试等待 d_i = min(cap, base×factor^(i−1))，期望等待 = Σ (1−p)^i × d_i；期望总耗时 = 期望尝试 × 单次耗时 + 期望等待", "inputs": [{"id": "attempts", "label": "最大尝试次数 N（含首次）", "def": "3"}, {"id": "p", "label": "单次成功率 p", "unit": "%", "def": "50"}, {"id": "base", "label": "首次重试等待 base", "unit": "ms", "def": "100"}, {"id": "factor", "label": "退避因子", "def": "2"}, {"id": "cap", "label": "等待上限 cap", "unit": "ms", "def": "10000"}, {"id": "req", "label": "单次尝试耗时（请求+超时）", "unit": "ms", "def": "200"}], "run": "var N=Number(attempts),pc=Number(p),bs=Number(base),fc=Number(factor),cp=Number(cap),rq=Number(req);\nif(!(N>=1)||Math.floor(N)!==N||N>100)return {ok:false,msg:'尝试次数须为 1~100 的整数'};\nif(!(pc>=0&&pc<=100))return {ok:false,msg:'单次成功率须在 0~100%'};\nif(!(bs>=0)||bs>86400000)return {ok:false,msg:'基础等待须在 [0, 86400000] ms'};\nif(!(fc>=1)||fc>100)return {ok:false,msg:'退避因子须在 [1, 100]'};\nif(!(cp>=0)||cp>86400000)return {ok:false,msg:'等待上限须在 [0, 86400000] ms'};\nif(!(rq>=0)||rq>3600000)return {ok:false,msg:'单次耗时须在 [0, 3600000] ms'};\nvar q=1-pc/100;var psucc=1-Math.pow(q,N);\nvar ds=[],worst=0;for(var i=1;i<N;i++){var d=Math.min(cp,bs*Math.pow(fc,i-1));ds.push(d);worst+=d;}\nvar eatt,ewait;\nif(pc===0){eatt=N;ewait=worst;}\nelse if(pc===100){eatt=1;ewait=0;}\nelse{eatt=(1-Math.pow(q,N))/(pc/100);ewait=0;for(var j=0;j<ds.length;j++)ewait+=Math.pow(q,j+1)*ds[j];}\nvar etot=eatt*rq+ewait;var wtot=N*rq+worst;\nfunction F(x){return String(Math.round(x*100)/100);}\nreturn {ok:true,html:'<div class=\"big\">总成功率 '+(psucc*100).toFixed(1)+'% · 期望总耗时 '+F(etot)+' ms</div><div class=\"row\">期望尝试 '+F(eatt)+' 次 × 单次 '+rq+' ms + 期望等待 '+F(ewait)+' ms = '+F(etot)+' ms</div><div class=\"row\">最坏总耗时 '+F(wtot)+' ms（'+N+' 次全失败：等待序列 '+(ds.length?ds.join(', '):'无')+' ms）；p=0 时永不成功、p=100 时一次必成</div>'};", "test": {"inputs": {"attempts": 3, "p": 50, "base": 100, "factor": 2, "cap": 10000, "req": 200}, "expect": "450"}},
+{"id": "kfpool", "cat": "kf", "icon": "🏊", "name": "连接池容量规划", "desc": "由吞吐与连接占用时长算连接池大小，或反查池利用率", "formula": "与 kfqps（算系统在途并发 L）分工：本工具把在途占用换算为池大小。同时占用连接 = QPS × 平均占用时长（秒）；建议池大小 = 向上取整(同时占用 ÷ 目标利用率)，利用率留余量应对抖动（常用 70%~85%）；反查：利用率 = 同时占用 ÷ 池大小", "inputs": [{"id": "mode", "label": "模式", "type": "select", "def": "size", "options": [{"v": "size", "t": "算池大小"}, {"v": "check", "t": "反查利用率"}]}, {"id": "qps", "label": "吞吐 QPS（次/秒）", "def": "100"}, {"id": "hold", "label": "单次平均占用时长", "unit": "ms", "def": "50"}, {"id": "util", "label": "目标利用率", "unit": "%", "def": "80", "when": "mode=size"}, {"id": "pool", "label": "现有池大小", "def": "10", "when": "mode=check"}], "run": "var q=Number(qps),hd=Number(hold);\nif(!(q>=0)||q>1e12)return {ok:false,msg:'QPS 须在 [0, 1e12]'};\nif(!(hd>0)||hd>3600000)return {ok:false,msg:'占用时长须在 (0, 3600000] ms'};\nvar inUse=q*hd/1000;\nfunction F(x){return String(Math.round(x*100)/100);}\nif(String(mode)==='size'){\n var ut=Number(util);if(!(ut>0&&ut<=100))return {ok:false,msg:'目标利用率须在 (0, 100]%'};\n var pl=q===0?0:Math.ceil(inUse/(ut/100)-1e-9);\n return {ok:true,html:'<div class=\"big\">建议连接数 '+pl+'</div><div class=\"row\">同时占用 '+F(inUse)+'（'+q+' 次/秒 × '+hd+' ms）÷ 目标利用率 '+ut+'% = '+F(inUse/(ut/100))+'，向上取整 '+pl+'；实际部署再叠加慢查询与故障冗余</div>'};\n}\nvar pl2=Number(pool);if(!(pl2>=1)||Math.floor(pl2)!==pl2||pl2>1000000)return {ok:false,msg:'池大小须为 1~1000000 的整数'};\nvar u2=inUse/pl2*100;var maxq=pl2*1000/hd;\nreturn {ok:true,html:'<div class=\"big\">'+(u2>100?'⚠️ 过载，利用率 ':'利用率 ')+F(u2)+'%</div><div class=\"row\">同时占用 '+F(inUse)+' ÷ 池 '+pl2+' = '+F(u2)+'%；该池在占用 '+hd+' ms 时的理论吞吐上限 '+F(maxq)+' 次/秒'+(u2>100?'，已超上限，请求将排队等待连接':'')+'</div>'};", "test": {"inputs": {"mode": "size", "qps": 100, "hold": 50, "util": 80, "pool": 10}, "expect": "建议连接数 7"}},
+{"id": "kfavail", "cat": "kf", "icon": "📟", "name": "可用性与错误预算", "desc": "SLA 停机预算、串并联组合可用性与错误预算消耗", "formula": "停机预算 = 周期分钟数 × (1 − 可用率)（30 天 = 43200 分钟）；串联可用性 = 各组件可用率连乘；并联（冗余）= 1 − Π(1 − aᵢ)；错误预算剩余 = 总预算 − 已消耗停机", "inputs": [{"id": "mode", "label": "模式", "type": "select", "def": "sla", "options": [{"v": "sla", "t": "SLA → 停机预算"}, {"v": "serial", "t": "串联可用性"}, {"v": "parallel", "t": "并联可用性"}, {"v": "budget", "t": "错误预算消耗"}]}, {"id": "sla", "label": "可用性 SLA", "unit": "%", "def": "99.9", "when": "mode=sla"}, {"id": "a1", "label": "组件 1 可用性", "unit": "%", "def": "99.9", "when": "mode=serial"}, {"id": "a2", "label": "组件 2 可用性", "unit": "%", "def": "99.9", "when": "mode=serial"}, {"id": "a3s", "label": "组件 3（串联不用填 100）", "unit": "%", "def": "100", "when": "mode=serial"}, {"id": "b1", "label": "组件 1 可用性", "unit": "%", "def": "99.9", "when": "mode=parallel"}, {"id": "b2", "label": "组件 2 可用性", "unit": "%", "def": "99.9", "when": "mode=parallel"}, {"id": "b3p", "label": "组件 3（并联不用填 0）", "unit": "%", "def": "0", "when": "mode=parallel"}, {"id": "bsla", "label": "可用性 SLA", "unit": "%", "def": "99.9", "when": "mode=budget"}, {"id": "days", "label": "周期天数", "def": "30", "when": "mode=budget"}, {"id": "usedmin", "label": "已消耗停机（分钟）", "def": "20", "when": "mode=budget"}], "run": "function F(x){return String(Math.round(x*10000)/10000);}\nfunction chk(x,nm,allow0){if(allow0){if(!(x>=0&&x<=100))return nm+' 须在 [0, 100]%';}else{if(!(x>0&&x<=100))return nm+' 须在 (0, 100]%';}return null;}\nvar md=String(mode);\nif(md==='sla'){\n var a=Number(sla);var er=chk(a,'SLA',false);if(er)return {ok:false,msg:er};\n var d30=43200*(1-a/100),dy=525600*(1-a/100);\n return {ok:true,html:'<div class=\"big\">月停机预算 '+F(d30)+' 分钟</div><div class=\"row\">'+a+'% 可用性：每 30 天允许停机 '+F(d30)+' 分钟（'+F(d30/60)+' 小时）；每年（365 天）约 '+F(dy)+' 分钟</div>'};\n}\nif(md==='serial'){\n var x1=Number(a1),x2=Number(a2),x3=Number(a3s);\n var e1=chk(x1,'组件 1',false)||chk(x2,'组件 2',false)||chk(x3,'组件 3',false);if(e1)return {ok:false,msg:e1};\n var prod=x1/100*x2/100*x3/100*100;\n return {ok:true,html:'<div class=\"big\">串联可用性 '+F(prod)+'%</div><div class=\"row\">'+x1+'% × '+x2+'% × '+x3+'% = '+F(prod)+'%；对应 30 天停机约 '+F(43200*(1-prod/100))+' 分钟（任一组件故障即整体故障）</div>'};\n}\nif(md==='parallel'){\n var y1=Number(b1),y2=Number(b2),y3=Number(b3p);\n var e2=chk(y1,'组件 1',false)||chk(y2,'组件 2',false)||chk(y3,'组件 3',true);if(e2)return {ok:false,msg:e2};\n var down=(1-y1/100)*(1-y2/100)*(y3>0?(1-y3/100):1);var res=(1-down)*100;\n return {ok:true,html:'<div class=\"big\">并联可用性 '+F(res)+'%</div><div class=\"row\">1 − (1−'+y1+'%)×(1−'+y2+'%)'+(y3>0?'×(1−'+y3+'%)':'')+' = '+F(res)+'%；对应 30 天停机约 '+F(43200*(1-res/100))+' 分钟（全部冗余同时故障才中断，独立故障假设）</div>'};\n}\nvar ba=Number(bsla),dy2=Number(days),um=Number(usedmin);\nvar e3=chk(ba,'SLA',false);if(e3)return {ok:false,msg:e3};\nif(!(dy2>=1)||Math.floor(dy2)!==dy2||dy2>366)return {ok:false,msg:'周期天数须为 1~366 的整数'};\nif(!(um>=0)||um>1e7)return {ok:false,msg:'已消耗停机须在 [0, 1e7] 分钟'};\nvar total=dy2*1440*(1-ba/100);var rem2=total-um;var pct=total>0?(um/total*100):(um>0?100:0);\nreturn {ok:true,html:'<div class=\"big\">剩余预算 '+F(rem2)+' 分钟（已用 '+F(pct)+'%）</div><div class=\"row\">周期 '+dy2+' 天、SLA '+ba+'% 的总错误预算 '+F(total)+' 分钟，已消耗 '+um+' 分钟'+(rem2<0?'，已超支 '+(0-rem2)+' 分钟，应冻结高风险发布':'')+'</div>'};", "test": {"inputs": {"mode": "sla", "sla": 99.9, "a1": 99.9, "a2": 99.9, "a3s": 100, "b1": 99.9, "b2": 99.9, "b3p": 0, "bsla": 99.9, "days": 30, "usedmin": 20}, "expect": "43.2"}},
+{"id": "kfepoch2", "cat": "kf", "icon": "⏱️", "name": "时间戳多单位换算", "desc": "秒/毫秒/微秒/纳秒时间戳互转并输出 ISO 时间（支持自动判单位）", "formula": "与 kftimestamp（仅秒 ↔ UTC）分工：本工具做四单位互转：1 s = 10³ ms = 10⁶ us = 10⁹ ns，BigInt 精确换算不丢精度；自动判单位口径（按绝对值量级）：<1e11 按秒、<1e14 按毫秒、<1e17 按微秒、否则纳秒", "inputs": [{"id": "val", "label": "时间戳整数（可负）", "type": "text", "def": "1700000000"}, {"id": "unit", "label": "输入单位", "type": "select", "def": "s", "options": [{"v": "auto", "t": "自动判断"}, {"v": "s", "t": "秒 s"}, {"v": "ms", "t": "毫秒 ms"}, {"v": "us", "t": "微秒 us"}, {"v": "ns", "t": "纳秒 ns"}]}], "run": "var s=String(val).trim();if(!/^-?\\d{1,30}$/.test(s))return {ok:false,msg:'须为整数（可负，最多 30 位）'};\nvar v=BigInt(s);var un=String(unit);\nif(un==='auto'){var av=v<0n?-v:v;un=av<100000000000n?'s':(av<100000000000000n?'ms':(av<100000000000000000n?'us':'ns'));}\nvar ns;if(un==='s')ns=v*1000000000n;else if(un==='ms')ns=v*1000000n;else if(un==='us')ns=v*1000n;else ns=v;\nfunction fmt(a,exp){var neg=a<0n;var x=neg?-a:a;var f=10n**BigInt(exp);var ip=x/f;var fp=exp===0?'':(x%f).toString().padStart(exp,'0').replace(/0+$/,'');return (neg?'-':'')+ip.toString()+(fp?'.'+fp:'');}\nvar sec=fmt(ns,9),msv=fmt(ns,6),usv=fmt(ns,3),nsv=fmt(ns,0);\nvar absNs=ns<0n?-ns:ns;var iso='超出 Date 可表示范围';\nif(absNs<=8640000000000000n*1000000n){var sign=ns<0n?-1:1;var a2=absNs;var msFloat=sign*(Number(a2/1000000n)+Number(a2%1000000n)/1e6);var d=new Date(msFloat);if(!isNaN(d.getTime()))iso=d.toISOString();}\nreturn {ok:true,html:'<div class=\"big\">'+iso+'</div><div class=\"row\">按 '+un+' 解释：秒 '+sec+'；毫秒 '+msv+'；微秒 '+usv+'；纳秒 '+nsv+'</div><div class=\"row\">自动判断为量级口径（<1e11 秒 / <1e14 毫秒 / <1e17 微秒 / 否则纳秒），跨量级边界请手动选单位</div>'};", "test": {"inputs": {"val": "1700000000", "unit": "s"}, "expect": "2023-11-14T22:13:20.000Z"}},
+{"id": "kflocale", "cat": "kf", "icon": "🌍", "name": "数字货币本地化格式", "desc": "按 en-US/de-DE/zh-CN/en-IN 口径格式化数字、货币与百分比", "formula": "Intl 口径节选（手工实现保证一致）：千分位分组 en-US/zh-CN 每 3 位、en-IN 印度分组（末 3 位后每 2 位）；小数点 de-DE 用逗号、分组用点号，其余小数点为点、分组为逗号；货币符号 USD $ / CNY ¥ / EUR €，de-DE 后缀、其余前缀；百分比先 ×100 再加 %", "inputs": [{"id": "num", "label": "数字", "type": "text", "def": "1234567.89"}, {"id": "loc", "label": "区域", "type": "select", "def": "en-IN", "options": [{"v": "en-US", "t": "en-US（美国）"}, {"v": "de-DE", "t": "de-DE（德国）"}, {"v": "zh-CN", "t": "zh-CN（中国）"}, {"v": "en-IN", "t": "en-IN（印度）"}]}, {"id": "style", "label": "样式", "type": "select", "def": "dec", "options": [{"v": "dec", "t": "普通数字"}, {"v": "cur", "t": "货币"}, {"v": "per", "t": "百分比"}]}, {"id": "cur", "label": "币种", "type": "select", "def": "CNY", "options": [{"v": "CNY", "t": "CNY 人民币 ¥"}, {"v": "USD", "t": "USD 美元 $"}, {"v": "EUR", "t": "EUR 欧元 €"}], "when": "style=cur"}, {"id": "dec", "label": "小数位数", "def": "2"}], "run": "var s=String(num).trim();if(!/^-?\\d{1,15}(\\.\\d{1,10})?$/.test(s))return {ok:false,msg:'请输入十进制数字（整数部分 ≤15 位，小数 ≤10 位）'};\nvar v=Number(s);var dc=Number(dec);if(!(dc>=0&&dc<=10)||Math.floor(dc)!==dc)return {ok:false,msg:'小数位数须为 0~10 的整数'};\nvar loc=String(loc),sty=String(style);\nvar eff=sty==='per'?v*100:v;\nvar fixed=eff.toFixed(dc);var neg=fixed.charAt(0)==='-';if(neg)fixed=fixed.slice(1);\nvar dot=fixed.indexOf('.');var ip=dot<0?fixed:fixed.slice(0,dot);var fp=dot<0?'':fixed.slice(dot+1);\nvar grouped;\nif(loc==='en-IN'){\n if(ip.length<=3)grouped=ip;\n else{var tail=ip.slice(-3);var head=ip.slice(0,-3);var parts=[];while(head.length>2){parts.unshift(head.slice(-2));head=head.slice(0,-2);}if(head)parts.unshift(head);grouped=parts.join(',')+','+tail;}\n}else{\n var parts2=[];while(ip.length>3){parts2.unshift(ip.slice(-3));ip=ip.slice(0,-3);}parts2.unshift(ip);grouped=parts2.join(',');\n}\nvar gsep=loc==='de-DE'?'.':',';grouped=grouped.split(',').join(gsep);\nvar dsep=loc==='de-DE'?',':'.';\nvar out=(neg?'-':'')+grouped+(fp?dsep+fp:'');\nif(sty==='cur'){var sym={'USD':'$','CNY':'¥','EUR':'€'}[String(cur)]||'';out=loc==='de-DE'?(out+' '+sym):(sym+out);}\nif(sty==='per')out=out+'%';\nreturn {ok:true,html:'<div class=\"big\">'+out+'</div><div class=\"row\">'+loc+' · '+(sty==='cur'?'货币 '+String(cur):sty==='per'?'百分比':'普通数字')+' · '+dc+' 位小数；Intl 口径节选的手工实现（分组/小数点/符号位置）</div>'};", "test": {"inputs": {"num": "1234567.89", "loc": "en-IN", "style": "dec", "cur": "CNY", "dec": 2}, "expect": "12,34,567.89"}},
+{"id": "kfglob", "cat": "kf", "icon": "🧤", "name": "Glob模式匹配测试", "desc": "用 Glob 模式逐行测试字符串是否匹配（* ? [] {}）", "formula": "Glob 转正则口径：* 匹配任意串（含 /，与 shell 逐段口径不同请注意）、? 匹配单个字符、[abc]/[a-z]/[!a-z] 字符类、{a,b} 分组择一（不支持嵌套超过 3 层）；其余字符按字面匹配，整串锚定。字符串 ≤1000 行", "inputs": [{"id": "pat", "label": "Glob 模式", "type": "text", "def": "*.{js,ts}"}, {"id": "strs", "label": "待测字符串（每行一个）", "type": "textarea", "def": "app.ts\nREADME.md"}], "run": "function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}\nfunction escRe(c){return /[.*+?^${}()|[\\]\\\\]/.test(c)?'\\\\'+c:c;}\nfunction conv(p,depth){\n if(depth>3)throw new Error('{} 嵌套过深（上限 3 层）');\n var out='',i=0;\n while(i<p.length){\n  var c=p[i];\n  if(c==='*'){out+='.*';i++;}\n  else if(c==='?'){out+='.';i++;}\n  else if(c==='['){\n   var j=i+1,neg=false;\n   if(j<p.length&&(p[j]==='!'||p[j]==='^')){neg=true;j++;}\n   var content='';if(j<p.length&&p[j]===']'){content+=']';j++;}\n   while(j<p.length&&p[j]!==']'){content+=p[j];j++;}\n   if(j>=p.length)throw new Error('未闭合');\n   out+='['+(neg?'^':'')+content.replace(/\\\\/g,'\\\\\\\\').replace(/\\]/g,'\\\\]')+']';i=j+1;\n  }\n  else if(c==='{'){\n   var depth2=1,j2=i+1;\n   while(j2<p.length&&depth2>0){if(p[j2]==='{')depth2++;else if(p[j2]==='}')depth2--;if(depth2>0)j2++;}\n   if(depth2!==0)throw new Error('{ 未闭合');\n   var inner=p.slice(i+1,j2);var alts=[],last=0,dep=0;\n   for(var t=0;t<inner.length;t++){if(inner[t]==='{')dep++;else if(inner[t]==='}')dep--;else if(inner[t]===','&&dep===0){alts.push(inner.slice(last,t));last=t+1;}}\n   alts.push(inner.slice(last));\n   if(alts.length>20)throw new Error('{} 备选过多（上限 20）');\n   out+='(?:'+alts.map(function(a2){return conv(a2,depth+1);}).join('|')+')';i=j2+1;\n  }\n  else if(c==='\\\\'){i++;if(i<p.length){out+=escRe(p[i]);i++;}}\n  else{out+=escRe(c);i++;}\n }\n return out;\n}\nvar pat=String(pat);if(pat.length>500)return {ok:false,msg:'模式过长（上限 500 字符）'};if(pat.trim()==='')return {ok:false,msg:'模式为空'};\nvar re;try{re=new RegExp('^'+conv(pat,0)+'$');}catch(err){return {ok:false,msg:'模式不合法：'+err.message};}\nvar lines=String(strs).split(/\\r?\\n/);if(lines.length>1000)return {ok:false,msg:'字符串过多（上限 1000 行）'};\nvar rows='',match=0,shown=0,total=0;\nfor(var i=0;i<lines.length;i++){var ln=lines[i];if(ln==='')continue;total++;var ok=re.test(ln);if(ok)match++;if(shown<100){rows+='<div class=\"row\">'+(ok?'✅':'❌')+' '+e(ln)+'</div>';shown++;}}\nif(!total)return {ok:false,msg:'没有待测字符串'};\nreturn {ok:true,html:'<div class=\"big\">匹配 '+match+' / '+total+'</div>'+rows+(total>100?'<div class=\"row\">仅显示前 100 行结果</div>':'')+'<div class=\"row\">口径：* 跨 / 匹配；{} 不支持超过 3 层嵌套</div>'};", "test": {"inputs": {"pat": "*.{js,ts}", "strs": "app.ts\nREADME.md"}, "expect": "匹配 1 / 2"}},
+{"id": "kfproperties", "cat": "kf", "icon": "☕", "name": "Java Properties解析", "desc": "把 .properties 配置解析为 JSON（分隔符/续行/转义口径）", "formula": "Java properties 口径（节选）：# 或 ! 起注释行；分隔符为第一个未转义的 = / : / 空白串；行尾奇数个反斜杠为续行；转义 \\t \\n \\r \\uXXXX 及 \\x=x；重复键后胜。与 kfini（INI 节结构）、kfdotenv（env 互转）分工：本工具按 Java 规范处理续行与 unicode 转义", "inputs": [{"id": "t", "label": "properties 文本", "type": "textarea", "def": "host=example.com\nport: 8080\nuni=\\u4e2d\\u6587"}], "run": "function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}\nvar s=String(t);if(s.length>100000)return {ok:false,msg:'输入过长（上限 100000 字符）'};\nvar raw=s.split(/\\r?\\n/);if(raw.length>5000)return {ok:false,msg:'行数过多（上限 5000 行）'};\nvar logical=[],buf='',start=1;\nfor(var i=0;i<raw.length;i++){\n var ln=raw[i];if(buf==='')start=i+1;\n var trail=0;for(var z=ln.length-1;z>=0&&ln[z]==='\\\\';z--)trail++;\n if(trail%2===1){buf+=ln.slice(0,-1);continue;}\n buf+=ln;logical.push([start,buf]);buf='';\n}\nif(buf!=='')logical.push([start,buf]);\nfunction unesc(str){\n var out='';\n for(var i=0;i<str.length;i++){var c=str[i];if(c!=='\\\\'){out+=c;continue;}i++;if(i>=str.length){out+='\\\\';break;}var nx=str[i];\n  if(nx==='u'){var hx=str.substr(i+1,4);if(!/^[0-9a-fA-F]{4}$/.test(hx))return null;out+=String.fromCharCode(parseInt(hx,16));i+=4;}\n  else if(nx==='t')out+='\\t';else if(nx==='n')out+='\\n';else if(nx==='r')out+='\\r';else if(nx==='f')out+='\\f';else out+=nx;}\n return out;\n}\nvar obj={},dup=0,count=0;\nfor(var q=0;q<logical.length;q++){\n var lineNo=logical[q][0],text=logical[q][1];\n var body=text.replace(/^\\s+/,'');\n if(body===''||body[0]==='#'||body[0]==='!')continue;\n var sep=-1,sepEnd=-1;\n for(var j=0;j<body.length;j++){var ch=body[j];\n  if(ch==='\\\\'){j++;continue;}\n  if(ch==='='||ch===':'){sep=j;sepEnd=j+1;break;}\n  if(ch===' '||ch==='\\t'){sep=j;var k2=j;while(k2<body.length&&(body[k2]===' '||body[k2]==='\\t'))k2++;if(k2<body.length&&(body[k2]==='='||body[k2]===':'))k2++;while(k2<body.length&&(body[k2]===' '||body[k2]==='\\t'))k2++;sepEnd=k2;break;}\n }\n var keyRaw,valueRaw;\n if(sep<0){keyRaw=body;valueRaw='';}\n else{keyRaw=body.slice(0,sep).replace(/\\s+$/,'');valueRaw=body.slice(sepEnd).replace(/^\\s+/,'');}\n var key=unesc(keyRaw),val=unesc(valueRaw);\n if(key===null||val===null)return {ok:false,msg:'第 '+lineNo+' 行 \\\\u 转义不合法（须 4 位十六进制）'};\n if(Object.prototype.hasOwnProperty.call(obj,key))dup++;\n obj[key]=val;count++;\n}\nreturn {ok:true,html:'<pre>'+e(JSON.stringify(obj,null,2))+'</pre><div class=\"row\">共 '+count+' 条赋值，键 '+Object.keys(obj).length+' 个'+(dup?'，重复键 '+dup+' 次（后胜）':'')+'；已处理续行与 \\\\u 转义</div>'};", "test": {"inputs": {"t": "host=example.com\nport: 8080\nuni=\\u4e2d\\u6587"}, "expect": "中文"}},
+{"id": "kfbase642", "cat": "kf", "icon": "🔐", "name": "Base64进阶转换", "desc": "Base64URL 编解码、标准↔URL-safe 字母表转换与 MIME 分段", "formula": "与 kfb64（标准编解码）、kfbase64size（体积估算）分工：Base64URL 把 +/ 换为 -_ 并去掉 = 填充（解码时补回）；std2url 只换字母表不重编码；wrap 按 RFC 2045 的 76 列把已有 Base64 文本分段（可改列宽）", "inputs": [{"id": "mode", "label": "模式", "type": "select", "def": "enc", "options": [{"v": "enc", "t": "文本 → Base64URL"}, {"v": "dec", "t": "Base64URL → 文本"}, {"v": "std2url", "t": "标准 Base64 → URL-safe"}, {"v": "wrap", "t": "Base64 分段（MIME）"}]}, {"id": "text", "label": "输入", "type": "textarea", "def": "hello?>>"}, {"id": "width", "label": "分段列宽", "def": "76", "when": "mode=wrap"}], "run": "function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}\nvar md=String(mode);var s=String(text);\nif(s.length>100000)return {ok:false,msg:'输入过长（上限 100000 字符）'};\nif(md==='enc'){\n if(s==='')return {ok:false,msg:'文本为空'};\n var bin;try{bin=btoa(unescape(encodeURIComponent(s)));}catch(err){return {ok:false,msg:'编码失败'};}\n var u=bin.replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');\n return {ok:true,html:'<div class=\"big\" style=\"font-size:15px\">'+e(u)+'</div><div class=\"row\">标准 Base64 为 '+e(bin)+'；URL-safe 已把 +/ 换成 -_ 并去掉 = 填充</div>'};\n}\nif(md==='dec'){\n var t2=s.trim();if(!/^[A-Za-z0-9_-]*$/.test(t2))return {ok:false,msg:'含 Base64URL 之外的字符'};if(t2.length%4===1)return {ok:false,msg:'长度不合法（长度 mod 4 不能为 1）'};\n var b=t2.replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';\n try{var out=decodeURIComponent(escape(atob(b)));return {ok:true,html:'<div class=\"big\" style=\"font-size:15px\">'+e(out)+'</div><div class=\"row\">按 UTF-8 解码；原串长度 '+t2.length+'（无填充）</div>'};}catch(err){return {ok:false,msg:'解码失败：不是合法的 Base64URL / UTF-8 文本'};}\n}\nif(md==='std2url'){\n var s2=s.trim();if(!/^[A-Za-z0-9+/]*={0,2}$/.test(s2)||s2.length%4!==0||s2==='')return {ok:false,msg:'不是合法的标准 Base64（长度须为 4 的倍数）'};\n var u2=s2.replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');\n return {ok:true,html:'<div class=\"big\" style=\"font-size:15px\">'+e(u2)+'</div><div class=\"row\">仅替换字母表 +/ → -_ 并去掉填充，未重新编解码</div>'};\n}\nvar s3=s.replace(/\\s+/g,'');if(!/^[A-Za-z0-9+/]*={0,2}$/.test(s3)||s3==='')return {ok:false,msg:'不是合法的 Base64 文本'};\nvar w=Number(width);if(!(w>=8&&w<=1000)||Math.floor(w)!==w)return {ok:false,msg:'列宽须为 8~1000 的整数'};\nvar chunks=[];for(var i=0;i<s3.length;i+=w)chunks.push(s3.slice(i,i+w));\nreturn {ok:true,html:'<pre>'+e(chunks.join('\\n'))+'</pre><div class=\"row\">共 '+s3.length+' 字符，按 '+w+' 列分 '+chunks.length+' 行（MIME 常用 76 列）</div>'};", "test": {"inputs": {"mode": "enc", "text": "hello?>>", "width": 76}, "expect": "aGVsbG8_Pj4"}},
+{"id": "kfutf16", "cat": "kf", "icon": "🔡", "name": "UTF-16编码分析", "desc": "统计代码点、UTF-16 单元、代理对与 UTF-8/UTF-16 字节数", "formula": "与 kfutf8（只数 UTF-8 字节）分工：UTF-16 中 BMP 字符占 1 单元（2 字节），增补平面字符占代理对 2 单元（4 字节）；代码点数 = 字符数，UTF-16 单元数 = JS 字符串 length；带 BOM 存文件时 UTF-16 另加 2 字节", "inputs": [{"id": "text", "label": "文本", "type": "textarea", "def": "你好"}, {"id": "bom", "label": "计入 BOM（文件口径）", "type": "select", "def": "n", "options": [{"v": "n", "t": "不计"}, {"v": "y", "t": "计入（+2 字节）"}]}], "run": "function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}\nvar s=String(text);if(s.length===0)return {ok:false,msg:'文本为空'};if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};\nvar units=s.length,cps=0,pairs=0;var rows='';\nfor(var i=0;i<s.length;){\n var cp=s.codePointAt(i);var w=cp>0xFFFF?2:1;if(w===2)pairs++;\n if(cps<20)rows+='<div class=\"row\">'+e(s.substr(i,w))+' U+'+cp.toString(16).toUpperCase().padStart(4,'0')+'：'+w+' 个 UTF-16 单元（'+(w*2)+' 字节）</div>';\n i+=w;cps++;\n}\nvar u8=new TextEncoder().encode(s).length;\nvar bomB=String(bom)==='y'?2:0;\nreturn {ok:true,html:'<div class=\"big\">'+cps+' 个代码点 · UTF-16 '+(units*2+bomB)+' 字节 · UTF-8 '+u8+' 字节</div><div class=\"row\">UTF-16 单元 '+units+' 个，代理对 '+pairs+' 对'+(bomB?'，含 BOM 2 字节':'')+'；增补平面字符（如多数 emoji）在 UTF-16 占 2 单元、在 UTF-8 占 4 字节</div>'+(cps>20?'<div class=\"row\">仅列前 20 个代码点明细</div>':'')+rows};", "test": {"inputs": {"text": "你好", "bom": "n"}, "expect": "UTF-8 6 字节"}},
+{"id": "kfbitwise2", "cat": "kf", "icon": "🧬", "name": "位级分析与掩码演示", "desc": "单值 popcount、置位位置与位反转（8/16/32/64 位宽）", "formula": "与 kfbit（双操作数 AND/OR/XOR/移位）分工：本工具做单位宽分析：二进制位串（4 位分组）、popcount（置位个数）、最高/最低置位位号、按位宽反转；负数按二补码落入位宽解释。掩码速记：/24 前缀掩码 = 高 24 位全 1", "inputs": [{"id": "val", "label": "整数（十进制或 0x 十六进制，可负）", "type": "text", "def": "12"}, {"id": "width", "label": "位宽", "type": "select", "def": "8", "options": [{"v": "8", "t": "8 位"}, {"v": "16", "t": "16 位"}, {"v": "32", "t": "32 位"}, {"v": "64", "t": "64 位"}]}], "run": "var s=String(val).trim();var w=Number(width);\nif([8,16,32,64].indexOf(w)<0)return {ok:false,msg:'位宽须为 8/16/32/64'};\nvar v;\nif(/^0[xX][0-9a-fA-F]+$/.test(s)){try{v=BigInt(s);}catch(err){return {ok:false,msg:'十六进制解析失败'};}}\nelse if(/^-?\\d+$/.test(s)){try{v=BigInt(s);}catch(err){return {ok:false,msg:'整数解析失败'};}}\nelse return {ok:false,msg:'请输入十进制或 0x 十六进制整数'};\nvar mod=1n<<BigInt(w);var minNeg=-(1n<<BigInt(w-1));var maxU=mod-1n;var maxS=(1n<<BigInt(w-1))-1n;\nif(v>maxU||v<minNeg)return {ok:false,msg:'超出 '+w+' 位范围（无符号 0~'+maxU.toString()+'，有符号 '+minNeg.toString()+'~'+maxS.toString()+'）'};\nvar u=v<0n?v+mod:v;\nvar bits=u.toString(2).padStart(w,'0');\nvar grouped='';for(var i=0;i<bits.length;i++){if(i>0&&i%4===0)grouped+=' ';grouped+=bits[i];}\nvar pop=0;for(var j=0;j<bits.length;j++)if(bits[j]==='1')pop++;\nvar hi=bits.indexOf('1');var highest=hi<0?'无（值为 0）':String(w-1-hi);\nvar lo=bits.lastIndexOf('1');var lowest=lo<0?'无（值为 0）':String(w-1-lo);\nvar revBits=bits.split('').reverse().join('');var rev=BigInt('0b'+revBits);\nvar signed=u>= (1n<<BigInt(w-1))?u-mod:u;\nreturn {ok:true,html:'<div class=\"big\">popcount '+pop+' · 最高置位 '+(hi<0?'—':(w-1-hi))+'</div><div class=\"row\">二进制（'+w+' 位）：'+grouped+'</div><div class=\"row\">无符号 '+u.toString()+'（0x'+u.toString(16).toUpperCase()+'），有符号 '+signed.toString()+'；最低置位位号 '+lowest+'</div><div class=\"row\">按 '+w+' 位反转 = '+rev.toString()+'（位串 '+revBits+'）</div>'};", "test": {"inputs": {"val": "12", "width": "8"}, "expect": "48"}},
+{"id": "kfdotenv2", "cat": "kf", "icon": "🧹", "name": "dotenv校验与差异对比", "desc": "lint 检查 .env 的重复键/空值/命名，或对比两份 .env 的差异", "formula": "与 kfdotenv（与 JSON 互转）分工：本工具只做校验与对比。lint 规则：缺 = 为错误；键名须合法标识符、推荐 UPPER_SNAKE 风格；重复键、空值、未加引号含空格的值给警告。diff 口径：export 前缀可省、成对引号去壳后按键比对（新增/删除/变更）", "inputs": [{"id": "mode", "label": "模式", "type": "select", "def": "lint", "options": [{"v": "lint", "t": "校验 lint"}, {"v": "diff", "t": "差异对比"}]}, {"id": "t", "label": ".env 文本", "type": "textarea", "def": "FOO=1\nFOO=2\nbar=3\nEMPTY=\nNOEQ", "when": "mode=lint"}, {"id": "a", "label": "旧版 .env", "type": "textarea", "def": "HOST=a.com\nPORT=80\nOLD=1", "when": "mode=diff"}, {"id": "b", "label": "新版 .env", "type": "textarea", "def": "HOST=a.com\nPORT=8080\nNEW=2", "when": "mode=diff"}], "run": "function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}\nfunction parseEnv(src){\n var map={},order=[];var lines=String(src).split(/\\r?\\n/);\n for(var i=0;i<lines.length;i++){var ln=lines[i].trim();if(!ln||ln[0]==='#')continue;if(ln.indexOf('export ')===0)ln=ln.slice(7).trim();var eq=ln.indexOf('=');if(eq<=0)continue;var k=ln.slice(0,eq).trim();var v=ln.slice(eq+1).trim();if(v.length>=2&&((v[0]==='\"'&&v[v.length-1]==='\"')||(v[0]===\"'\"&&v[v.length-1]===\"'\")))v=v.slice(1,-1);if(!Object.prototype.hasOwnProperty.call(map,k))order.push(k);map[k]=v;}\n return {map:map,order:order};\n}\nfunction cut(x){x=String(x);return x.length>40?x.slice(0,40)+'…':x;}\nif(String(mode)==='diff'){\n var sa=String(a),sb=String(b);if(sa.length>100000||sb.length>100000)return {ok:false,msg:'输入过长（上限 100000 字符）'};\n var A=parseEnv(sa),B=parseEnv(sb);\n var added=B.order.filter(function(k){return !Object.prototype.hasOwnProperty.call(A.map,k);});\n var removed=A.order.filter(function(k){return !Object.prototype.hasOwnProperty.call(B.map,k);});\n var changed=B.order.filter(function(k){return Object.prototype.hasOwnProperty.call(A.map,k)&&A.map[k]!==B.map[k];});\n var rows='';\n added.forEach(function(k){rows+='<div class=\"row\">＋ 新增 '+e(k)+' = '+e(cut(B.map[k]))+'</div>';});\n removed.forEach(function(k){rows+='<div class=\"row\">－ 删除 '+e(k)+'</div>';});\n changed.forEach(function(k){rows+='<div class=\"row\">～ 变更 '+e(k)+'：'+e(cut(A.map[k]))+' → '+e(cut(B.map[k]))+'</div>';});\n if(!rows)rows='<div class=\"row\">两份配置无差异（按解析口径）</div>';\n return {ok:true,html:'<div class=\"big\">新增 '+added.length+' · 删除 '+removed.length+' · 变更 '+changed.length+'</div>'+rows};\n}\nvar s=String(t);if(s.length>100000)return {ok:false,msg:'输入过长（上限 100000 字符）'};\nvar lines=s.split(/\\r?\\n/);if(lines.length>5000)return {ok:false,msg:'行数过多（上限 5000 行）'};\nvar seen={},errs=0,warns=0,rowsArr=[];\nfor(var i2=0;i2<lines.length;i2++){\n var ln=lines[i2].trim();if(!ln||ln[0]==='#')continue;\n var body=ln.indexOf('export ')===0?ln.slice(7).trim():ln;\n var eq=body.indexOf('=');\n if(eq<0){errs++;rowsArr.push('<div class=\"row\">第 '+(i2+1)+' 行：❌ 缺少 =（'+e(cut(body))+'）</div>');continue;}\n var key=body.slice(0,eq).trim();var val2=body.slice(eq+1).trim();\n if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)){errs++;rowsArr.push('<div class=\"row\">第 '+(i2+1)+' 行：❌ 键名不合法（'+e(cut(key))+'）</div>');continue;}\n if(Object.prototype.hasOwnProperty.call(seen,key)){warns++;rowsArr.push('<div class=\"row\">第 '+(i2+1)+' 行：⚠️ 重复键 '+e(key)+'（首次在第 '+seen[key]+' 行，后值覆盖前值）</div>');}\n else seen[key]=i2+1;\n if(!/^[A-Z_][A-Z0-9_]*$/.test(key)){warns++;rowsArr.push('<div class=\"row\">第 '+(i2+1)+' 行：⚠️ 键 '+e(key)+' 不是 UPPER_SNAKE 风格</div>');}\n if(val2===''){warns++;rowsArr.push('<div class=\"row\">第 '+(i2+1)+' 行：⚠️ 键 '+e(key)+' 值为空</div>');}\n else if(/\\s/.test(val2)&&val2[0]!=='\"'&&val2[0]!==\"'\"){warns++;rowsArr.push('<div class=\"row\">第 '+(i2+1)+' 行：⚠️ 键 '+e(key)+' 的值含空格未加引号</div>');}\n}\nvar rowsOut=rowsArr.slice(0,200).join('')+(rowsArr.length>200?'<div class=\"row\">其余问题略（共 '+rowsArr.length+' 条）</div>':'');\nif(!rowsOut)rowsOut='<div class=\"row\">未发现问题</div>';\nreturn {ok:true,html:'<div class=\"big\">错误 '+errs+' · 警告 '+warns+'</div>'+rowsOut};", "test": {"inputs": {"mode": "lint", "t": "FOO=1\nFOO=2\nbar=3\nEMPTY=\nNOEQ", "a": "HOST=a.com\nPORT=80\nOLD=1", "b": "HOST=a.com\nPORT=8080\nNEW=2"}, "expect": "重复键 FOO"}}
+);
 
 
 /* 数据驱动工具自动注册渲染器（必须在所有 TOOLS.push 之后、初始化之前执行） */
