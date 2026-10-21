@@ -1376,7 +1376,7 @@ TOOLS.push(
  {id:"shbabydays", cat:"sh", icon:"👶", name:"宝宝出生天数", desc:"按出生日期算出生天数、百日宴和周岁日期",
   formula:"天数 = 基准日期 − 出生日期；百日宴 = 出生 + 100天",
   inputs:[{id:"birth", label:"出生日期", type:"text", def:"2026-01-01", ph:"YYYY-MM-DD"},{id:"ref", label:"基准日期", type:"text", def:"2026-04-11", ph:"YYYY-MM-DD"}],
-  run:"var b=Date.parse(birth),r=Date.parse(ref); if(isNaN(b)||isNaN(r)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; if(r<b) return {ok:false,msg:'基准日期不能早于出生日期'}; var days=Math.round((r-b)/86400000); function fm(t){var d=new Date(t);function f2(x){return String(x).padStart(2,'0');}return d.getUTCFullYear()+'-'+f2(d.getUTCMonth()+1)+'-'+f2(d.getUTCDate());} var bd=new Date(b); var y1=Date.UTC(bd.getUTCFullYear()+1,bd.getUTCMonth(),bd.getUTCDate()); return {ok:true,html:'<div class=\"big\">出生 '+days+' 天</div><div class=\"row\">百日宴：'+fm(b+100*86400000)+'；周岁：'+fm(y1)+'</div>'};",
+  run:"var b=Date.parse(birth),r=Date.parse(ref); if(isNaN(b)||isNaN(r)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; function _v(ts,str){var p=String(str).split('-');if(p.length!==3)return false;var q=new Date(ts);return q.getUTCFullYear()===+p[0]&&q.getUTCMonth()===+p[1]-1&&q.getUTCDate()===+p[2];} if(!_v(b,birth)||!_v(r,ref)) return {ok:false,msg:'日期不存在（如2月没有30日），请检查'}; if(r<b) return {ok:false,msg:'基准日期不能早于出生日期'}; var days=Math.round((r-b)/86400000); function fm(t){var d=new Date(t);function f2(x){return String(x).padStart(2,'0');}return d.getUTCFullYear()+'-'+f2(d.getUTCMonth()+1)+'-'+f2(d.getUTCDate());} var bd=new Date(b); var y1=Date.UTC(bd.getUTCFullYear()+1,bd.getUTCMonth(),bd.getUTCDate()); return {ok:true,html:'<div class=\"big\">出生 '+days+' 天</div><div class=\"row\">百日宴：'+fm(b+100*86400000)+'；周岁：'+fm(y1)+'</div>'};",
   test:{inputs:{birth:"2026-01-01",ref:"2026-04-11"}, expect:"出生 100 天"}},
  {id:"shcatage", cat:"sh", icon:"🐱", name:"猫咪年龄换算", desc:"把猫的实际年龄换算成人类年龄",
   formula:"1岁=15岁，2岁=24岁，之后每1年≈4岁",
@@ -1402,12 +1402,12 @@ TOOLS.push(
  {id:"shmacro", cat:"sh", icon:"🍗", name:"三大营养素分配", desc:"按总热量和蛋白脂肪比例算每种吃多少克",
   formula:"蛋白g=热量×蛋白比÷4；脂肪g=热量×脂肪比÷9；碳水g=剩余热量÷4",
   inputs:[{id:"kcal", label:"每日总热量", unit:"kcal", def:"2000", min:500, max:6000},{id:"p", label:"蛋白质比例", unit:"%", def:"30", min:0, max:100},{id:"f", label:"脂肪比例", unit:"%", def:"25", min:0, max:100}],
-  run:"if(p+f>100) return {ok:false,msg:'蛋白+脂肪比例不能超过100%'}; var pg=kcal*p/100/4, fg=kcal*f/100/9, cg=(kcal-kcal*p/100-kcal*f/100)/4; return {ok:true,html:'<div class=\"big\">蛋白 '+pg.toFixed(1)+'g / 脂肪 '+fg.toFixed(1)+'g / 碳水 '+cg.toFixed(1)+'g</div>'};",
+  run:"if(!(p>=0&&f>=0)) return {ok:false,msg:'比例不能为负'}; if(p+f>100) return {ok:false,msg:'蛋白+脂肪比例不能超过100%'}; var pg=kcal*p/100/4, fg=kcal*f/100/9, cg=(kcal-kcal*p/100-kcal*f/100)/4; return {ok:true,html:'<div class=\"big\">蛋白 '+pg.toFixed(1)+'g / 脂肪 '+fg.toFixed(1)+'g / 碳水 '+cg.toFixed(1)+'g</div>'};",
   test:{inputs:{kcal:2000,p:30,f:25}, expect:"蛋白 150.0g"}},
  {id:"shpetpreg", cat:"sh", icon:"🐾", name:"宠物预产期", desc:"按配种日期推算宠物生产日期区间",
   formula:"猫63~67天；狗58~68天；兔子28~32天",
   inputs:[{id:"pet", label:"宠物", type:"select", options:[{v:"63,67",t:"猫"},{v:"58,68",t:"狗"},{v:"28,32",t:"兔子"}], def:"63,67"},{id:"d", label:"配种日期", type:"text", def:"2026-01-01", ph:"YYYY-MM-DD"}],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var r=pet.split(','),a=+r[0],b=+r[1]; function fm(x){var dd=new Date(x);function f2(n){return String(n).padStart(2,'0');}return dd.getUTCFullYear()+'-'+f2(dd.getUTCMonth()+1)+'-'+f2(dd.getUTCDate());} return {ok:true,html:'<div class=\"big\">预产期 '+fm(t+a*86400000)+' ~ '+fm(t+b*86400000)+'</div>'};",
+  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var _p=String(d).split('-'); if(_p.length!==3||new Date(t).getUTCDate()!==+_p[2]||new Date(t).getUTCMonth()!==+_p[1]-1) return {ok:false,msg:'日期不存在（如2月没有30日），请检查'};  var r=pet.split(','),a=+r[0],b=+r[1]; function fm(x){var dd=new Date(x);function f2(n){return String(n).padStart(2,'0');}return dd.getUTCFullYear()+'-'+f2(dd.getUTCMonth()+1)+'-'+f2(dd.getUTCDate());} return {ok:true,html:'<div class=\"big\">预产期 '+fm(t+a*86400000)+' ~ '+fm(t+b*86400000)+'</div>'};",
   test:{inputs:{pet:"63,67",d:"2026-01-01"}, expect:"2026-03-05"}},
  {id:"shrent", cat:"sh", icon:"🏠", name:"租房首付费用", desc:"押金+首期租金+中介费一次要准备多少钱",
   formula:"首付 = 月租×押金月数 + 月租×首付月数 + 月租×中介费比例",
@@ -1425,10 +1425,10 @@ TOOLS.push(
   run:"if(!(n>0)) return {ok:false,msg:'每天餐数须大于0'}; var total=w*120, per=total/n; return {ok:true,html:'<div class=\"big\">每天 '+total.toFixed(0)+' ml，每餐约 '+per.toFixed(0)+' ml</div><div class=\"row\">按100~150ml/kg/天，取中间值120；个体差异请遵医嘱</div>'};",
   test:{inputs:{w:6,n:6}, expect:"每餐约 120 ml"}},
  {id:"shpetfood", cat:"sh", icon:"🦴", name:"宠物每日喂食量", desc:"按体重和生理阶段算干粮克数",
-  formula:"RER=70×体重^0.75；DER=RER×系数；干粮克数=DER÷3.5（按350kcal/100g）",
-  inputs:[{id:"w", label:"宠物体重", unit:"kg", def:"10", min:0.5, max:100},{id:"k", label:"生理阶段", type:"select", options:[{v:"1.6",t:"幼年"},{v:"1.0",t:"成年"},{v:"0.8",t:"老年/减肥"},{v:"1.2",t:"孕期"}], def:"1.0"}],
+  formula:"RER=70×体重^0.75；DER=RER×系数；干粮克数=DER÷3.5（按350kcal/100g）。系数取 WSAVA 通行 DER：犬 已绝育成年 1.6、未绝育 1.8、减肥 1.0、幼犬 2.0~3.0、孕期 1.8；猫 已绝育 1.2、未绝育 1.4、减肥 0.8、幼猫 2.5、孕期 1.6",
+  inputs:[{id:"w", label:"宠物体重", unit:"kg", def:"10", min:0.5, max:100},{id:"k", label:"生理阶段", type:"select", options:[{v:"3.0",t:"犬·幼犬（≤4月龄）"},{v:"2.0",t:"犬·幼犬（>4月龄）"},{v:"1.8",t:"犬·成年未绝育"},{v:"1.6",t:"犬·成年已绝育"},{v:"1.0",t:"犬·减肥"},{v:"1.8",t:"犬·孕期"},{v:"2.5",t:"猫·幼猫"},{v:"1.4",t:"猫·成年未绝育"},{v:"1.2",t:"猫·成年已绝育"},{v:"0.8",t:"猫·减肥"},{v:"1.6",t:"猫·孕期"}], def:"1.6"}],
   run:"if(!(w>0)) return {ok:false,msg:'宠物体重须大于0'}; var rer=70*Math.pow(w,0.75), der=rer*parseFloat(k), g=der/3.5; return {ok:true,html:'<div class=\"big\">每天约 '+g.toFixed(0)+' 克干粮</div><div class=\"row\">日需 '+der.toFixed(0)+' kcal（RER '+rer.toFixed(0)+'）</div>'};",
-  test:{inputs:{w:10,k:"1.0"}, expect:"112 克"}},
+  test:{inputs:{w:10,k:"1.6"}, expect:"180 克"}},
  {id:"shsmokequit", cat:"sh", icon:"🚭", name:"戒烟省钱计算", desc:"算戒烟N天能省多少钱、少抽多少支",
   formula:"省钱 = 每天包数 × 单价 × 天数；少抽 = 包数 × 20 × 天数",
   inputs:[{id:"p", label:"每天", unit:"包", def:"1", min:0.1, max:10},{id:"price", label:"每包单价", unit:"元", def:"25", min:1},{id:"d", label:"戒烟天数", unit:"天", def:"365", min:1}],
@@ -1437,7 +1437,7 @@ TOOLS.push(
  {id:"shreading", cat:"sh", icon:"📖", name:"读书计划", desc:"按每天页数算读完一本书要几天、何时读完",
   formula:"天数 = 总页数 ÷ 每天页数（向上取整）；完成日期 = 开始 + 天数 − 1",
   inputs:[{id:"pages", label:"总页数", unit:"页", def:"300", min:1},{id:"per", label:"每天读", unit:"页", def:"20", min:1},{id:"s", label:"开始日期", type:"text", def:"2026-01-01", ph:"YYYY-MM-DD"}],
-  run:"if(!(per>0)) return {ok:false,msg:'每天页数须大于0'}; if(!(pages>0)) return {ok:false,msg:'总页数须大于0'}; var t=Date.parse(s); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var days=Math.ceil(pages/per); if(!(days<=1000000)) return {ok:false,msg:'预计天数超过100万天，请分段计算'}; var dd=new Date(t+(days-1)*86400000); function f2(x){return String(x).padStart(2,'0');} var ds=dd.getUTCFullYear()+'-'+f2(dd.getUTCMonth()+1)+'-'+f2(dd.getUTCDate()); return {ok:true,html:'<div class=\"big\">需 '+days+' 天，'+ds+' 读完</div>'};",
+  run:"if(!(per>0)) return {ok:false,msg:'每天页数须大于0'}; if(!(pages>0)) return {ok:false,msg:'总页数须大于0'}; var t=Date.parse(s); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var _p=String(s).split('-'); if(_p.length!==3||new Date(t).getUTCDate()!==+_p[2]||new Date(t).getUTCMonth()!==+_p[1]-1) return {ok:false,msg:'日期不存在（如2月没有30日），请检查'};  var days=Math.ceil(pages/per); if(!(days<=1000000)) return {ok:false,msg:'预计天数超过100万天，请分段计算'}; var dd=new Date(t+(days-1)*86400000); function f2(x){return String(x).padStart(2,'0');} var ds=dd.getUTCFullYear()+'-'+f2(dd.getUTCMonth()+1)+'-'+f2(dd.getUTCDate()); return {ok:true,html:'<div class=\"big\">需 '+days+' 天，'+ds+' 读完</div>'};",
   test:{inputs:{pages:300,per:20,s:"2026-01-01"}, expect:"2026-01-15 读完"}},
  {id:"shovertime", cat:"sh", icon:"⏰", name:"加班费计算", desc:"按月薪和加班类型算应得加班费",
   formula:"时薪 = 月薪 ÷ 21.75 ÷ 8；加班费 = 时薪 × 倍数 × 小时（平时1.5/休息日2/法定3）",
@@ -1447,32 +1447,32 @@ TOOLS.push(
  {id:"shlicense", cat:"sh", icon:"🪪", name:"驾照换证提醒", desc:"按初领日期和有效期算到期日和可换证时间",
   formula:"到期日 = 初领 + 有效期；提前90天可换证",
   inputs:[{id:"d", label:"初领日期", type:"text", def:"2020-05-20", ph:"YYYY-MM-DD"},{id:"y", label:"有效期", type:"select", options:[{v:"6",t:"6年"},{v:"10",t:"10年"},{v:"0",t:"长期"}], def:"6"}],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var yy=+y; if(yy===0) return {ok:true,html:'<div class=\"big\">长期有效，无需换证</div>'}; var dd=new Date(t); var exp=new Date(Date.UTC(dd.getUTCFullYear()+yy,dd.getUTCMonth(),dd.getUTCDate())); function fm(x){var q=new Date(x);function f2(n){return String(n).padStart(2,'0');}return q.getUTCFullYear()+'-'+f2(q.getUTCMonth()+1)+'-'+f2(q.getUTCDate());} return {ok:true,html:'<div class=\"big\">到期 '+fm(exp.getTime())+'</div><div class=\"row\">'+fm(exp.getTime()-90*86400000)+' 起可换证（提前90天）</div>'};",
+  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var _p=String(d).split('-'); if(_p.length!==3||new Date(t).getUTCDate()!==+_p[2]||new Date(t).getUTCMonth()!==+_p[1]-1) return {ok:false,msg:'日期不存在（如2月没有30日），请检查'};  var yy=+y; if(yy===0) return {ok:true,html:'<div class=\"big\">长期有效，无需换证</div>'}; var dd=new Date(t); var exp=new Date(Date.UTC(dd.getUTCFullYear()+yy,dd.getUTCMonth(),dd.getUTCDate())); function fm(x){var q=new Date(x);function f2(n){return String(n).padStart(2,'0');}return q.getUTCFullYear()+'-'+f2(q.getUTCMonth()+1)+'-'+f2(q.getUTCDate());} return {ok:true,html:'<div class=\"big\">到期 '+fm(exp.getTime())+'</div><div class=\"row\">'+fm(exp.getTime()-90*86400000)+' 起可换证（提前90天）</div>'};",
   test:{inputs:{d:"2020-05-20",y:"6"}, expect:"2026-02-19"}},
  {id:"shwarranty", cat:"sh", icon:"🧰", name:"家电保修检查", desc:"按购买日期和保修年限查是否在保",
   formula:"到期日 = 购买日期 + 保修年数；剩余 = 到期日 − 基准日期",
   inputs:[{id:"d", label:"购买日期", type:"text", def:"2024-06-01", ph:"YYYY-MM-DD"},{id:"y", label:"保修年限", unit:"年", def:"3", min:1, max:10},{id:"ref", label:"基准日期", type:"text", def:"2026-01-01", ph:"YYYY-MM-DD（留空=今天）", optional:true}],
-  run:"if(!(y>=1&&y<=100)) return {ok:false,msg:'保修年限须在1~100年之间'}; var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'购买日期格式应为YYYY-MM-DD'}; var dd=new Date(t); var exp=Date.UTC(dd.getUTCFullYear()+y,dd.getUTCMonth(),dd.getUTCDate()); var r=(ref&&String(ref).trim())?Date.parse(ref):Date.now(); if(isNaN(r)) return {ok:false,msg:'基准日期格式应为YYYY-MM-DD'}; function fm(x){var q=new Date(x);function f2(n){return String(n).padStart(2,'0');}return q.getUTCFullYear()+'-'+f2(q.getUTCMonth()+1)+'-'+f2(q.getUTCDate());} var left=Math.round((exp-r)/86400000); var st=left>=0?('在保，剩余 '+left+' 天'):('已过保 '+(-left)+' 天'); return {ok:true,html:'<div class=\"big\">'+st+'</div><div class=\"row\">保修到期 '+fm(exp)+'</div>'};",
+  run:"if(!(y>=1&&y<=100)) return {ok:false,msg:'保修年限须在1~100年之间'}; var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'购买日期格式应为YYYY-MM-DD'}; function _v(ts,str){var p=String(str).split('-');if(p.length!==3)return false;var q=new Date(ts);return q.getUTCFullYear()===+p[0]&&q.getUTCMonth()===+p[1]-1&&q.getUTCDate()===+p[2];} if(!_v(t,d)) return {ok:false,msg:'购买日期不存在（如2月没有30日），请检查'}; var dd=new Date(t); var exp=Date.UTC(dd.getUTCFullYear()+y,dd.getUTCMonth(),dd.getUTCDate()); var r=(ref&&String(ref).trim())?Date.parse(ref):Date.now(); if(ref&&String(ref).trim()&&!_v(r,ref)) return {ok:false,msg:'基准日期不存在（如2月没有30日），请检查'}; if(isNaN(r)) return {ok:false,msg:'基准日期格式应为YYYY-MM-DD'}; function fm(x){var q=new Date(x);function f2(n){return String(n).padStart(2,'0');}return q.getUTCFullYear()+'-'+f2(q.getUTCMonth()+1)+'-'+f2(q.getUTCDate());} var left=Math.round((exp-r)/86400000); var st=left>=0?('在保，剩余 '+left+' 天'):('已过保 '+(-left)+' 天'); return {ok:true,html:'<div class=\"big\">'+st+'</div><div class=\"row\">保修到期 '+fm(exp)+'</div>'};",
   test:{inputs:{d:"2024-06-01",y:3,ref:"2026-01-01"}, expect:"剩余 516 天"}},
  {id:"shcosmetic", cat:"sh", icon:"💄", name:"化妆品开封保质期", desc:"按开封日期和瓶身12M标识算过期日",
   formula:"过期日 = 开封日期 + 标识月数",
   inputs:[{id:"d", label:"开封日期", type:"text", def:"2025-06-01", ph:"YYYY-MM-DD"},{id:"m", label:"瓶身标识", type:"select", options:[{v:"6",t:"6M"},{v:"12",t:"12M"},{v:"24",t:"24M"},{v:"36",t:"36M"}], def:"12"},{id:"ref", label:"基准日期", type:"text", def:"2026-01-01", ph:"YYYY-MM-DD（留空=今天）", optional:true}],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'开封日期格式应为YYYY-MM-DD'}; var dd=new Date(t),y=dd.getUTCFullYear(),mo=dd.getUTCMonth()+(+m),day=dd.getUTCDate(); y+=Math.floor(mo/12); mo=((mo%12)+12)%12; var dim=new Date(Date.UTC(y,mo+1,0)).getUTCDate(); var exp=Date.UTC(y,mo,Math.min(day,dim)); var r=(ref&&String(ref).trim())?Date.parse(ref):Date.now(); if(isNaN(r)) return {ok:false,msg:'基准日期格式应为YYYY-MM-DD'}; function fm(x){var q=new Date(x);function f2(n){return String(n).padStart(2,'0');}return q.getUTCFullYear()+'-'+f2(q.getUTCMonth()+1)+'-'+f2(q.getUTCDate());} var left=Math.round((exp-r)/86400000); var st=left>=0?('未过期，剩余 '+left+' 天'):('已过期 '+(-left)+' 天'); return {ok:true,html:'<div class=\"big\">'+st+'</div><div class=\"row\">过期日 '+fm(exp)+'</div>'};",
+  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'开封日期格式应为YYYY-MM-DD'}; function _v(ts,str){var p=String(str).split('-');if(p.length!==3)return false;var q=new Date(ts);return q.getUTCFullYear()===+p[0]&&q.getUTCMonth()===+p[1]-1&&q.getUTCDate()===+p[2];} if(!_v(t,d)) return {ok:false,msg:'开封日期不存在（如2月没有30日），请检查'}; var dd=new Date(t),y=dd.getUTCFullYear(),mo=dd.getUTCMonth()+(+m),day=dd.getUTCDate(); y+=Math.floor(mo/12); mo=((mo%12)+12)%12; var dim=new Date(Date.UTC(y,mo+1,0)).getUTCDate(); var exp=Date.UTC(y,mo,Math.min(day,dim)); var r=(ref&&String(ref).trim())?Date.parse(ref):Date.now(); if(ref&&String(ref).trim()&&!_v(r,ref)) return {ok:false,msg:'基准日期不存在（如2月没有30日），请检查'}; if(isNaN(r)) return {ok:false,msg:'基准日期格式应为YYYY-MM-DD'}; function fm(x){var q=new Date(x);function f2(n){return String(n).padStart(2,'0');}return q.getUTCFullYear()+'-'+f2(q.getUTCMonth()+1)+'-'+f2(q.getUTCDate());} var left=Math.round((exp-r)/86400000); var st=left>=0?('未过期，剩余 '+left+' 天'):('已过期 '+(-left)+' 天'); return {ok:true,html:'<div class=\"big\">'+st+'</div><div class=\"row\">过期日 '+fm(exp)+'</div>'};",
   test:{inputs:{d:"2025-06-01",m:"12",ref:"2026-01-01"}, expect:"剩余 151 天"}},
  {id:"shmedicine", cat:"sh", icon:"💊", name:"药品有效期检查", desc:"按生产日期和保质期算到期日",
   formula:"到期日 = 生产日期 + 保质期月数",
   inputs:[{id:"d", label:"生产日期", type:"text", def:"2024-03-10", ph:"YYYY-MM-DD"},{id:"m", label:"保质期", unit:"个月", def:"24", min:1, max:120},{id:"ref", label:"基准日期", type:"text", def:"2026-01-01", ph:"YYYY-MM-DD（留空=今天）", optional:true}],
-  run:"if(!(m>=1&&m<=1200)) return {ok:false,msg:'保质期须在1~1200个月之间'}; var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'生产日期格式应为YYYY-MM-DD'}; var dd=new Date(t),y=dd.getUTCFullYear(),mo=dd.getUTCMonth()+Math.trunc(m),day=dd.getUTCDate(); y+=Math.floor(mo/12); mo=((mo%12)+12)%12; var dim=new Date(Date.UTC(y,mo+1,0)).getUTCDate(); var exp=Date.UTC(y,mo,Math.min(day,dim)); var r=(ref&&String(ref).trim())?Date.parse(ref):Date.now(); if(isNaN(r)) return {ok:false,msg:'基准日期格式应为YYYY-MM-DD'}; function fm(x){var q=new Date(x);function f2(n){return String(n).padStart(2,'0');}return q.getUTCFullYear()+'-'+f2(q.getUTCMonth()+1)+'-'+f2(q.getUTCDate());} var left=Math.round((exp-r)/86400000); var st=left>=0?('未过期，剩余 '+left+' 天'):('已过期 '+(-left)+' 天'); return {ok:true,html:'<div class=\"big\">'+st+'</div><div class=\"row\">到期日 '+fm(exp)+'；建议提前1个月不再服用</div>'};",
+  run:"if(!(m>=1&&m<=1200)) return {ok:false,msg:'保质期须在1~1200个月之间'}; var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'生产日期格式应为YYYY-MM-DD'}; function _v(ts,str){var p=String(str).split('-');if(p.length!==3)return false;var q=new Date(ts);return q.getUTCFullYear()===+p[0]&&q.getUTCMonth()===+p[1]-1&&q.getUTCDate()===+p[2];} if(!_v(t,d)) return {ok:false,msg:'生产日期不存在（如2月没有30日），请检查'}; var dd=new Date(t),y=dd.getUTCFullYear(),mo=dd.getUTCMonth()+Math.trunc(m),day=dd.getUTCDate(); y+=Math.floor(mo/12); mo=((mo%12)+12)%12; var dim=new Date(Date.UTC(y,mo+1,0)).getUTCDate(); var exp=Date.UTC(y,mo,Math.min(day,dim)); var r=(ref&&String(ref).trim())?Date.parse(ref):Date.now(); if(ref&&String(ref).trim()&&!_v(r,ref)) return {ok:false,msg:'基准日期不存在（如2月没有30日），请检查'}; if(isNaN(r)) return {ok:false,msg:'基准日期格式应为YYYY-MM-DD'}; function fm(x){var q=new Date(x);function f2(n){return String(n).padStart(2,'0');}return q.getUTCFullYear()+'-'+f2(q.getUTCMonth()+1)+'-'+f2(q.getUTCDate());} var left=Math.round((exp-r)/86400000); var st=left>=0?('未过期，剩余 '+left+' 天'):('已过期 '+(-left)+' 天'); return {ok:true,html:'<div class=\"big\">'+st+'</div><div class=\"row\">到期日 '+fm(exp)+'；建议提前1个月不再服用</div>'};",
   test:{inputs:{d:"2024-03-10",m:24,ref:"2026-01-01"}, expect:"2026-03-10"}},
  {id:"shschoolage", cat:"sh", icon:"🎒", name:"小学入学年份", desc:"按出生日期算哪年9月入读小学",
   formula:"当年8月31日前满6周岁 → 出生年+6；之后出生 → 出生年+7",
   inputs:[{id:"b", label:"出生日期", type:"text", def:"2020-03-15", ph:"YYYY-MM-DD"}],
-  run:"var t=Date.parse(b); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t); var yr=dd.getUTCMonth()<=7?dd.getUTCFullYear()+6:dd.getUTCFullYear()+7; return {ok:true,html:'<div class=\"big\">'+yr+' 年9月入学</div><div class=\"row\">当年8月31日前满6周岁入学</div>'};",
+  run:"var t=Date.parse(b); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var _p=String(b).split('-'); if(_p.length!==3||new Date(t).getUTCDate()!==+_p[2]||new Date(t).getUTCMonth()!==+_p[1]-1) return {ok:false,msg:'日期不存在（如2月没有30日），请检查'};  var dd=new Date(t); var yr=dd.getUTCMonth()<=7?dd.getUTCFullYear()+6:dd.getUTCFullYear()+7; return {ok:true,html:'<div class=\"big\">'+yr+' 年9月入学</div><div class=\"row\">当年8月31日前满6周岁入学</div>'};",
   test:{inputs:{b:"2020-03-15"}, expect:"2026 年9月入学"}},
  {id:"shblooddonate", cat:"sh", icon:"🩸", name:"献血间隔计算", desc:"按上次献血日期算下次可献血日期",
   formula:"全血间隔≥6个月；成分血间隔≥1个月",
   inputs:[{id:"d", label:"上次献血日期", type:"text", def:"2025-08-01", ph:"YYYY-MM-DD"},{id:"k", label:"献血类型", type:"select", options:[{v:"6",t:"全血"},{v:"1",t:"成分血"}], def:"6"}],
-  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t),y=dd.getUTCFullYear(),mo=dd.getUTCMonth()+(+k),day=dd.getUTCDate(); y+=Math.floor(mo/12); mo=((mo%12)+12)%12; var dim=new Date(Date.UTC(y,mo+1,0)).getUTCDate(); function f2(x){return String(x).padStart(2,'0');} var s=y+'-'+f2(mo+1)+'-'+f2(Math.min(day,dim)); return {ok:true,html:'<div class=\"big\">下次可献血 '+s+'</div>'};",
+  run:"var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var _p=String(d).split('-'); if(_p.length!==3||new Date(t).getUTCDate()!==+_p[2]||new Date(t).getUTCMonth()!==+_p[1]-1) return {ok:false,msg:'日期不存在（如2月没有30日），请检查'};  var dd=new Date(t),y=dd.getUTCFullYear(),mo=dd.getUTCMonth()+(+k),day=dd.getUTCDate(); y+=Math.floor(mo/12); mo=((mo%12)+12)%12; var dim=new Date(Date.UTC(y,mo+1,0)).getUTCDate(); function f2(x){return String(x).padStart(2,'0');} var s=y+'-'+f2(mo+1)+'-'+f2(Math.min(day,dim)); return {ok:true,html:'<div class=\"big\">下次可献血 '+s+'</div>'};",
   test:{inputs:{d:"2025-08-01",k:"6"}, expect:"2026-02-01"}},
  {id:"shcookrice", cat:"sh", icon:"🍚", name:"煮饭水量", desc:"按米的杯数和种类算加多少水",
   formula:"水量 = 杯数 × 180ml × 米水比（大米1.2/糙米1.5/糯米0.8）",
@@ -1487,7 +1487,7 @@ TOOLS.push(
  {id:"shcarmaint", cat:"sh", icon:"🔧", name:"汽车保养提醒", desc:"按上次保养日期里程算下次保养时间",
   formula:"下次日期 = 上次 + 间隔月数；下次里程 = 上次 + 间隔里程；以先到为准",
   inputs:[{id:"d", label:"上次保养日期", type:"text", def:"2025-10-01", ph:"YYYY-MM-DD"},{id:"km", label:"上次里程", unit:"km", def:"20000", min:0},{id:"im", label:"间隔", unit:"个月", def:"6", min:1, max:24},{id:"ikm", label:"间隔里程", unit:"km", def:"5000", min:1000, max:20000},{id:"ref", label:"基准日期", type:"text", def:"2026-01-01", ph:"YYYY-MM-DD（留空=今天）", optional:true},{id:"now", label:"当前里程", unit:"km", def:"23000", min:0}],
-  run:"if(!(im>=1&&im<=120)) return {ok:false,msg:'保养间隔须在1~120个月之间'}; var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; var dd=new Date(t),y=dd.getUTCFullYear(),mo=dd.getUTCMonth()+Math.trunc(im),day=dd.getUTCDate(); y+=Math.floor(mo/12); mo=((mo%12)+12)%12; var dim=new Date(Date.UTC(y,mo+1,0)).getUTCDate(); var nd=Date.UTC(y,mo,Math.min(day,dim)); var nk=km+ikm; var r=(ref&&String(ref).trim())?Date.parse(ref):Date.now(); if(isNaN(r)) return {ok:false,msg:'基准日期格式应为YYYY-MM-DD'}; function fm(x){var q=new Date(x);function f2(n){return String(n).padStart(2,'0');}return q.getUTCFullYear()+'-'+f2(q.getUTCMonth()+1)+'-'+f2(q.getUTCDate());} var ld=Math.round((nd-r)/86400000), lk=nk-now; return {ok:true,html:'<div class=\"big\">下次保养 '+fm(nd)+' / '+nk+'km</div><div class=\"row\">按日期剩 '+ld+' 天，按里程剩 '+lk+' km，以先到为准</div>'};",
+  run:"if(!(im>=1&&im<=120)) return {ok:false,msg:'保养间隔须在1~120个月之间'}; var t=Date.parse(d); if(isNaN(t)) return {ok:false,msg:'日期格式应为YYYY-MM-DD'}; function _v(ts,str){var p=String(str).split('-');if(p.length!==3)return false;var q=new Date(ts);return q.getUTCFullYear()===+p[0]&&q.getUTCMonth()===+p[1]-1&&q.getUTCDate()===+p[2];} if(!_v(t,d)) return {ok:false,msg:'日期不存在（如2月没有30日），请检查'}; var dd=new Date(t),y=dd.getUTCFullYear(),mo=dd.getUTCMonth()+Math.trunc(im),day=dd.getUTCDate(); y+=Math.floor(mo/12); mo=((mo%12)+12)%12; var dim=new Date(Date.UTC(y,mo+1,0)).getUTCDate(); var nd=Date.UTC(y,mo,Math.min(day,dim)); var nk=km+ikm; var r=(ref&&String(ref).trim())?Date.parse(ref):Date.now(); if(ref&&String(ref).trim()&&!_v(r,ref)) return {ok:false,msg:'基准日期不存在（如2月没有30日），请检查'}; if(isNaN(r)) return {ok:false,msg:'基准日期格式应为YYYY-MM-DD'}; function fm(x){var q=new Date(x);function f2(n){return String(n).padStart(2,'0');}return q.getUTCFullYear()+'-'+f2(q.getUTCMonth()+1)+'-'+f2(q.getUTCDate());} var ld=Math.round((nd-r)/86400000), lk=nk-now; return {ok:true,html:'<div class=\"big\">下次保养 '+fm(nd)+' / '+nk+'km</div><div class=\"row\">按日期剩 '+ld+' 天，按里程剩 '+lk+' km，以先到为准</div>'};",
   test:{inputs:{d:"2025-10-01",km:20000,im:6,ikm:5000,ref:"2026-01-01",now:23000}, expect:"2026-04-01"}}
 );
 TOOLS.push(
@@ -4718,7 +4718,7 @@ TOOLS.push(
    {id:"h", label:"身高", unit:"cm", def:"170", min:50, max:250},
    {id:"w", label:"体重", unit:"kg", def:"65", min:20, max:300}
   ],
-  run:"if(!(h>0)) return {ok:false,msg:'身高必须大于 0'}; var bmi=w/((h/100)*(h/100)); var c=bmi<18.5?'偏瘦':bmi<24?'正常':bmi<28?'超重':'肥胖'; return {ok:true,html:'<div class=\"big\">BMI = '+bmi.toFixed(1)+'</div><div class=\"row\">体型判断：'+c+'（仅供参考）</div>'};",
+  run:"if(!(h>0)) return {ok:false,msg:'身高必须大于 0'}; if(!(w>0)) return {ok:false,msg:'体重必须大于 0'}; var bmi=w/((h/100)*(h/100)); var c=bmi<18.5?'偏瘦':bmi<24?'正常':bmi<28?'超重':'肥胖'; return {ok:true,html:'<div class=\"big\">BMI = '+bmi.toFixed(1)+'</div><div class=\"row\">体型判断：'+c+'（仅供参考）</div>'};",
   test:{inputs:{h:170,w:65}, expect:"22.5"}},
  {id:"shbodyfat", cat:"sh", icon:"🧍", name:"体脂率估算", desc:"Deurenberg公式估算体脂率",
   formula:"体脂率% = 1.2×BMI + 0.23×年龄 − 10.8×性别 − 5.4（男=1，女=0）；男正常15–18%，女正常22–25%",
@@ -4728,7 +4728,7 @@ TOOLS.push(
    {id:"age", label:"年龄", unit:"岁", def:"30", min:10, max:100},
    {id:"sex", label:"性别", type:"select", def:"1", options:[{v:"1",t:"男"},{v:"0",t:"女"}]}
   ],
-  run:"if(!(h>0)) return {ok:false,msg:'身高必须大于 0'}; var bmi=w/((h/100)*(h/100)); var bf=1.2*bmi+0.23*age-10.8*Number(sex)-5.4; var c=Number(sex)===1?(bf<15?'偏低':bf<=18?'正常':'偏高'):(bf<22?'偏低':bf<=25?'正常':'偏高'); return {ok:true,html:'<div class=\"big\">体脂率 ≈ '+bf.toFixed(1)+'%</div><div class=\"row\">'+c+'（估算值，仅供参考）</div>'};",
+  run:"if(!(h>0)) return {ok:false,msg:'身高必须大于 0'}; if(!(w>0)) return {ok:false,msg:'体重必须大于 0'}; var bmi=w/((h/100)*(h/100)); var bf=1.2*bmi+0.23*age-10.8*Number(sex)-5.4; var c=Number(sex)===1?(bf<15?'偏低':bf<=18?'正常':'偏高'):(bf<22?'偏低':bf<=25?'正常':'偏高'); return {ok:true,html:'<div class=\"big\">体脂率 ≈ '+bf.toFixed(1)+'%</div><div class=\"row\">'+c+'（估算值，仅供参考）</div>'};",
   test:{inputs:{h:170,w:65,age:30,sex:"1"}, expect:"17.7"}},
  {id:"shstdweight", cat:"sh", icon:"📏", name:"标准体重", desc:"按身高算标准体重范围",
   formula:"男标准=(身高−80)×0.7；女标准=(身高−70)×0.6（kg）；±10%为正常范围",
@@ -4736,14 +4736,14 @@ TOOLS.push(
    {id:"h", label:"身高", unit:"cm", def:"170", min:50, max:250},
    {id:"sex", label:"性别", type:"select", def:"1", options:[{v:"1",t:"男"},{v:"0",t:"女"}]}
   ],
-  run:"var s=Number(sex)===1?(h-80)*0.7:(h-70)*0.6; var lo=(s*0.9).toFixed(1), hi=(s*1.1).toFixed(1); return {ok:true,html:'<div class=\"big\">标准体重 '+s.toFixed(1)+' kg</div><div class=\"row\">正常范围 '+lo+'–'+hi+' kg（仅供参考）</div>'};",
+  run:"var s=Number(sex)===1?(h-80)*0.7:(h-70)*0.6; if(!(s>0)) return {ok:false,msg:'身高超出公式适用范围'}; var lo=(s*0.9).toFixed(1), hi=(s*1.1).toFixed(1); return {ok:true,html:'<div class=\"big\">标准体重 '+s.toFixed(1)+' kg</div><div class=\"row\">正常范围 '+lo+'–'+hi+' kg（仅供参考）</div>'};",
   test:{inputs:{h:170,sex:"1"}, expect:"63.0"}},
  {id:"shwater", cat:"sh", icon:"💧", name:"每日喝水量建议", desc:"按体重算每天该喝多少水",
   formula:"每日需水量 ≈ 体重(kg) × 30–40 ml；取中间值35ml/kg",
   inputs:[
    {id:"w", label:"体重", unit:"kg", def:"65", min:20, max:300}
   ],
-  run:"var lo=Math.round(w*30), mid=Math.round(w*35), hi=Math.round(w*40); return {ok:true,html:'<div class=\"big\">建议 '+lo+'–'+hi+' ml/天</div><div class=\"row\">中间值约 '+mid+' ml（≈'+(mid/500).toFixed(1)+'瓶500ml矿泉水）；运动/高温天适当加量</div>'};",
+  run:"if(!(w>0)) return {ok:false,msg:'体重必须大于 0'}; var lo=Math.round(w*30), mid=Math.round(w*35), hi=Math.round(w*40); return {ok:true,html:'<div class=\"big\">建议 '+lo+'–'+hi+' ml/天</div><div class=\"row\">中间值约 '+mid+' ml（≈'+(mid/500).toFixed(1)+'瓶500ml矿泉水）；运动/高温天适当加量</div>'};",
   test:{inputs:{w:65}, expect:"2275"}},
  {id:"shsleep", cat:"sh", icon:"😴", name:"睡眠周期计算", desc:"按90分钟周期推算入睡时间",
   formula:"睡眠周期约90分钟；入睡时间 = 起床时间 − 周期数×90分钟 − 15分钟（入睡耗时）",
@@ -4764,7 +4764,7 @@ TOOLS.push(
    {id:"tm", label:"目标-月", def:"10", min:1, max:12},
    {id:"td", label:"目标-日", def:"18", min:1, max:31}
   ],
-  run:"var y=ty-by, m=tm-bm, d=td-bd; if(d<0){m--; var pm=new Date(ty,tm-1,0).getDate(); d+=pm;} if(m<0){y--; m+=12;} if(y<0) return {ok:false,msg:'目标日期不能早于出生日期'}; return {ok:true,html:'<div class=\"big\">'+y+'岁'+m+'个月'+d+'天</div><div class=\"row\">可用于算宝宝月龄、工龄、合同期等</div>'};",
+  run:"var _d1=new Date(by,bm,0).getDate(), _d2=new Date(ty,tm,0).getDate(); if(!(bm>=1&&bm<=12&&tm>=1&&tm<=12&&bd>=1&&bd<=_d1&&td>=1&&td<=_d2)) return {ok:false,msg:'日期不合法（如月份超12或当月无此日）'}; var y=ty-by, m=tm-bm, d=td-bd; if(d<0){m--; var pm=new Date(ty,tm-1,0).getDate(); d+=pm;} if(m<0){y--; m+=12;} if(y<0) return {ok:false,msg:'目标日期不能早于出生日期'}; return {ok:true,html:'<div class=\"big\">'+y+'岁'+m+'个月'+d+'天</div><div class=\"row\">可用于算宝宝月龄、工龄、合同期等</div>'};",
   test:{inputs:{by:2000,bm:1,bd:15,ty:2026,tm:10,td:18}, expect:"26岁9个月3天"}},
  {id:"shbp", cat:"sh", icon:"🩺", name:"血压判断", desc:"按中国指南判断血压分级",
   formula:"正常<120/80；正常高值120–139/80–89；1级140–159/90–99；2级160–179/100–109；3级≥180/110 mmHg",
@@ -4772,7 +4772,7 @@ TOOLS.push(
    {id:"sbp", label:"收缩压(高压)", unit:"mmHg", def:"120", min:50, max:300},
    {id:"dbp", label:"舒张压(低压)", unit:"mmHg", def:"80", min:30, max:200}
   ],
-  run:"var g=(sbp>=180||dbp>=110)?'3级高血压':(sbp>=160||dbp>=100)?'2级高血压':(sbp>=140||dbp>=90)?'1级高血压':(sbp>=120||dbp>=80)?'正常高值':'正常血压'; var tip=g==='正常血压'?'继续保持':'建议咨询医生，规律监测（仅供参考）'; return {ok:true,html:'<div class=\"big\">'+g+'</div><div class=\"row\">'+sbp+'/'+dbp+' mmHg；'+tip+'</div>'};",
+  run:"var g=(sbp>=180||dbp>=110)?'3级高血压':(sbp>=160||dbp>=100)?'2级高血压':(sbp>=140||dbp>=90)?'1级高血压':(sbp>=120||dbp>=80)?'正常高值':'正常血压'; if(g==='正常血压'&&(sbp<90||dbp<60)) g='偏低（低血压倾向）'; var tip=g==='正常血压'?'继续保持':'建议咨询医生，规律监测（仅供参考）'; return {ok:true,html:'<div class=\"big\">'+g+'</div><div class=\"row\">'+sbp+'/'+dbp+' mmHg；'+tip+'</div>'};",
   test:{inputs:{sbp:120,dbp:80}, expect:"正常高值"}}
 );
 TOOLS.push(
@@ -4793,13 +4793,13 @@ TOOLS.push(
   run:"var c=t<36?'偏低':t<=37.2?'正常':t<=38?'低热':t<=39?'中等热':'高热'; return {ok:true,html:'<div class=\"big\">'+c+'</div><div class=\"row\">'+t+'℃；发热请多休息、多喝水，持续不退请就医（仅供参考）</div>'};",
   test:{inputs:{t:37.5}, expect:"低热"}},
  {id:"shduedate", cat:"sh", icon:"🤰", name:"孕期预产期", desc:"按末次月经推算预产期",
-  formula:"Naegele法则：月份>3则月−3年+1，否则月+9；日期+7（超月按实际天数进位）",
+  formula:"Naegele法则：预产期 ≈ 末次月经首日 + 280 天（等价于月份−3、日期+7、年份+1）",
   inputs:[
    {id:"yr", label:"末次月经-年", def:"2025", min:2020, max:2035},
    {id:"mo", label:"末次月经-月", def:"10", min:1, max:12},
    {id:"da", label:"末次月经-日", def:"17", min:1, max:31}
   ],
-  run:"if(!(yr>=1900&&yr<=2100)) return {ok:false,msg:'年份须在 1900–2100 之间'}; if(!(mo>=1&&mo<=12)) return {ok:false,msg:'月份须在 1–12 之间'}; if(!(da>=1&&da<=31)) return {ok:false,msg:'日期须在 1–31 之间'}; var d=new Date(mo>3?yr+1:yr, (mo>3?mo-3:mo+9)-1, da+7); var s=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'; return {ok:true,html:'<div class=\"big\">预产期 '+s+'</div><div class=\"row\">孕期约280天，实际分娩前后两周内都正常（仅供参考）</div>'};",
+  run:"if(!(yr>=1900&&yr<=2100)) return {ok:false,msg:'年份须在 1900–2100 之间'}; if(!(mo>=1&&mo<=12)) return {ok:false,msg:'月份须在 1–12 之间'}; if(!(da>=1&&da<=31)) return {ok:false,msg:'日期须在 1–31 之间'}; if(da>new Date(yr,mo,0).getDate()) return {ok:false,msg:'该月没有这一天'}; var d=new Date(yr, mo-1, da+280); var s=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日'; return {ok:true,html:'<div class=\"big\">预产期 '+s+'</div><div class=\"row\">孕期约280天，实际分娩前后两周内都正常（仅供参考）</div>'};",
   test:{inputs:{yr:2025,mo:10,da:17}, expect:"2026年7月24日"}},
  {id:"shchildh", cat:"sh", icon:"👶", name:"宝宝身高预测", desc:"按父母身高预测孩子成年身高",
   formula:"男孩=(父+母+13)/2；女孩=(父+母−13)/2（cm）；±5cm为常见范围",
@@ -4816,7 +4816,7 @@ TOOLS.push(
    {id:"mode", label:"换算方向", type:"select", def:"d2f", options:[{v:"d2f",t:"度数→焦距"},{v:"f2d",t:"焦距→度数"}]},
    {id:"v", label:"数值", unit:"度/cm", def:"500", min:1, max:2000}
   ],
-  run:"if(!(v>0)) return {ok:false,msg:'数值必须大于 0'}; var out, s; if(mode==='d2f'){var fcm=10000/v; out='焦距 ≈ '+fcm.toFixed(1)+' cm'; s='500度近视，看清约20cm内的东西';}else{var dd=10000/v; out='度数 ≈ '+Math.round(dd)+' 度'; s='焦距20cm约对应500度';} return {ok:true,html:'<div class=\"big\">'+out+'</div><div class=\"row\">'+s+'（近似换算）</div>'};",
+  run:"if(!(v>0)) return {ok:false,msg:'数值必须大于 0'}; var out, s; if(mode==='d2f'){var fcm=10000/v; out='焦距 ≈ '+fcm.toFixed(1)+' cm'; s=v+'度近视，看清约'+fcm.toFixed(1)+'cm内的东西';}else{var dd=10000/v; out='度数 ≈ '+Math.round(dd)+' 度'; s='焦距'+v+'cm约对应'+Math.round(dd)+'度';} return {ok:true,html:'<div class=\"big\">'+out+'</div><div class=\"row\">'+s+'（近似换算）</div>'};",
   test:{inputs:{mode:"d2f",v:500}, expect:"20.0"}},
  {id:"shovulation", cat:"sh", icon:"📅", name:"排卵期推算", desc:"按月经周期推算排卵日和下次月经",
   formula:"排卵日 ≈ 上次月经首日 + (周期−14)天；下次月经 ≈ 上次首日 + 周期天",
@@ -4826,7 +4826,7 @@ TOOLS.push(
    {id:"da", label:"上次月经-日", def:"1", min:1, max:31},
    {id:"cyc", label:"周期天数", unit:"天", def:"28", min:20, max:45}
   ],
-  run:"if(!(yr>=1900&&yr<=2100)) return {ok:false,msg:'年份须在 1900–2100 之间'}; if(!(mo>=1&&mo<=12)) return {ok:false,msg:'月份须在 1–12 之间'}; if(!(da>=1&&da<=31)) return {ok:false,msg:'日期须在 1–31 之间'}; if(!(cyc>=1&&cyc<=365)) return {ok:false,msg:'周期天数须在 1–365 之间'}; function fmt(d){return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';} var ov=new Date(yr,mo-1,da+(cyc-14)); var nx=new Date(yr,mo-1,da+cyc); return {ok:true,html:'<div class=\"big\">排卵日 ≈ '+fmt(ov)+'</div><div class=\"row\">下次月经 ≈ '+fmt(nx)+'；周期不规律时仅供参考</div>'};",
+  run:"if(!(yr>=1900&&yr<=2100)) return {ok:false,msg:'年份须在 1900–2100 之间'}; if(!(mo>=1&&mo<=12)) return {ok:false,msg:'月份须在 1–12 之间'}; if(!(da>=1&&da<=31)) return {ok:false,msg:'日期须在 1–31 之间'}; if(da>new Date(yr,mo,0).getDate()) return {ok:false,msg:'该月没有这一天'}; if(!(cyc>=1&&cyc<=365)) return {ok:false,msg:'周期天数须在 1–365 之间'}; function fmt(d){return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';} var ov=new Date(yr,mo-1,da+(cyc-14)); var nx=new Date(yr,mo-1,da+cyc); return {ok:true,html:'<div class=\"big\">排卵日 ≈ '+fmt(ov)+'</div><div class=\"row\">下次月经 ≈ '+fmt(nx)+'；周期不规律时仅供参考</div>'};",
   test:{inputs:{yr:2026,mo:1,da:1,cyc:28}, expect:"1月15日"}}
 );
 TOOLS.push(
@@ -4879,7 +4879,7 @@ TOOLS.push(
   inputs:[
    {id:"bonus", label:"年终奖", unit:"元", def:"36000", min:0, max:10000000}
   ],
-  run:"var m=bonus/12, r, q; if(m<=3000){r=0.03;q=0;}else if(m<=12000){r=0.1;q=210;}else if(m<=25000){r=0.2;q=1410;}else if(m<=35000){r=0.25;q=2660;}else if(m<=55000){r=0.3;q=4410;}else if(m<=80000){r=0.35;q=7160;}else{r=0.45;q=15160;} var tax=bonus*r-q; return {ok:true,html:'<div class=\"big\">应缴 '+tax.toFixed(0)+' 元</div><div class=\"row\">到手 '+(bonus-tax).toFixed(0)+' 元（单独计税政策估算）</div>'};",
+  run:"if(!(bonus>=0)) return {ok:false,msg:'年终奖不能为负'}; var m=bonus/12, r, q; if(m<=3000){r=0.03;q=0;}else if(m<=12000){r=0.1;q=210;}else if(m<=25000){r=0.2;q=1410;}else if(m<=35000){r=0.25;q=2660;}else if(m<=55000){r=0.3;q=4410;}else if(m<=80000){r=0.35;q=7160;}else{r=0.45;q=15160;} var tax=bonus*r-q; return {ok:true,html:'<div class=\"big\">应缴 '+tax.toFixed(0)+' 元</div><div class=\"row\">到手 '+(bonus-tax).toFixed(0)+' 元（单独计税政策估算）</div>'};",
   test:{inputs:{bonus:36000}, expect:"1080"}},
  {id:"shaa", cat:"sh", icon:"🧮", name:"AA分摊", desc:"聚餐旅行人均该出多少",
   formula:"人均 = 总金额 ÷ 人数",
@@ -4913,7 +4913,7 @@ TOOLS.push(
    {id:"d", label:"优惠金额", unit:"元", def:"50", min:1, max:1000000},
    {id:"c", label:"当前金额", unit:"元", def:"260", min:0, max:1000000}
   ],
-  run:"var out; if(c>=m){out='<div class=\"big\">已达标，减后 '+(c-d).toFixed(2)+' 元</div><div class=\"row\">使用满'+m+'减'+d+'优惠</div>';}else{out='<div class=\"big\">还差 '+(m-c).toFixed(2)+' 元</div><div class=\"row\">凑满'+m+'元可减'+d+'元</div>';} return {ok:true,html:out};",
+  run:"var out; if(c>=m){out='<div class=\"big\">已达标，减后 '+Math.max(0,c-d).toFixed(2)+' 元</div><div class=\"row\">使用满'+m+'减'+d+'优惠</div>';}else{out='<div class=\"big\">还差 '+(m-c).toFixed(2)+' 元</div><div class=\"row\">凑满'+m+'元可减'+d+'元</div>';} return {ok:true,html:out};",
   test:{inputs:{m:300,d:50,c:260}, expect:"40.00"}}
 );
 TOOLS.push(
@@ -4940,7 +4940,7 @@ TOOLS.push(
   inputs:[
    {id:"area", label:"房间面积", unit:"㎡", def:"20", min:1, max:300}
   ],
-  run:"var need=area*200; var ps=need/2500; var std=[1,1.5,2,2.5,3,5]; var rec=std[std.length-1]; for(var i=0;i<std.length;i++){if(std[i]>=ps){rec=std[i];break;}} return {ok:true,html:'<div class=\"big\">推荐 '+rec+' 匹</div><div class=\"row\">需制冷量约 '+Math.round(need)+'W（估算值，顶楼/西晒选大一档）</div>'};",
+  run:"var need=area*200; var ps=need/2500; var std=[1,1.5,2,2.5,3,5]; var rec=std[std.length-1]; for(var i=0;i<std.length;i++){if(std[i]>=ps){rec=std[i];break;}} var warn=need>12500?'（已超单台5匹制冷量上限，需多台或商用机型）':''; return {ok:true,html:'<div class=\"big\">推荐 '+rec+' 匹'+warn+'</div><div class=\"row\">需制冷量约 '+Math.round(need)+'W（估算值，顶楼/西晒选大一档）</div>'};",
   test:{inputs:{area:20}, expect:"2 匹"}},
  {id:"shpace", cat:"yd", icon:"⏱", name:"跑步配速计算", desc:"算每公里配速和时速",
   formula:"配速 = 总秒数 ÷ 公里数；时速 = 3600 ÷ 每公里秒数",
@@ -10281,6 +10281,1626 @@ TOOLS.push(
 {"id":"wbbanner","cat":"wb","icon":"▣","name":"文本边框横幅","desc":"给多行文本套 ASCII/双线/井号边框做横幅","formula":"按显示宽度（CJK 全角字符计 2、其余计 1）取最大行宽，补齐后套框：box 用 +-|、double 用 ╔═╗║、hash 用 #；内边距可调。注释、标题、终端横幅常用","inputs":[{"id":"mode","label":"边框样式","type":"select","def":"box","options":[{"v":"box","t":"ASCII +-|"},{"v":"double","t":"双线 ╔═╗"},{"v":"hash","t":"井号 ###"}]},{"id":"pad","label":"内边距（空格数）","def":"1"},{"id":"t","label":"文本","type":"textarea","ph":"粘贴文本"}],"run":"var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(!s)return {ok:false,msg:'请输入文本'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var P=Number(pad);if(!isFinite(P)||Math.floor(P)!==P||P<0||P>5)return {ok:false,msg:'内边距须为 0~5 的整数'};var lines=s.split('\\n');if(lines.length>100)return {ok:false,msg:'行数过多（上限 100 行）'};function dw(x){var n=0;var a=Array.from(x);for(var i=0;i<a.length;i++){var cp=a[i].codePointAt(0);n+=(cp>=0x1100&&(cp<=0x115F||cp>=0x2E80&&cp<=0xA4CF||cp>=0xAC00&&cp<=0xD7A3||cp>=0xF900&&cp<=0xFAFF||cp>=0xFE30&&cp<=0xFE4F||cp>=0xFF00&&cp<=0xFF60||cp>=0xFFE0&&cp<=0xFFE6))?2:1;}return n;}var W=0;for(var i2=0;i2<lines.length;i2++)W=Math.max(W,dw(lines[i2]));if(W>200)return {ok:false,msg:'单行显示宽度过大（上限 200）'};var inner=W+P*2;var padS='';for(var q=0;q<P;q++)padS+=' ';var m=String(mode);var TL,TR,BL,BR,H,V;if(m==='box'){TL='+';TR='+';BL='+';BR='+';H='-';V='|';}else if(m==='double'){TL='\\u2554';TR='\\u2557';BL='\\u255A';BR='\\u255D';H='\\u2550';V='\\u2551';}else{TL='#';TR='#';BL='#';BR='#';H='#';V='#';}function rep(c,n2){var o='';for(var i3=0;i3<n2;i3++)o+=c;return o;}var out=[TL+rep(H,inner)+TR];for(var j=0;j<lines.length;j++){var fill=inner-P*2-dw(lines[j]);out.push(V+padS+lines[j]+rep(' ',fill)+padS+V);}out.push(BL+rep(H,inner)+BR);return {ok:true,html:'<div class=\\\"big\\\">横幅已生成（'+lines.length+' 行）</div><div class=\\\"row\\\" style=\\\"white-space:pre-wrap;word-break:break-all\\\">'+e(out.join('\\n'))+'</div><div class=\\\"row\\\">中文等宽字符按 2 个显示宽度计；等宽字体下对齐最佳</div>'};","test":{"inputs":{"mode":"box","pad":1,"t":"hi"},"expect":"| hi |"}},
 {"id":"wbdeaccent","cat":"wb","icon":"é→e","name":"去重音符号","desc":"去掉字母上的重音/变音符号（café → cafe、nǐ → ni）","formula":"Unicode NFD 分解 + 删除组合附加符号区段（U+0300–036F）；不能分解的特殊字母按对照表转写（ø→o、æ→ae、œ→oe、ß→ss、ł→l、þ→th）；可选转小写。适用于带调拼音、法/德/西/越等拉丁字母文本清洗","inputs":[{"id":"mode","label":"输出","type":"select","def":"keep","options":[{"v":"keep","t":"保留原大小写"},{"v":"lower","t":"同时转小写"}]},{"id":"t","label":"文本","type":"textarea","ph":"如 café、nǐ hǎo、Zürich"}],"run":"var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(!s)return {ok:false,msg:'请输入文本'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var SP={'\\u00F8':'o','\\u00D8':'O','\\u00E6':'ae','\\u00C6':'AE','\\u0153':'oe','\\u0152':'OE','\\u00DF':'ss','\\u0111':'d','\\u0110':'D','\\u0142':'l','\\u0141':'L','\\u00FE':'th','\\u00F0':'d','\\u00D0':'D'};var out='';var arr=Array.from(s);for(var i=0;i<arr.length;i++){var ch=arr[i];if(SP[ch]){out+=SP[ch];continue;}var dec=ch.normalize('NFD');var stripped=dec.replace(/[\\u0300-\\u036F]/g,'');out+=stripped;}if(String(mode)==='lower')out=out.toLowerCase();return {ok:true,html:'<div class=\\\"big\\\">已去重音</div><div class=\\\"row\\\" style=\\\"white-space:pre-wrap;word-break:break-all\\\">'+e(out)+'</div><div class=\\\"row\\\">NFD 分解后去掉组合附加符（U+0300–036F）；无分解形的 ø/æ/œ/ß/ł 等按对照表转写。带调拼音同样适用：nǐ hǎo → ni hao</div>'};","test":{"inputs":{"mode":"keep","t":"café"},"expect":"cafe"}},
 {"id":"wbacrostic","cat":"wb","icon":"🎋","name":"藏头藏尾提取","desc":"提取每行首字/尾字/第 N 字，拼出藏头藏尾内容","formula":"逐行（跳过空行、忽略行首尾空白）按码点取首字、尾字、首尾字或第 N 字拼接。与「按列提取」分工：彼按分隔符切列，本工具按行取固定位置单字，专为藏头诗/口令核对","inputs":[{"id":"mode","label":"取字位置","type":"select","def":"head","options":[{"v":"head","t":"每行首字（藏头）"},{"v":"tail","t":"每行尾字（藏尾）"},{"v":"both","t":"每行首+尾字"},{"v":"nth","t":"每行第 N 字"}]},{"id":"n","label":"N（第几个字）","def":"2","when":"mode=nth"},{"id":"t","label":"文本","type":"textarea","ph":"每行一句，粘贴文本"}],"run":"var s=String(t==null?'':t);if(s.length>100000)return {ok:false,msg:'文本过长（上限 100000 字符）'};if(!s.trim())return {ok:false,msg:'请输入文本'};function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}var lines=s.split('\\n').filter(function(x){return x.trim()!=='';});if(lines.length>10000)return {ok:false,msg:'行数过多（上限 10000 行）'};var m=String(mode);var out='';if(m==='nth'){var N=Number(n);if(!isFinite(N)||Math.floor(N)!==N||N<1||N>1000)return {ok:false,msg:'N 须为 1~1000 的整数'};for(var i=0;i<lines.length;i++){var a=Array.from(lines[i].trim());if(a.length>=N)out+=a[N-1];}return {ok:true,html:'<div class=\\\"big\\\">每行第 '+N+' 字</div><div class=\\\"row\\\" style=\\\"white-space:pre-wrap;word-break:break-all\\\">'+e(out)+'</div><div class=\\\"row\\\">短于 N 字的行已跳过</div>'};}for(var j=0;j<lines.length;j++){var arr=Array.from(lines[j].trim());if(m==='head')out+=arr[0];else if(m==='tail')out+=arr[arr.length-1];else out+=arr[0]+arr[arr.length-1];}return {ok:true,html:'<div class=\\\"big\\\">'+(m==='head'?'藏头（每行首字）':m==='tail'?'藏尾（每行尾字）':'每行首尾字')+'</div><div class=\\\"row\\\" style=\\\"white-space:pre-wrap;word-break:break-all\\\">'+e(out)+'</div><div class=\\\"row\\\">共取 '+lines.length+' 行；行首尾空白已忽略</div>'};","test":{"inputs":{"mode":"head","n":2,"t":"明日复明日\n月落乌啼"},"expect":"明月"}}
+);
+/* ===== R3 金融 jr 第二轮 25 个（+1000 第三轮） ===== */
+TOOLS.push(
+{
+ "id": "jrann2",
+ "cat": "jr",
+ "icon": "🌱",
+ "name": "增长型年金现值终值",
+ "desc": "每期金额按增长率 g 递增的年金，现值/终值互算，含期初/期末与 g=r 临界分支（基础版 jrpv/jrfv 只算等额年金）",
+ "formula": "增长型年金（首期金额 A，之后每期按 g 增长，共 n 期）：g≠r 时 现值 PV = A×[1−((1+g)/(1+r))ⁿ]÷(r−g)，终值 FV = A×[(1+r)ⁿ−(1+g)ⁿ]÷(r−g)；g=r 时 PV = A×n÷(1+r)，FV = A×n×(1+r)ⁿ⁻¹；期初年金（每期期初支付）再 ×(1+r)。期数上限 100 期",
+ "inputs": [
+  {
+   "id": "mode",
+   "label": "计算目标",
+   "type": "select",
+   "options": [
+    {
+     "v": "pv",
+     "t": "现值 PV"
+    },
+    {
+     "v": "fv",
+     "t": "终值 FV"
+    }
+   ],
+   "def": "pv"
+  },
+  {
+   "id": "typ",
+   "label": "支付时点",
+   "type": "select",
+   "options": [
+    {
+     "v": "end",
+     "t": "期末年金（普通年金）"
+    },
+    {
+     "v": "beg",
+     "t": "期初年金（预付年金）"
+    }
+   ],
+   "def": "end"
+  },
+  {
+   "id": "A",
+   "label": "首期金额 A",
+   "unit": "元",
+   "def": "10000"
+  },
+  {
+   "id": "r",
+   "label": "折现率/利率 r",
+   "unit": "%",
+   "def": "8"
+  },
+  {
+   "id": "g",
+   "label": "金额增长率 g",
+   "unit": "%",
+   "def": "3"
+  },
+  {
+   "id": "n",
+   "label": "期数 n",
+   "def": "10"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var a=Number(A),rr=Number(r)/100,gg=Number(g)/100,nn=Number(n);if(!(a>0))return {ok:false,msg:'首期金额须大于 0'};if(!(nn>=1&&nn<=100)||Math.floor(nn)!==nn)return {ok:false,msg:'期数须为 1~100 的整数'};if(!(rr>-1&&rr<10))return {ok:false,msg:'利率 r 须在 -100%~1000% 之间'};if(!(gg>-1&&gg<10))return {ok:false,msg:'增长率 g 须在 -100%~1000% 之间'};var eq=Math.abs(rr-gg)<1e-12;var val;if(String(mode)==='pv'){val=eq?a*nn/(1+rr):a*(1-Math.pow((1+gg)/(1+rr),nn))/(rr-gg);}else{val=eq?a*nn*Math.pow(1+rr,nn-1):a*(Math.pow(1+rr,nn)-Math.pow(1+gg,nn))/(rr-gg);}if(String(typ)==='beg')val*=(1+rr);if(!isFinite(val))return {ok:false,msg:'参数组合超出计算范围'};return {ok:true,html:'<div class=\"big\">'+(String(mode)==='pv'?'增长型年金现值 ':'增长型年金终值 ')+M(val)+' 元</div><div class=\"row\">首期 '+M(a)+' 元，r = '+r+'%，g = '+g+'%，共 '+nn+' 期，'+(String(typ)==='beg'?'期初':'期末')+'支付'+(eq?'；g = r 临界分支（极限公式）':'')+'</div><div class=\"row\">基础等额年金见「年金现值 jrpv / 年金终值 jrfv」，本工具多算金额逐期增长的情形</div>'};",
+ "test": {
+  "inputs": {
+   "mode": "pv",
+   "typ": "end",
+   "A": 10000,
+   "r": 8,
+   "g": 3,
+   "n": 10
+  },
+  "expect": "75501.34"
+ }
+},
+{
+ "id": "jrpmt2",
+ "cat": "jr",
+ "icon": "⚡",
+ "name": "贷款部分提前还款对比",
+ "desc": "部分提前还一笔后，缩短期限 vs 减少月供两种处理各省多少利息（jrprepay 只算一次性还清，jrloan 只算新贷款）",
+ "formula": "原贷款按等额本息：月供 = B×i÷(1−(1+i)^−N)，i = 年利率÷12。部分提前还款 P 后剩余本金 B′ = B−P：①减少月供（期限不变）：新月供按 B′、原剩余期数重算；②缩短期限（月供不变）：逐月模拟至还清（上限 600 期）。省息 = 原剩余总利息 − 新方案总利息（提前还款金额本身是应还本金，不计入节省）。零利率分支月供 = 本金÷期数、省息为 0",
+ "inputs": [
+  {
+   "id": "bal",
+   "label": "当前剩余本金",
+   "unit": "元",
+   "def": "500000"
+  },
+  {
+   "id": "rate",
+   "label": "贷款年利率",
+   "unit": "%",
+   "def": "4.8"
+  },
+  {
+   "id": "months",
+   "label": "剩余期数",
+   "unit": "月",
+   "def": "240"
+  },
+  {
+   "id": "pre",
+   "label": "计划提前还款金额",
+   "unit": "元",
+   "def": "100000"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var B=Number(bal),rt=Number(rate),N=Number(months),P=Number(pre);if(!(B>0))return {ok:false,msg:'剩余本金须大于 0'};if(!(rt>=0&&rt<=100))return {ok:false,msg:'年利率须在 0~100% 之间'};if(!(N>=1&&N<=600)||Math.floor(N)!==N)return {ok:false,msg:'剩余期数须为 1~600 的整数'};if(!(P>0&&P<B))return {ok:false,msg:'提前还款金额须大于 0 且小于剩余本金（全部还清请用 jrprepay）'};var i=rt/1200;var pmt=i===0?B/N:B*i/(1-Math.pow(1+i,-N));var origInt=pmt*N-B;var B2=B-P;var pmt2=i===0?B2/N:B2*i/(1-Math.pow(1+i,-N));var intA=pmt2*N-B2;var b=B2,tot=0,mm=0;while(b>0.005&&mm<600){var it=b*i;b+=it;var pay=Math.min(pmt,b);b-=pay;tot+=it;mm++;}if(b>0.005)return {ok:false,msg:'缩短期限方案 600 期内未还清，参数异常'};var saveA=origInt-intA,saveB=origInt-tot;if(!isFinite(saveA)||!isFinite(saveB))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\"big\">缩短期限省息 '+M(saveB)+' 元</div><div class=\"row\">原月供 '+M(pmt)+' 元，原剩余总利息 '+M(origInt)+' 元；提前还 '+M(P)+' 元后剩余本金 '+M(B2)+' 元</div><div class=\"row\">①减少月供：新月供 '+M(pmt2)+' 元，省息 '+M(saveA)+' 元；②缩短期限：月供不变，约 '+mm+' 个月还清（提前 '+(N-mm)+' 个月），省息 '+M(saveB)+' 元</div><div class=\"row\">未计银行提前还款违约金/手续费，实际以贷款合同为准</div>'};",
+ "test": {
+  "inputs": {
+   "bal": 500000,
+   "rate": 4.8,
+   "months": 240,
+   "pre": 100000
+  },
+  "expect": "126487.81"
+ }
+},
+{
+ "id": "jrbond2",
+ "cat": "jr",
+ "icon": "🧱",
+ "name": "可转债纯债价值（债底）",
+ "desc": "把可转债当纯债折现算债底价格，与转股价值、转债市价三方对照（jrconv 只算转股价值与溢价率）",
+ "formula": "纯债价值 = Σ 票面利息÷(1+y)ᵗ + 赎回价÷(1+y)ⁿ（年付息口径，y 为同评级纯债到期收益率）；转股价值 = 面值÷转股价×正股价；纯债溢价率 =（转债价−纯债价值）÷纯债价值。债底是转债下跌时的理论支撑位，实际还受信用与条款影响",
+ "inputs": [
+  {
+   "id": "face",
+   "label": "债券面值",
+   "unit": "元",
+   "def": "100"
+  },
+  {
+   "id": "coupon",
+   "label": "票面利率",
+   "unit": "%",
+   "def": "3"
+  },
+  {
+   "id": "yrs",
+   "label": "剩余年限",
+   "unit": "年",
+   "def": "5"
+  },
+  {
+   "id": "ytm",
+   "label": "纯债折现率（同评级收益率）",
+   "unit": "%",
+   "def": "5"
+  },
+  {
+   "id": "redeem",
+   "label": "到期赎回价",
+   "unit": "元",
+   "def": "110"
+  },
+  {
+   "id": "cp",
+   "label": "转股价",
+   "unit": "元",
+   "def": "10"
+  },
+  {
+   "id": "stock",
+   "label": "正股价格",
+   "unit": "元",
+   "def": "12"
+  },
+  {
+   "id": "price",
+   "label": "转债市价",
+   "unit": "元",
+   "def": "130"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var F=Number(face),c=Number(coupon)/100,nn=Number(yrs),y=Number(ytm)/100,RP=Number(redeem),CP=Number(cp),SP=Number(stock),PR=Number(price);if(!(F>0))return {ok:false,msg:'面值须大于 0'};if(!(c>=0))return {ok:false,msg:'票面利率不能为负'};if(!(nn>=1&&nn<=50)||Math.floor(nn)!==nn)return {ok:false,msg:'剩余年限须为 1~50 的整数'};if(!(y>-0.99))return {ok:false,msg:'折现率须大于 -99%'};if(!(RP>=0))return {ok:false,msg:'赎回价不能为负'};if(!(CP>0))return {ok:false,msg:'转股价须大于 0'};if(!(SP>=0))return {ok:false,msg:'正股价不能为负'};if(!(PR>0))return {ok:false,msg:'转债市价须大于 0'};var pv=0;for(var t=1;t<=nn;t++){pv+=(F*c)/Math.pow(1+y,t);}pv+=RP/Math.pow(1+y,nn);var conv=F/CP*SP;var premB=(PR-pv)/pv*100;var premC=conv>0?(PR-conv)/conv*100:0;if(!isFinite(pv))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\"big\">纯债价值 '+M(pv)+' 元</div><div class=\"row\">转股价值 '+M(conv)+' 元，转债市价 '+M(PR)+' 元；市价高出债底 '+M(premB)+'%，'+(conv>0?'高出转股价值 '+M(premC)+'%':'正股价为 0 无转股价值')+'</div><div class=\"row\">市价越接近纯债价值，下行支撑越强；转股价值见 jrconv，本工具补纯债折现一侧</div>'};",
+ "test": {
+  "inputs": {
+   "face": 100,
+   "coupon": 3,
+   "yrs": 5,
+   "ytm": 5,
+   "redeem": 110,
+   "cp": 10,
+   "stock": 12,
+   "price": 130
+  },
+  "expect": "99.18"
+ }
+},
+{
+ "id": "jrddmh",
+ "cat": "jr",
+ "icon": "📉",
+ "name": "H模型股利贴现",
+ "desc": "增长率从高位线性递减到长期水平的股利贴现（jrddm 是固定增长、jrddm2 是两阶段跳变，本工具是线性递减过渡）",
+ "formula": "H 模型（Fuller & Hsia）：P = D₀×(1+gL)÷(r−gL) + D₀×H×(gS−gL)÷(r−gL)，其中 gS 为当前高增长率，gL 为长期稳定增长率，增长率在 2H 年内线性递减（H 为半程年数），r 为要求回报率，须 r > gL",
+ "inputs": [
+  {
+   "id": "d0",
+   "label": "最近股利 D₀",
+   "unit": "元/股",
+   "def": "2"
+  },
+  {
+   "id": "gs",
+   "label": "当前高增长率 gS",
+   "unit": "%",
+   "def": "15"
+  },
+  {
+   "id": "gl",
+   "label": "长期增长率 gL",
+   "unit": "%",
+   "def": "4"
+  },
+  {
+   "id": "H",
+   "label": "递减半程 H",
+   "unit": "年",
+   "hint": "增长率在 2H 年内由 gS 线性降到 gL",
+   "def": "5"
+  },
+  {
+   "id": "r",
+   "label": "要求回报率 r",
+   "unit": "%",
+   "def": "10"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var D=Number(d0),a=Number(gs)/100,b=Number(gl)/100,hh=Number(H),rr=Number(r)/100;if(!(D>=0))return {ok:false,msg:'股利不能为负'};if(!(hh>0&&hh<=50))return {ok:false,msg:'半程 H 须在 0~50 年之间'};if(!(b>-1))return {ok:false,msg:'长期增长率须大于 -100%'};if(!(a>-1))return {ok:false,msg:'高增长率须大于 -100%'};if(!(rr>b))return {ok:false,msg:'要求回报率 r 须大于长期增长率 gL，否则模型发散'};var base=D*(1+b)/(rr-b);var extra=D*hh*(a-b)/(rr-b);var val=base+extra;if(!isFinite(val))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\"big\">内在价值 '+M(val)+' 元/股</div><div class=\"row\">稳定增长部分 '+M(base)+' 元 + 超额增长部分 '+M(extra)+' 元（gS '+gs+'% 在 '+(2*hh)+' 年内线性递减至 gL '+gl+'%）</div>'+(a<=b?'<div class=\"row\">提示：gS ≤ gL 时并非递减情形，结果仅供公式对照</div>':'')};",
+ "test": {
+  "inputs": {
+   "d0": 2,
+   "gs": 15,
+   "gl": 4,
+   "H": 5,
+   "r": 10
+  },
+  "expect": "53.00"
+ }
+},
+{
+ "id": "jrcapm2",
+ "cat": "jr",
+ "icon": "⚖️",
+ "name": "杠杆贝塔互换（哈马达公式）",
+ "desc": "含税债务下无杠杆贝塔与杠杆贝塔互推（jrcapm 只用给定 β 算预期收益，本工具算 β 本身随资本结构的变化）",
+ "formula": "哈马达公式：βL = βU × [1 + (1−税率) × D/E]；反解 βU = βL ÷ [1 + (1−税率) × D/E]。D/E 为负债与权益市值之比；税率为企业所得税率（债务税盾口径）",
+ "inputs": [
+  {
+   "id": "mode",
+   "label": "换算方向",
+   "type": "select",
+   "options": [
+    {
+     "v": "lever",
+     "t": "无杠杆 βU → 杠杆 βL"
+    },
+    {
+     "v": "unlever",
+     "t": "杠杆 βL → 无杠杆 βU"
+    }
+   ],
+   "def": "lever"
+  },
+  {
+   "id": "beta",
+   "label": "已知贝塔 β",
+   "def": "0.8"
+  },
+  {
+   "id": "de",
+   "label": "负债权益比 D/E",
+   "def": "0.5"
+  },
+  {
+   "id": "tax",
+   "label": "企业所得税率",
+   "unit": "%",
+   "def": "25"
+  }
+ ],
+ "run": "var b=Number(beta),de2=Number(de),t=Number(tax)/100;if(!isFinite(b))return {ok:false,msg:'贝塔无效'};if(!(de2>=0))return {ok:false,msg:'D/E 不能为负'};if(!(t>=0&&t<=1))return {ok:false,msg:'税率须在 0~100% 之间'};var f=1+(1-t)*de2;var out=String(mode)==='lever'?b*f:b/f;return {ok:true,html:'<div class=\"big\">'+(String(mode)==='lever'?'杠杆贝塔 βL = ':'无杠杆贝塔 βU = ')+out.toFixed(4)+'</div><div class=\"row\">放大/缩小因子 1+(1−'+tax+'%)×'+de+' = '+f.toFixed(4)+'；D/E = 0 时两者相等</div><div class=\"row\">求得 β 后可代入 jrcapm 算预期收益；本工具只做资本结构换算</div>'};",
+ "test": {
+  "inputs": {
+   "mode": "lever",
+   "beta": 0.8,
+   "de": 0.5,
+   "tax": 25
+  },
+  "expect": "1.1000"
+ }
+},
+{
+ "id": "jrperf2",
+ "cat": "jr",
+ "icon": "Ω",
+ "name": "Omega比率与收益痛苦比",
+ "desc": "由收益序列算 Omega 比率（门槛以上收益对门槛以下损失之比），夏普/索提诺/卡玛之外的分布口径绩效（各比率单算见 jrsharpe/jrsortino/jrcalmar）",
+ "formula": "Omega(τ) = Σ max(rᵢ−τ, 0) ÷ Σ max(τ−rᵢ, 0)，τ 为门槛收益（%）；收益痛苦比（Gain-to-Pain）= Σ(rᵢ−τ) ÷ Σ max(τ−rᵢ, 0)。Omega > 1 表示门槛以上面积大于以下；无下行期时 Omega 为 ∞；序列以 % 输入、逗号分隔，2~500 期",
+ "inputs": [
+  {
+   "id": "seq",
+   "label": "各期收益率序列",
+   "unit": "%",
+   "type": "text",
+   "hint": "逗号分隔，如 10,-5,8,-2,6",
+   "def": "10,-5,8,-2,6"
+  },
+  {
+   "id": "tau",
+   "label": "门槛收益 τ",
+   "unit": "%",
+   "def": "0"
+  }
+ ],
+ "run": "var s=String(seq);if(s.length>2000)return {ok:false,msg:'序列过长（上限 2000 字符）'};var toks=s.split(/[,，、\\s]+/).filter(function(x){return x!=='';});if(toks.length<2||toks.length>500)return {ok:false,msg:'序列须为 2~500 期'};var xs=[],i;for(i=0;i<toks.length;i++){var v=Number(toks[i]);if(!isFinite(v))return {ok:false,msg:'序列含非数值内容：'+toks[i]};xs.push(v);}var tv=Number(tau);if(!isFinite(tv))return {ok:false,msg:'门槛收益无效'};var up=0,dn=0,sum=0;for(i=0;i<xs.length;i++){var d=xs[i]-tv;sum+=d;if(d>0)up+=d;else dn-=d;}if(dn===0&&up===0)return {ok:false,msg:'全部收益都等于门槛，Omega 无定义'};if(dn===0)return {ok:true,html:'<div class=\"big\">Omega = ∞（无下行期）</div><div class=\"row\">门槛 '+tv+'% 以上合计 +'+up.toFixed(2)+'%，无任何一期低于门槛，Omega 无上界</div>'};var om=up/dn,gtp=sum/dn;return {ok:true,html:'<div class=\"big\">Omega = '+om.toFixed(4)+'</div><div class=\"row\">门槛 '+tv+'%：上行合计 +'+up.toFixed(2)+'% ÷ 下行合计 −'+dn.toFixed(2)+'%；收益痛苦比 = '+gtp.toFixed(4)+'（净超额 ÷ 下行合计）</div><div class=\"row\">Omega 用完整分布而非只看波动，>1 为门槛以上占优</div>'};",
+ "test": {
+  "inputs": {
+   "seq": "10,-5,8,-2,6",
+   "tau": 0
+  },
+  "expect": "3.4286"
+ }
+},
+{
+ "id": "jrkelly2",
+ "cat": "jr",
+ "icon": "🎲",
+ "name": "分数凯利仓位进阶",
+ "desc": "全/半/四分之一凯利三档仓位与对应金额、期望对数增长率（jrkelly 只给全凯利一个数）",
+ "formula": "全凯利 f* = (b·p − q)÷b（p 胜率，q = 1−p，b 盈亏比）；半凯利 = f*÷2，四分之一凯利 = f*÷4；全凯利期望对数增长率 g = p·ln(1+b·f*) + q·ln(1−f*)（每注，p=100% 时 g = ln(1+b)）。f* ≤ 0 表示期望不占优，仓位为 0",
+ "inputs": [
+  {
+   "id": "p",
+   "label": "胜率",
+   "unit": "%",
+   "def": "60"
+  },
+  {
+   "id": "b",
+   "label": "盈亏比（平均盈利÷平均亏损）",
+   "def": "1"
+  },
+  {
+   "id": "bank",
+   "label": "可用资金",
+   "unit": "元",
+   "def": "100000"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var pf=Number(p)/100,bv=Number(b),bk=Number(bank);if(!(pf>=0&&pf<=1))return {ok:false,msg:'胜率须在 0~100% 之间'};if(!(bv>0))return {ok:false,msg:'盈亏比须大于 0'};if(!(bk>0))return {ok:false,msg:'可用资金须大于 0'};var f=(bv*pf-(1-pf))/bv;if(f<=0)return {ok:true,html:'<div class=\"big\">全凯利 0.00%（期望不占优）</div><div class=\"row\">f* = '+f.toFixed(4)+' ≤ 0，凯利准则建议仓位为 0，不参与</div>'};var gr=pf>=1?Math.log(1+bv*f):pf*Math.log(1+bv*f)+(1-pf)*Math.log(1-f);var gp=(Math.exp(gr)-1)*100;return {ok:true,html:'<div class=\"big\">全凯利 '+(f*100).toFixed(2)+'%（'+M(bk*f)+' 元）</div><div class=\"row\">半凯利 '+(f*50).toFixed(2)+'%（'+M(bk*f/2)+' 元）；四分之一凯利 '+(f*25).toFixed(2)+'%（'+M(bk*f/4)+' 元）</div><div class=\"row\">全凯利期望对数增长率每注 '+gr.toFixed(4)+'（约合 '+(gp>=0?'+':'')+gp.toFixed(2)+'% 几何增长），波动最大；分数凯利以部分增长率换低回撤</div>'};",
+ "test": {
+  "inputs": {
+   "p": 60,
+   "b": 1,
+   "bank": 100000
+  },
+  "expect": "20.00%"
+ }
+},
+{
+ "id": "jropt2",
+ "cat": "jr",
+ "icon": "🏛️",
+ "name": "期权Rho与杠杆弹性",
+ "desc": "Black-Scholes 的 Rho（利率敏感度）与 Omega 弹性（杠杆倍数）专项（jrgreeks 给 Δ/Γ/Θ/Vega，不含 Rho 与弹性）",
+ "formula": "d1 = [ln(S/K) + (r + σ²/2)·T] ÷ (σ√T)，d2 = d1 − σ√T；Rho（每 1% 利率变化）看涨 = K·T·e^(−rT)·N(d2)÷100，看跌 = −K·T·e^(−rT)·N(−d2)÷100；弹性（Omega 杠杆）= Δ × S ÷ 期权价格，价格由 BS 公式同算；无股息欧式期权口径",
+ "inputs": [
+  {
+   "id": "S",
+   "label": "标的价格 S",
+   "def": "100"
+  },
+  {
+   "id": "K",
+   "label": "行权价 K",
+   "def": "100"
+  },
+  {
+   "id": "T",
+   "label": "剩余期限 T",
+   "unit": "年",
+   "def": "1"
+  },
+  {
+   "id": "r",
+   "label": "无风险利率 r",
+   "unit": "%",
+   "def": "5"
+  },
+  {
+   "id": "sig",
+   "label": "波动率 σ",
+   "unit": "%",
+   "def": "20"
+  },
+  {
+   "id": "type",
+   "label": "期权类型",
+   "type": "select",
+   "options": [
+    {
+     "v": "call",
+     "t": "看涨 Call"
+    },
+    {
+     "v": "put",
+     "t": "看跌 Put"
+    }
+   ],
+   "def": "call"
+  }
+ ],
+ "run": "function N(x){var s=x<0?-1:1;var ax=Math.abs(x)/Math.sqrt(2);var t=1/(1+0.3275911*ax);var y=1-((((1.061405429*t-1.453152027)*t+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-ax*ax);return 0.5*(1+s*y);}var SS=Number(S),KK=Number(K),TT=Number(T),rr=Number(r)/100,sg=Number(sig)/100;if(!(SS>0))return {ok:false,msg:'标的价格须大于 0'};if(!(KK>0))return {ok:false,msg:'行权价须大于 0'};if(!(TT>0&&TT<=50))return {ok:false,msg:'剩余期限须在 0~50 年之间'};if(!(sg>0))return {ok:false,msg:'波动率 σ 须大于 0'};if(!isFinite(rr))return {ok:false,msg:'利率无效'};var sq=Math.sqrt(TT);var d1=(Math.log(SS/KK)+(rr+sg*sg/2)*TT)/(sg*sq);var d2=d1-sg*sq;var call=String(type)==='call';var disc=Math.exp(-rr*TT);var price=call?SS*N(d1)-KK*disc*N(d2):KK*disc*N(-d2)-SS*N(-d1);if(!(price>1e-10))return {ok:false,msg:'期权理论价过小（深度价外/临近到期），弹性无意义'};var delta=call?N(d1):N(d1)-1;var rho=call?KK*TT*disc*N(d2)/100:-KK*TT*disc*N(-d2)/100;var lam=delta*SS/price;return {ok:true,html:'<div class=\"big\">Rho = '+rho.toFixed(4)+'</div><div class=\"row\">理论价 '+price.toFixed(4)+'，Delta = '+delta.toFixed(4)+'，弹性 Omega = '+lam.toFixed(4)+'（标的涨 1%，期权约涨 '+lam.toFixed(2)+'%）</div><div class=\"row\">Rho 为利率每变动 1 个百分点的价格变化；Δ/Γ/Θ/Vega 见 jrgreeks</div>'};",
+ "test": {
+  "inputs": {
+   "S": 100,
+   "K": 100,
+   "T": 1,
+   "r": 5,
+   "sig": 20,
+   "type": "call"
+  },
+  "expect": "0.5323"
+ }
+},
+{
+ "id": "jrfv2",
+ "cat": "jr",
+ "icon": "🔁",
+ "name": "计息频率等值利率换算",
+ "desc": "同一实际收益下，名义利率在年/半年/季/月/周/日/连续计息之间互换（jrear 只换到 EAR，jrcont 只算连续复利终值）",
+ "formula": "先折实际年利率 EAR：离散 EAR = (1 + r÷m)ᵐ − 1，连续 EAR = e^r − 1；再反解目标口径：连续利率 = ln(1+EAR)，名义利率 = m×[(1+EAR)^(1/m) − 1]。等值利率现金流等价，与计息频率无关的只有 EAR",
+ "inputs": [
+  {
+   "id": "r",
+   "label": "已知利率",
+   "unit": "%",
+   "def": "12"
+  },
+  {
+   "id": "src",
+   "label": "已知口径",
+   "type": "select",
+   "options": [
+    {
+     "v": "1",
+     "t": "名义年利率（年计息）"
+    },
+    {
+     "v": "2",
+     "t": "名义年利率（半年计息）"
+    },
+    {
+     "v": "4",
+     "t": "名义年利率（季计息）"
+    },
+    {
+     "v": "12",
+     "t": "名义年利率（月计息）"
+    },
+    {
+     "v": "52",
+     "t": "名义年利率（周计息）"
+    },
+    {
+     "v": "365",
+     "t": "名义年利率（日计息）"
+    },
+    {
+     "v": "cont",
+     "t": "连续复利率"
+    }
+   ],
+   "def": "12"
+  },
+  {
+   "id": "dst",
+   "label": "目标口径",
+   "type": "select",
+   "options": [
+    {
+     "v": "1",
+     "t": "名义年利率（年计息）"
+    },
+    {
+     "v": "2",
+     "t": "名义年利率（半年计息）"
+    },
+    {
+     "v": "4",
+     "t": "名义年利率（季计息）"
+    },
+    {
+     "v": "12",
+     "t": "名义年利率（月计息）"
+    },
+    {
+     "v": "52",
+     "t": "名义年利率（周计息）"
+    },
+    {
+     "v": "365",
+     "t": "名义年利率（日计息）"
+    },
+    {
+     "v": "cont",
+     "t": "连续复利率"
+    }
+   ],
+   "def": "cont"
+  }
+ ],
+ "run": "var rr=Number(r)/100;if(!(rr>-0.99&&rr<=10))return {ok:false,msg:'利率须在 -99%~1000% 之间'};var fm=String(src),tm=String(dst);var ear;if(fm==='cont'){ear=Math.exp(rr)-1;}else{var m1=Number(fm);if(!(1+rr/m1>0))return {ok:false,msg:'利率过低，1+r/m 不为正'};ear=Math.pow(1+rr/m1,m1)-1;}if(!(ear>-1))return {ok:false,msg:'实际年利率不大于 -100%，无等值利率'};var out;if(tm==='cont'){out=Math.log(1+ear);}else{var m2=Number(tm);out=m2*(Math.pow(1+ear,1/m2)-1);}if(!isFinite(out))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\"big\">等值利率 = '+(out*100).toFixed(4)+'%</div><div class=\"row\">中介口径 EAR（实际年利率）= '+(ear*100).toFixed(4)+'%；计息越频繁，同名义利率的 EAR 越高、等值连续利率越低</div>'};",
+ "test": {
+  "inputs": {
+   "r": 12,
+   "src": "12",
+   "dst": "cont"
+  },
+  "expect": "11.9404%"
+ }
+},
+{
+ "id": "jrrule72",
+ "cat": "jr",
+ "icon": "⏳",
+ "name": "倍增时间精确版（72/115法则对照）",
+ "desc": "任意倍数的精确增长年限，与 72 法则、115 法则、连续复利口径对照（jr72 只有 72÷r 一个近似数）",
+ "formula": "精确年限（年复利）= ln(倍数) ÷ ln(1+r)；连续复利年限 = ln(倍数) ÷ r；72 法则：翻倍年限 ≈ 72÷r%（由 ln2÷ln(1+r) 在 r≈8% 附近校准）；115 法则：三倍年限 ≈ 115÷r%。近似法则在利率偏离 8% 较多时误差变大",
+ "inputs": [
+  {
+   "id": "x",
+   "label": "目标倍数",
+   "hint": "如翻倍 2、三倍 3、十倍 10",
+   "def": "2"
+  },
+  {
+   "id": "r",
+   "label": "年化收益率",
+   "unit": "%",
+   "def": "8"
+  }
+ ],
+ "run": "var xx=Number(x),rr=Number(r)/100;if(!(xx>1&&xx<=1e6))return {ok:false,msg:'目标倍数须大于 1（上限 100 万倍）'};if(!(rr>0&&rr<=10))return {ok:false,msg:'收益率须在 0~1000% 之间'};var exact=Math.log(xx)/Math.log(1+rr);var cont=Math.log(xx)/rr;var r72=(72/Number(r))*(Math.log(xx)/Math.log(2));return {ok:true,html:'<div class=\"big\">精确 '+exact.toFixed(4)+' 年</div><div class=\"row\">连续复利口径 '+cont.toFixed(4)+' 年；72 法则推算（按翻倍 '+(72/Number(r)).toFixed(2)+' 年折算到 '+xx+' 倍）'+r72.toFixed(2)+' 年</div><div class=\"row\">参考：此利率下翻倍 72 法则 ≈ '+(72/Number(r)).toFixed(2)+' 年（精确 '+(Math.log(2)/Math.log(1+rr)).toFixed(2)+' 年），三倍 115 法则 ≈ '+(115/Number(r)).toFixed(2)+' 年（精确 '+(Math.log(3)/Math.log(1+rr)).toFixed(2)+' 年）</div>'};",
+ "test": {
+  "inputs": {
+   "x": 2,
+   "r": 8
+  },
+  "expect": "9.0065"
+ }
+},
+{
+ "id": "jrlease",
+ "cat": "jr",
+ "icon": "🏭",
+ "name": "融资租赁租金计算",
+ "desc": "按等额年金法算融资租赁每期租金（设备款 − 残值现值分摊），含期初/期末付款与计息频率",
+ "formula": "每期租金 = [设备价 − 残值÷(1+i)ᴺ] × i ÷ [1 − (1+i)^−ᴺ]，i = 年利率÷每年期数，N = 年数×每年期数；残值按期末留购价/保证金口径在期末回收，故先折现扣除；期初付款租金 = 期末租金÷(1+i)；零利率时租金 =（设备价−残值）÷N。总期数上限 360",
+ "inputs": [
+  {
+   "id": "price",
+   "label": "设备价款（融资金额）",
+   "unit": "元",
+   "def": "1000000"
+  },
+  {
+   "id": "rv",
+   "label": "期末残值/留购价",
+   "unit": "元",
+   "def": "50000"
+  },
+  {
+   "id": "rate",
+   "label": "租赁年利率",
+   "unit": "%",
+   "def": "6"
+  },
+  {
+   "id": "yrs",
+   "label": "租期",
+   "unit": "年",
+   "def": "5"
+  },
+  {
+   "id": "m",
+   "label": "每年付款期数",
+   "type": "select",
+   "options": [
+    {
+     "v": "1",
+     "t": "每年 1 期"
+    },
+    {
+     "v": "2",
+     "t": "每年 2 期"
+    },
+    {
+     "v": "4",
+     "t": "每年 4 期"
+    },
+    {
+     "v": "12",
+     "t": "每月 1 期"
+    }
+   ],
+   "def": "1"
+  },
+  {
+   "id": "typ",
+   "label": "付款时点",
+   "type": "select",
+   "options": [
+    {
+     "v": "end",
+     "t": "期末付款"
+    },
+    {
+     "v": "beg",
+     "t": "期初付款"
+    }
+   ],
+   "def": "end"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var P=Number(price),RV=Number(rv),rt=Number(rate),Y=Number(yrs),mm=Number(m);if(!(P>0))return {ok:false,msg:'设备价款须大于 0'};if(!(RV>=0&&RV<=P))return {ok:false,msg:'残值须在 0 与设备价款之间'};if(!(rt>=0&&rt<=100))return {ok:false,msg:'年利率须在 0~100% 之间'};if(!(Y>=1&&Y<=30)||Math.floor(Y)!==Y)return {ok:false,msg:'租期须为 1~30 的整数年'};var N=Y*mm;if(N>360)return {ok:false,msg:'总期数超过 360 期上限'};var i=rt/100/mm;var pvRV=RV/Math.pow(1+i,N);var rent;if(i===0){rent=(P-RV)/N;}else{rent=(P-pvRV)*i/(1-Math.pow(1+i,-N));if(String(typ)==='beg')rent/=(1+i);}if(!isFinite(rent))return {ok:false,msg:'参数超出计算范围'};var total=rent*N;var cost=total+RV-P;return {ok:true,html:'<div class=\"big\">每期租金 '+M(rent)+' 元</div><div class=\"row\">共 '+N+' 期，租金合计 '+M(total)+' 元，融资总成本（租金+残值−设备价）'+M(cost)+' 元</div><div class=\"row\">残值现值 '+M(pvRV)+' 元已从融资额中扣除；未计手续费、保证金占用与税费</div>'};",
+ "test": {
+  "inputs": {
+   "price": 1000000,
+   "rv": 50000,
+   "rate": 6,
+   "yrs": 5,
+   "m": "1",
+   "typ": "end"
+  },
+  "expect": "228526.58"
+ }
+},
+{
+ "id": "jrfactor",
+ "cat": "jr",
+ "icon": "🧾",
+ "name": "应收账款保理融资成本",
+ "desc": "保理/票据贴现进阶：预付到账净额与实际年化融资成本（jrdisc 只是通用复利折现，不含预付比例与保理费）",
+ "formula": "预付额 = 发票额 × 预付比例；融资利息 = 预付额 × 年利率 × 天数÷360（ACT/360 银行口径，预扣）；保理费 = 发票额 × 费率；实际到账 = 预付额 − 利息 − 保理费；实际年化成本 =（利息+保理费）÷ 预付额 × 360÷天数。到期由债务人回款冲抵预付额",
+ "inputs": [
+  {
+   "id": "amt",
+   "label": "应收账款/票据金额",
+   "unit": "元",
+   "def": "1000000"
+  },
+  {
+   "id": "adv",
+   "label": "预付比例",
+   "unit": "%",
+   "def": "80"
+  },
+  {
+   "id": "rate",
+   "label": "融资年利率",
+   "unit": "%",
+   "def": "6"
+  },
+  {
+   "id": "days",
+   "label": "融资天数",
+   "unit": "天",
+   "def": "90"
+  },
+  {
+   "id": "fee",
+   "label": "保理手续费率（按发票额）",
+   "unit": "%",
+   "def": "1"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var A=Number(amt),ap=Number(adv)/100,rt=Number(rate)/100,D=Number(days),fp=Number(fee)/100;if(!(A>0))return {ok:false,msg:'账款金额须大于 0'};if(!(ap>0&&ap<=1))return {ok:false,msg:'预付比例须在 0~100% 之间'};if(!(rt>=0))return {ok:false,msg:'融资年利率不能为负'};if(!(D>=1&&D<=720)||Math.floor(D)!==D)return {ok:false,msg:'融资天数须为 1~720 的整数'};if(!(fp>=0))return {ok:false,msg:'手续费率不能为负'};var advA=A*ap;var interest=advA*rt*D/360;var feeA=A*fp;var net=advA-interest-feeA;if(!(net>0))return {ok:false,msg:'利息与手续费已超过预付额，到账为负，请调低费率或天数'};var eff=(interest+feeA)/advA*360/D*100;return {ok:true,html:'<div class=\"big\">实际到账 '+M(net)+' 元</div><div class=\"row\">预付额 '+M(advA)+' 元 − 预扣利息 '+M(interest)+' 元 − 保理费 '+M(feeA)+' 元；实际年化成本 '+eff.toFixed(2)+'%（高于名义利率 '+rate+'%，因费率按全额发票计且利息预扣）</div>'};",
+ "test": {
+  "inputs": {
+   "amt": 1000000,
+   "adv": 80,
+   "rate": 6,
+   "days": 90,
+   "fee": 1
+  },
+  "expect": "778000.00"
+ }
+},
+{
+ "id": "jrpension2",
+ "cat": "jr",
+ "icon": "👴",
+ "name": "个人账户养老金（计发月数全表）",
+ "desc": "40~70 岁全档计发月数查表算个人账户养老金月领额（jrpension 只有 50/55/60 三档且混算基础养老金，本工具只做个人账户一口）",
+ "formula": "个人账户养老金 = 个人账户储存额 ÷ 计发月数。计发月数表源自国发〔2005〕38 号附件：40 岁 233、45 岁 216、50 岁 195、55 岁 170、60 岁 139、65 岁 101、70 岁 56（全表 40~70 岁内置）。延迟退休改革（2025 年起）不改变本表数值；账户领完后由统筹基金继续按原标准发放",
+ "inputs": [
+  {
+   "id": "acct",
+   "label": "个人账户储存额",
+   "unit": "元",
+   "def": "139000"
+  },
+  {
+   "id": "age",
+   "label": "退休年龄（计发月数）",
+   "type": "select",
+   "options": [
+    {
+     "v": "40",
+     "t": "40 岁（233 个月）"
+    },
+    {
+     "v": "41",
+     "t": "41 岁（230 个月）"
+    },
+    {
+     "v": "42",
+     "t": "42 岁（226 个月）"
+    },
+    {
+     "v": "43",
+     "t": "43 岁（223 个月）"
+    },
+    {
+     "v": "44",
+     "t": "44 岁（220 个月）"
+    },
+    {
+     "v": "45",
+     "t": "45 岁（216 个月）"
+    },
+    {
+     "v": "46",
+     "t": "46 岁（212 个月）"
+    },
+    {
+     "v": "47",
+     "t": "47 岁（208 个月）"
+    },
+    {
+     "v": "48",
+     "t": "48 岁（204 个月）"
+    },
+    {
+     "v": "49",
+     "t": "49 岁（199 个月）"
+    },
+    {
+     "v": "50",
+     "t": "50 岁（195 个月）"
+    },
+    {
+     "v": "51",
+     "t": "51 岁（190 个月）"
+    },
+    {
+     "v": "52",
+     "t": "52 岁（185 个月）"
+    },
+    {
+     "v": "53",
+     "t": "53 岁（180 个月）"
+    },
+    {
+     "v": "54",
+     "t": "54 岁（175 个月）"
+    },
+    {
+     "v": "55",
+     "t": "55 岁（170 个月）"
+    },
+    {
+     "v": "56",
+     "t": "56 岁（164 个月）"
+    },
+    {
+     "v": "57",
+     "t": "57 岁（158 个月）"
+    },
+    {
+     "v": "58",
+     "t": "58 岁（152 个月）"
+    },
+    {
+     "v": "59",
+     "t": "59 岁（145 个月）"
+    },
+    {
+     "v": "60",
+     "t": "60 岁（139 个月）"
+    },
+    {
+     "v": "61",
+     "t": "61 岁（132 个月）"
+    },
+    {
+     "v": "62",
+     "t": "62 岁（125 个月）"
+    },
+    {
+     "v": "63",
+     "t": "63 岁（117 个月）"
+    },
+    {
+     "v": "64",
+     "t": "64 岁（109 个月）"
+    },
+    {
+     "v": "65",
+     "t": "65 岁（101 个月）"
+    },
+    {
+     "v": "66",
+     "t": "66 岁（93 个月）"
+    },
+    {
+     "v": "67",
+     "t": "67 岁（84 个月）"
+    },
+    {
+     "v": "68",
+     "t": "68 岁（75 个月）"
+    },
+    {
+     "v": "69",
+     "t": "69 岁（65 个月）"
+    },
+    {
+     "v": "70",
+     "t": "70 岁（56 个月）"
+    }
+   ],
+   "def": "60"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var TAB={40:233,41:230,42:226,43:223,44:220,45:216,46:212,47:208,48:204,49:199,50:195,51:190,52:185,53:180,54:175,55:170,56:164,57:158,58:152,59:145,60:139,61:132,62:125,63:117,64:109,65:101,66:93,67:84,68:75,69:65,70:56};var ac=Number(acct),ag=Number(age);var mo=TAB[ag];if(mo===undefined)return {ok:false,msg:'退休年龄须在 40~70 岁之间'};if(!(ac>=0))return {ok:false,msg:'个人账户储存额不能为负'};var monthly=ac/mo;return {ok:true,html:'<div class=\"big\">每月 '+M(monthly)+' 元</div><div class=\"row\">'+ag+' 岁退休计发月数 '+mo+' 个月，个人账户 '+M(ac)+' 元 ÷ '+mo+'；这只是养老金中的个人账户部分，基础养老金等见 jrpension</div>'};",
+ "test": {
+  "inputs": {
+   "acct": 139000,
+   "age": "60"
+  },
+  "expect": "1000.00"
+ }
+},
+{
+ "id": "jrtax2",
+ "cat": "jr",
+ "icon": "🧧",
+ "name": "年终奖计税方式对比",
+ "desc": "全年一次性奖金单独计税 vs 并入综合所得，两种方式税额并排比（shbonus 只算单独计税一种，jrtax 只算月工资）",
+ "formula": "单独计税：按奖金÷12 查月度换算税率表（≤3000 3%/0，≤12000 10%/210，≤25000 20%/1410，≤35000 25%/2660，≤55000 30%/4410，≤80000 35%/7160，>80000 45%/15160），税 = 奖金×税率−速扣。并入口径：增量税 = 综合所得年度税(其他应纳税所得+奖金) − 年度税(其他应纳税所得)，年度表：≤3.6万 3%/0，≤14.4万 10%/2520，≤30万 20%/16920，≤42万 25%/31920，≤66万 30%/52920，≤96万 35%/85920，>96万 45%/181920。单独计税政策延续至 2027-12-31（财政部、税务总局公告 2023 年第 30 号）。输入为已扣减除费用与扣除后的应纳税所得额口径",
+ "inputs": [
+  {
+   "id": "inc",
+   "label": "其他综合所得应纳税所得额（不含奖金）",
+   "unit": "元",
+   "def": "100000"
+  },
+  {
+   "id": "bonus",
+   "label": "全年一次性奖金",
+   "unit": "元",
+   "def": "36000"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}function atax(x){if(x<=0)return 0;var B=[[36000,0.03,0],[144000,0.10,2520],[300000,0.20,16920],[420000,0.25,31920],[660000,0.30,52920],[960000,0.35,85920],[Infinity,0.45,181920]];for(var i=0;i<B.length;i++){if(x<=B[i][0])return x*B[i][1]-B[i][2];}return 0;}var ic=Number(inc),bn=Number(bonus);if(!(ic>=0))return {ok:false,msg:'其他应纳税所得额不能为负'};if(!(bn>0))return {ok:false,msg:'奖金须大于 0'};var mm=bn/12,rate,ded;if(mm<=3000){rate=0.03;ded=0;}else if(mm<=12000){rate=0.10;ded=210;}else if(mm<=25000){rate=0.20;ded=1410;}else if(mm<=35000){rate=0.25;ded=2660;}else if(mm<=55000){rate=0.30;ded=4410;}else if(mm<=80000){rate=0.35;ded=7160;}else{rate=0.45;ded=15160;}var sep=Math.max(bn*rate-ded,0);var merged=atax(ic+bn)-atax(ic);var diff=Math.abs(sep-merged);var rec=sep<merged-0.005?'单独计税更省':(merged<sep-0.005?'并入综合所得更省':'两种方式税额相同');return {ok:true,html:'<div class=\"big\">单独计税 '+M(sep)+' 元</div><div class=\"row\">并入综合所得的奖金增量税 '+M(merged)+' 元；'+rec+(diff>0.005?'，相差 '+M(diff)+' 元':'')+'</div><div class=\"row\">注意单独计税存在档位临界点（如奖金 36001 元税率跳档），临界附近务必两式都算；政策口径截至 2027 年底</div>'};",
+ "test": {
+  "inputs": {
+   "inc": 100000,
+   "bonus": 36000
+  },
+  "expect": "1080.00"
+ }
+},
+{
+ "id": "jrhouse2",
+ "cat": "jr",
+ "icon": "🏠",
+ "name": "二手房交易税费全算",
+ "desc": "卖方增值税/个税 + 买方契税一次算清（jrdeed 只有买方契税且为旧档位，本工具含卖方税与 2024 年末契税新档）",
+ "formula": "卖方：增值税——持有 <2 年按含税价÷1.05×5%（5% 征收率），≥2 年免征（简化口径，不分普通/非普通）；个税——满 5 年且卖方唯一住房免征，否则核定征收 = 含税价×1%，或差额征收 =（现价−原买入价）×20%（二选一，地方执行有差异）。买方契税（2024-12-01 起）：首套 ≤140㎡ 1%、>140㎡ 1.5%；二套 ≤140㎡ 1%、>140㎡ 2%。未计增值税附加、登记费与中介费",
+ "inputs": [
+  {
+   "id": "price",
+   "label": "成交价（含税总价）",
+   "unit": "元",
+   "def": "3000000"
+  },
+  {
+   "id": "area",
+   "label": "房屋面积",
+   "unit": "㎡",
+   "def": "100"
+  },
+  {
+   "id": "buy",
+   "label": "卖方原买入价",
+   "unit": "元",
+   "when": "pit=diff",
+   "def": "2000000"
+  },
+  {
+   "id": "holding",
+   "label": "卖方持有年限",
+   "type": "select",
+   "options": [
+    {
+     "v": "lt2",
+     "t": "不足 2 年"
+    },
+    {
+     "v": "y25",
+     "t": "2~5 年"
+    },
+    {
+     "v": "g5",
+     "t": "5 年以上"
+    }
+   ],
+   "def": "lt2"
+  },
+  {
+   "id": "only",
+   "label": "是否卖方家庭唯一住房",
+   "type": "select",
+   "options": [
+    {
+     "v": "n",
+     "t": "否"
+    },
+    {
+     "v": "y",
+     "t": "是"
+    }
+   ],
+   "def": "n"
+  },
+  {
+   "id": "pit",
+   "label": "个税征收方式",
+   "type": "select",
+   "options": [
+    {
+     "v": "assessed",
+     "t": "核定征收 1%"
+    },
+    {
+     "v": "diff",
+     "t": "差额征收 20%"
+    }
+   ],
+   "def": "assessed"
+  },
+  {
+   "id": "buyer",
+   "label": "买方购房情形",
+   "type": "select",
+   "options": [
+    {
+     "v": "first",
+     "t": "首套房"
+    },
+    {
+     "v": "second",
+     "t": "二套房"
+    }
+   ],
+   "def": "first"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var P=Number(price),AR=Number(area);if(!(P>0))return {ok:false,msg:'成交价须大于 0'};if(!(AR>0))return {ok:false,msg:'面积须大于 0'};var vat=String(holding)==='lt2'?P/1.05*0.05:0;var pitTax;if(String(holding)==='g5'&&String(only)==='y'){pitTax=0;}else if(String(pit)==='diff'){var BP=Number(buy);if(!(BP>=0))return {ok:false,msg:'原买入价不能为负'};pitTax=Math.max(P-BP,0)*0.20;}else{pitTax=P*0.01;}var dr;if(String(buyer)==='first'){dr=AR<=140?0.01:0.015;}else{dr=AR<=140?0.01:0.02;}var deed=P*dr;var seller=vat+pitTax;var total=seller+deed;return {ok:true,html:'<div class=\"big\">交易税费合计 '+M(total)+' 元</div><div class=\"row\">卖方：增值税 '+M(vat)+' 元 + 个税 '+M(pitTax)+' 元 = '+M(seller)+' 元；买方：契税 '+M(deed)+' 元（税率 '+(dr*100)+'%）</div><div class=\"row\">契税按 2024-12-01 起 140㎡ 档位；增值税与个税为简化口径，各地（如一线城市）执行细则可能不同，交易前请向不动产登记中心核实</div>'};",
+ "test": {
+  "inputs": {
+   "price": 3000000,
+   "area": 100,
+   "buy": 2000000,
+   "holding": "lt2",
+   "only": "n",
+   "pit": "assessed",
+   "buyer": "first"
+  },
+  "expect": "202857.14"
+ }
+},
+{
+ "id": "jrcar2",
+ "cat": "jr",
+ "icon": "🚗",
+ "name": "购车总成本（车贷版）",
+ "desc": "裸车价 + 购置税 + 保险 + 上牌费 + 车贷利息的落地总成本（jrloan 只算贷款月供，sh 类只有油耗/保养，无购车落地价工具）",
+ "formula": "贷款额 = 裸车价 ×（1 − 首付比例）；月供按等额本息（零利率时 = 贷款额÷期数）；购置税 = 裸车价÷1.13 × 税率：燃油车 10%，新能源 2024–2025 年全免、2026–2027 年减半按 5%（购置税减免政策口径）；购车总成本 = 裸车价 + 购置税 + 首年保险 + 其他费用 + 贷款总利息",
+ "inputs": [
+  {
+   "id": "price",
+   "label": "裸车价",
+   "unit": "元",
+   "def": "200000"
+  },
+  {
+   "id": "down",
+   "label": "首付比例",
+   "unit": "%",
+   "def": "30"
+  },
+  {
+   "id": "rate",
+   "label": "车贷年利率",
+   "unit": "%",
+   "def": "5"
+  },
+  {
+   "id": "months",
+   "label": "贷款期数",
+   "unit": "月",
+   "def": "36"
+  },
+  {
+   "id": "taxmode",
+   "label": "购置税情形",
+   "type": "select",
+   "options": [
+    {
+     "v": "fuel",
+     "t": "燃油车 10%"
+    },
+    {
+     "v": "nev",
+     "t": "新能源免征（2024–2025）"
+    },
+    {
+     "v": "nevhalf",
+     "t": "新能源减半 5%（2026–2027）"
+    }
+   ],
+   "def": "fuel"
+  },
+  {
+   "id": "ins",
+   "label": "首年保险费",
+   "unit": "元",
+   "def": "8000"
+  },
+  {
+   "id": "fees",
+   "label": "上牌/金融服务等其他费用",
+   "unit": "元",
+   "def": "1500"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var P=Number(price),dp=Number(down)/100,rt=Number(rate),N=Number(months),IN=Number(ins),FE=Number(fees);if(!(P>0))return {ok:false,msg:'裸车价须大于 0'};if(!(dp>=0&&dp<1))return {ok:false,msg:'首付比例须在 0~100% 之间（100% 为全款）'};if(!(rt>=0&&rt<=100))return {ok:false,msg:'年利率须在 0~100% 之间'};if(!(N>=1&&N<=84)||Math.floor(N)!==N)return {ok:false,msg:'贷款期数须为 1~84 的整数'};if(!(IN>=0)||!(FE>=0))return {ok:false,msg:'保险与费用不能为负'};var tm=String(taxmode);var tax=tm==='fuel'?P/1.13*0.10:(tm==='nevhalf'?P/1.13*0.05:0);var loan=P*(1-dp);var i=rt/1200;var pmt=i===0?loan/N:loan*i/(1-Math.pow(1+i,-N));var interest=pmt*N-loan;var total=P+tax+IN+FE+interest;return {ok:true,html:'<div class=\"big\">购车总成本 '+M(total)+' 元</div><div class=\"row\">首付 '+M(P*dp)+' 元，贷款 '+M(loan)+' 元，月供 '+M(pmt)+' 元，贷款利息 '+M(interest)+' 元，购置税 '+M(tax)+' 元</div><div class=\"row\">总成本未含后续年份保险、保养与油/电费；新能源购置税减免有每辆减税额上限，豪华车型请按上限核减</div>'};",
+ "test": {
+  "inputs": {
+   "price": 200000,
+   "down": 30,
+   "rate": 5,
+   "months": 36,
+   "taxmode": "fuel",
+   "ins": 8000,
+   "fees": 1500
+  },
+  "expect": "238252.44"
+ }
+},
+{
+ "id": "jredu2",
+ "cat": "jr",
+ "icon": "🎓",
+ "name": "教育金规划进阶（通胀+已有储备）",
+ "desc": "目标按通胀涨到入学时、已有储备按收益滚存，再反推每月要存多少（jredu 只算无通胀、无储备的每年存一笔）",
+ "formula": "入学时目标 = 今日目标 ×（1+通胀)ⁿ；已有储备届时值 = 储备 ×（1+收益率)ⁿ；缺口 = 两者之差（≤0 即已覆盖）；每月定存（月末存入）= 缺口 × i ÷ [(1+i)^月数 − 1]，i = 年收益率÷12；收益率为 0 时 = 缺口÷月数。年数上限 40 年",
+ "inputs": [
+  {
+   "id": "target",
+   "label": "教育金目标（按今日价格）",
+   "unit": "元",
+   "def": "500000"
+  },
+  {
+   "id": "infl",
+   "label": "教育费用通胀率",
+   "unit": "%",
+   "def": "3"
+  },
+  {
+   "id": "yrs",
+   "label": "距入学/用钱年数",
+   "unit": "年",
+   "def": "10"
+  },
+  {
+   "id": "exist",
+   "label": "已有教育储备",
+   "unit": "元",
+   "def": "100000"
+  },
+  {
+   "id": "ret",
+   "label": "储备年收益率",
+   "unit": "%",
+   "def": "5"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var T=Number(target),inf=Number(infl)/100,Y=Number(yrs),E=Number(exist),rt=Number(ret)/100;if(!(T>0))return {ok:false,msg:'目标金额须大于 0'};if(!(Y>=1&&Y<=40)||Math.floor(Y)!==Y)return {ok:false,msg:'年数须为 1~40 的整数'};if(!(inf>-0.9&&inf<10))return {ok:false,msg:'通胀率超出合理范围'};if(!(rt>-0.9&&rt<10))return {ok:false,msg:'收益率超出合理范围'};if(!(E>=0))return {ok:false,msg:'已有储备不能为负'};var fvT=T*Math.pow(1+inf,Y);var fvE=E*Math.pow(1+rt,Y);var gap=fvT-fvE;if(gap<=0)return {ok:true,html:'<div class=\"big\">每月需存 0 元（已有储备已覆盖）</div><div class=\"row\">届时目标 '+M(fvT)+' 元，已有储备滚存到 '+M(fvE)+' 元，尚有盈余 '+M(-gap)+' 元</div>'};var months=Y*12;var i=rt/12;var monthly=i===0?gap/months:gap*i/(Math.pow(1+i,months)-1);if(!isFinite(monthly))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\"big\">每月需存 '+M(monthly)+' 元</div><div class=\"row\">今日目标 '+M(T)+' 元按通胀 '+Number(infl)+'% 涨到届时 '+M(fvT)+' 元；已有储备滚存 '+M(fvE)+' 元；缺口 '+M(gap)+' 元，'+months+' 个月月末定存补齐</div>'};",
+ "test": {
+  "inputs": {
+   "target": 500000,
+   "infl": 3,
+   "yrs": 10,
+   "exist": 100000,
+   "ret": 5
+  },
+  "expect": "3278.34"
+ }
+},
+{
+ "id": "jrretire2",
+ "cat": "jr",
+ "icon": "🌅",
+ "name": "退休缺口测算（通胀口径）",
+ "desc": "退休后支出按通胀增长、按退休后收益折现算所需储备，再扣现有储备与定投滚存（jrretire 用 4% 法则静态估算，无通胀与领取期折现）",
+ "formula": "退休首年支出 E = 当前年支出 ×（1+通胀)^距退休年数；所需储备（退休时点）= 增长型年金现值 E×[1−((1+通胀)/(1+退休后收益))^领取年数]÷(退休后收益−通胀)，两者相等时 = E×领取年数÷(1+退休后收益)；届时储备 = 现有储备×(1+退休前收益)^年数 + 每月定投按月复利滚存；缺口 = 所需 − 届时储备",
+ "inputs": [
+  {
+   "id": "age",
+   "label": "当前年龄",
+   "unit": "岁",
+   "def": "30"
+  },
+  {
+   "id": "ra",
+   "label": "退休年龄",
+   "unit": "岁",
+   "def": "60"
+  },
+  {
+   "id": "life",
+   "label": "预期寿命",
+   "unit": "岁",
+   "def": "85"
+  },
+  {
+   "id": "exp",
+   "label": "退休后年支出（按今日价格）",
+   "unit": "元",
+   "def": "120000"
+  },
+  {
+   "id": "infl",
+   "label": "通胀率",
+   "unit": "%",
+   "def": "2.5"
+  },
+  {
+   "id": "pre",
+   "label": "退休前年收益率",
+   "unit": "%",
+   "def": "5"
+  },
+  {
+   "id": "post",
+   "label": "退休后年收益率",
+   "unit": "%",
+   "def": "3"
+  },
+  {
+   "id": "exist",
+   "label": "现有储备",
+   "unit": "元",
+   "def": "200000"
+  },
+  {
+   "id": "save",
+   "label": "每月定投",
+   "unit": "元",
+   "def": "3000"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var A=Number(age),RA=Number(ra),LF=Number(life),EX=Number(exp),inf=Number(infl)/100,pr=Number(pre)/100,po=Number(post)/100,EV=Number(exist),SV=Number(save);if(!(RA>A))return {ok:false,msg:'退休年龄须大于当前年龄'};if(!(LF>RA))return {ok:false,msg:'预期寿命须大于退休年龄'};var Y=RA-A,R=LF-RA;if(Y>60||R>60)return {ok:false,msg:'距退休或领取年数过长（上限各 60 年）'};if(!(EX>=0))return {ok:false,msg:'年支出不能为负'};if(!(EV>=0)||!(SV>=0))return {ok:false,msg:'储备与定投不能为负'};if(!(inf>-0.9&&inf<1)||!(pr>-0.9&&pr<1)||!(po>-0.9&&po<1))return {ok:false,msg:'通胀/收益率超出合理范围（-90%~100%）'};var E=EX*Math.pow(1+inf,Y);var need;if(Math.abs(po-inf)<1e-12){need=E*R/(1+po);}else{need=E*(1-Math.pow((1+inf)/(1+po),R))/(po-inf);}var im=pr/12,mm=Y*12;var have=EV*Math.pow(1+pr,Y)+(im===0?SV*mm:SV*(Math.pow(1+im,mm)-1)/im);var gap=need-have;if(!isFinite(need)||!isFinite(have))return {ok:false,msg:'参数超出计算范围'};if(gap<=0)return {ok:true,html:'<div class=\"big\">无缺口（盈余 '+M(-gap)+' 元）</div><div class=\"row\">退休时所需储备 '+M(need)+' 元，届时储备约 '+M(have)+' 元（退休首年支出按通胀涨到 '+M(E)+' 元/年，领取 '+R+' 年）</div>'};return {ok:true,html:'<div class=\"big\">退休缺口 '+M(gap)+' 元</div><div class=\"row\">退休时所需储备 '+M(need)+' 元（首年支出 '+M(E)+' 元，领取 '+R+' 年，支出随通胀、按退休后收益折现）；届时储备约 '+M(have)+' 元</div><div class=\"row\">未计社保养老金抵扣，实际缺口应扣除预计养老金现值</div>'};",
+ "test": {
+  "inputs": {
+   "age": 30,
+   "ra": 60,
+   "life": 85,
+   "exp": 120000,
+   "infl": 2.5,
+   "pre": 5,
+   "post": 3,
+   "exist": 200000,
+   "save": 3000
+  },
+  "expect": "2405265.71"
+ }
+},
+{
+ "id": "jrfire",
+ "cat": "jr",
+ "icon": "🔥",
+ "name": "FIRE数字与海岸FIRE",
+ "desc": "按安全提取率算财务自由所需资产、达标年限与海岸 FIRE 数（jrretire 是 4% 法则缺口口径，本工具含 SWR 可调与 Coast 折算）",
+ "formula": "FIRE 数字 = 年支出 ÷ 安全提取率（4% 即 25 倍年支出）；海岸 FIRE = FIRE 数字 ÷（1+收益率)^距退休年数（达到此数后不再投入、靠复利滑行到退休即达标）；达标年限解 现有资产×(1+r)ᵗ + 年定投×[((1+r)ᵗ−1)÷r] = FIRE 数字（r=0 时线性解）",
+ "inputs": [
+  {
+   "id": "exp",
+   "label": "目标年支出",
+   "unit": "元",
+   "def": "120000"
+  },
+  {
+   "id": "swr",
+   "label": "安全提取率",
+   "unit": "%",
+   "def": "4"
+  },
+  {
+   "id": "nw",
+   "label": "当前净资产（可投资）",
+   "unit": "元",
+   "def": "500000"
+  },
+  {
+   "id": "ret",
+   "label": "年收益率",
+   "unit": "%",
+   "def": "7"
+  },
+  {
+   "id": "save",
+   "label": "每年定投",
+   "unit": "元",
+   "def": "200000"
+  },
+  {
+   "id": "yrs",
+   "label": "距退休年数（海岸FIRE用）",
+   "unit": "年",
+   "def": "30"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var EX=Number(exp),sw=Number(swr)/100,NW=Number(nw),rt=Number(ret)/100,SV=Number(save),Y=Number(yrs);if(!(EX>0))return {ok:false,msg:'年支出须大于 0'};if(!(sw>0&&sw<=0.2))return {ok:false,msg:'安全提取率须在 0~20% 之间'};if(!(NW>=0))return {ok:false,msg:'净资产不能为负'};if(!(rt>-0.9&&rt<1))return {ok:false,msg:'收益率超出合理范围'};if(!(SV>=0))return {ok:false,msg:'每年定投不能为负'};if(!(Y>=0&&Y<=80))return {ok:false,msg:'距退休年数须在 0~80 之间'};var fire=EX/sw;var coast=fire/Math.pow(1+rt,Y);var prog=NW/fire*100;var yrsTxt;if(NW>=fire){yrsTxt='已达标';}else if(rt===0){if(SV<=0)return {ok:false,msg:'收益率为 0 且无定投，无法达标'};yrsTxt=((fire-NW)/SV).toFixed(2)+' 年';}else if(SV===0&&NW<=0){return {ok:false,msg:'无资产、无定投且有收益也无法达标，请填定投'};}else{var ratio=(fire+SV/rt)/(NW+SV/rt);if(!(ratio>0))return {ok:false,msg:'参数组合无法达标'};yrsTxt=(Math.log(ratio)/Math.log(1+rt)).toFixed(2)+' 年';}return {ok:true,html:'<div class=\"big\">FIRE 数字 '+M(fire)+' 元</div><div class=\"row\">年支出 '+M(EX)+' 元 ÷ 提取率 '+swr+'%（'+(100/Number(swr)).toFixed(1)+' 倍年支出）；当前进度 '+prog.toFixed(2)+'%</div><div class=\"row\">按年收益 '+ret+'% 与年定投 '+M(SV)+' 元，预计 '+yrsTxt+'达标；海岸 FIRE 数字 '+M(coast)+' 元（达到后停投、滑行 '+Y+' 年到退休即达标）</div>'};",
+ "test": {
+  "inputs": {
+   "exp": 120000,
+   "swr": 4,
+   "nw": 500000,
+   "ret": 7,
+   "save": 200000,
+   "yrs": 30
+  },
+  "expect": "3000000.00"
+ }
+},
+{
+ "id": "jrdebt2",
+ "cat": "jr",
+ "icon": "🏔️",
+ "name": "债务雪崩法 vs 雪球法对比",
+ "desc": "三笔债务逐月模拟：雪崩（先还高利率）与雪球（先还小余额）的清偿月数与总利息对照（jrdebtinc 只算债务收入比，不做还款模拟）",
+ "formula": "逐月模拟（上限 600 个月）：每月先按各债余额×年利率÷12 计息，再用固定月预算（各债最低还款之和 + 额外还款）依次付各债最低还款，余款全部投向目标债——雪崩法目标 = 利率最高者，雪球法目标 = 余额最小者；某债还清后其最低还款自动滚入余款。总利息与清偿月数由模拟得出",
+ "inputs": [
+  {
+   "id": "b1",
+   "label": "债务1余额",
+   "unit": "元",
+   "def": "2000"
+  },
+  {
+   "id": "a1",
+   "label": "债务1年利率",
+   "unit": "%",
+   "def": "5"
+  },
+  {
+   "id": "m1",
+   "label": "债务1最低月还款",
+   "unit": "元",
+   "def": "100"
+  },
+  {
+   "id": "b2",
+   "label": "债务2余额",
+   "unit": "元",
+   "def": "10000"
+  },
+  {
+   "id": "a2",
+   "label": "债务2年利率",
+   "unit": "%",
+   "def": "24"
+  },
+  {
+   "id": "m2",
+   "label": "债务2最低月还款",
+   "unit": "元",
+   "def": "300"
+  },
+  {
+   "id": "b3",
+   "label": "债务3余额（无填0）",
+   "unit": "元",
+   "def": "0"
+  },
+  {
+   "id": "a3",
+   "label": "债务3年利率",
+   "unit": "%",
+   "def": "0"
+  },
+  {
+   "id": "m3",
+   "label": "债务3最低月还款",
+   "unit": "元",
+   "def": "0"
+  },
+  {
+   "id": "extra",
+   "label": "每月额外还款",
+   "unit": "元",
+   "def": "400"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var BS=[Number(b1),Number(b2),Number(b3)],AS=[Number(a1),Number(a2),Number(a3)],MS=[Number(m1),Number(m2),Number(m3)],EX=Number(extra);var i,any=false,budget=EX;for(i=0;i<3;i++){if(!(BS[i]>=0&&BS[i]<=1e12))return {ok:false,msg:'债务余额须在 0~1万亿元之间'};if(!(AS[i]>=0&&AS[i]<=100))return {ok:false,msg:'年利率须在 0~100% 之间'};if(!(MS[i]>=0))return {ok:false,msg:'最低还款不能为负'};if(BS[i]>0){any=true;budget+=MS[i];}}if(!any)return {ok:false,msg:'至少要有一笔债务余额大于 0'};if(!(EX>=0))return {ok:false,msg:'额外还款不能为负'};if(!(budget>0))return {ok:false,msg:'月预算（最低还款+额外还款）须大于 0'};function sim(mode){var bs=BS.slice(),tot=0,months=0;while(months<600){var alive=false;for(var j=0;j<3;j++)if(bs[j]>0.005)alive=true;if(!alive)break;months++;for(j=0;j<3;j++){if(bs[j]>0){var it=bs[j]*AS[j]/1200;bs[j]+=it;tot+=it;}}var pool=budget;for(j=0;j<3;j++){if(pool<=0)break;if(bs[j]>0){var pay=Math.min(MS[j],bs[j],pool);bs[j]-=pay;pool-=pay;}}var guard=0;while(pool>0.005&&guard<10){guard++;var tgt=-1,k;for(k=0;k<3;k++){if(bs[k]<=0.005)continue;if(tgt<0){tgt=k;continue;}if(mode==='av'&&AS[k]>AS[tgt])tgt=k;if(mode==='snow'&&bs[k]<bs[tgt])tgt=k;}if(tgt<0)break;var p2=Math.min(pool,bs[tgt]);bs[tgt]-=p2;pool-=p2;}}var left=0;for(var j2=0;j2<3;j2++)left+=bs[j2];return {months:months,interest:tot,left:left};}var av=sim('av'),sn=sim('snow');function desc(r){return r.left>0.005?'600 个月内未还清（余 '+M(r.left)+' 元）':r.months+' 个月，总利息 '+M(r.interest)+' 元';}return {ok:true,html:'<div class=\"big\">雪崩法总利息 '+M(av.interest)+' 元</div><div class=\"row\">雪崩法（先还高利率）：'+desc(av)+'</div><div class=\"row\">雪球法（先还小余额）：'+desc(sn)+'</div><div class=\"row\">月预算 '+M(budget)+' 元固定滚动；雪崩法利息通常更低，雪球法先清小债、正反馈更强</div>'};",
+ "test": {
+  "inputs": {
+   "b1": 2000,
+   "a1": 5,
+   "m1": 100,
+   "b2": 10000,
+   "a2": 24,
+   "m2": 300,
+   "b3": 0,
+   "a3": 0,
+   "m3": 0,
+   "extra": 400
+  },
+  "expect": "1984.18"
+ }
+},
+{
+ "id": "jrfcfe",
+ "cat": "jr",
+ "icon": "🏢",
+ "name": "股权自由现金流 FCFE 估值",
+ "desc": "由净利润构建股权自由现金流并按戈登模型算股权价值（jrdcf 是企业现金流 FCFF+WACC 口径，本工具是股东口径 FCFE+股权成本）",
+ "formula": "FCFE = 净利润 + 折旧摊销 − 资本支出 − 营运资本增加 + 净借入（新借债 − 还债，可为负）；股权价值 = FCFE×(1+g) ÷（股权成本 − g），须股权成本 > g；每股价值 = 股权价值 ÷ 总股数。金额单位自选（万元/万股配套）",
+ "inputs": [
+  {
+   "id": "ni",
+   "label": "净利润",
+   "unit": "万元",
+   "def": "1000"
+  },
+  {
+   "id": "dep",
+   "label": "折旧与摊销",
+   "unit": "万元",
+   "def": "200"
+  },
+  {
+   "id": "capex",
+   "label": "资本支出",
+   "unit": "万元",
+   "def": "300"
+  },
+  {
+   "id": "dwc",
+   "label": "营运资本增加",
+   "unit": "万元",
+   "hint": "减少填负数",
+   "def": "50"
+  },
+  {
+   "id": "nb",
+   "label": "净借入（新债−还债）",
+   "unit": "万元",
+   "def": "100"
+  },
+  {
+   "id": "g",
+   "label": "永续增长率 g",
+   "unit": "%",
+   "def": "3"
+  },
+  {
+   "id": "ke",
+   "label": "股权成本 ke",
+   "unit": "%",
+   "def": "10"
+  },
+  {
+   "id": "shares",
+   "label": "总股数",
+   "unit": "万股",
+   "def": "100"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var fcfe=Number(ni)+Number(dep)-Number(capex)-Number(dwc)+Number(nb);var gg=Number(g)/100,kk=Number(ke)/100,sh=Number(shares);if(!isFinite(fcfe))return {ok:false,msg:'现金流参数无效'};if(fcfe<=0)return {ok:false,msg:'FCFE ≤ 0（当前 '+M(fcfe)+'），戈登永续模型不适用，请改用分阶段模型'};if(!(kk>gg))return {ok:false,msg:'股权成本 ke 须大于永续增长率 g'};if(!(kk>0))return {ok:false,msg:'股权成本须大于 0'};if(!(sh>0))return {ok:false,msg:'总股数须大于 0'};var val=fcfe*(1+gg)/(kk-gg);return {ok:true,html:'<div class=\"big\">股权价值 '+M(val)+' 万元</div><div class=\"row\">FCFE = '+M(fcfe)+' 万元（净利润+折旧−资本支出−营运资本增加+净借入）；每股价值 '+M(val/sh)+' 元</div><div class=\"row\">企业口径（FCFF+终值）见 jrdcf，本工具为股东口径单阶段模型</div>'};",
+ "test": {
+  "inputs": {
+   "ni": 1000,
+   "dep": 200,
+   "capex": 300,
+   "dwc": 50,
+   "nb": 100,
+   "g": 3,
+   "ke": 10,
+   "shares": 100
+  },
+  "expect": "13978.57"
+ }
+},
+{
+ "id": "jrnpv2",
+ "cat": "jr",
+ "icon": "💰",
+ "name": "多笔现金流 NPV/IRR/MIRR 进阶",
+ "desc": "任意期数现金流序列一次算 NPV、全部 IRR（扫描多解）与 MIRR（jrnpv/jrirr 固定三年且只求一个 IRR）",
+ "formula": "NPV = Σ CFₜ÷(1+r)ᵗ（首笔为 t=0）；IRR 在 −99%~500% 区间以 1% 步长扫描 NPV 变号、二分细化，变号几次就有几个 IRR（非常规现金流可多解）；MIRR：正现金流按再投资率复利到末期、负现金流按折现率折到 t=0，MIRR = (正流终值÷|负流现值|)^(1/n) − 1。序列上限 51 笔",
+ "inputs": [
+  {
+   "id": "cf",
+   "label": "现金流序列（逗号分隔，首笔为期初）",
+   "type": "text",
+   "hint": "如 -10000,4000,4000,4000,4000",
+   "def": "-10000,4000,4000,4000,4000"
+  },
+  {
+   "id": "r",
+   "label": "折现率（NPV/MIRR融资率）",
+   "unit": "%",
+   "def": "10"
+  },
+  {
+   "id": "rein",
+   "label": "MIRR 再投资率",
+   "unit": "%",
+   "def": "10"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var s=String(cf);if(s.length>500)return {ok:false,msg:'现金流序列过长（上限 500 字符）'};var toks=s.split(/[,，、;\\s]+/).filter(function(x){return x!=='';});if(toks.length<2||toks.length>51)return {ok:false,msg:'现金流须为 2~51 笔'};var xs=[],i;for(i=0;i<toks.length;i++){var v=Number(toks[i]);if(!isFinite(v))return {ok:false,msg:'现金流含非数值内容：'+toks[i]};xs.push(v);}var rr=Number(r)/100,ri=Number(rein)/100;if(!(rr>-1))return {ok:false,msg:'折现率须大于 -100%'};if(!(ri>-1))return {ok:false,msg:'再投资率须大于 -100%'};function npvAt(x){var s2=0;for(var j=0;j<xs.length;j++)s2+=xs[j]/Math.pow(1+x,j);return s2;}var npv=npvAt(rr);var n=xs.length-1;var fvPos=0,pvNeg=0;for(i=0;i<xs.length;i++){if(xs[i]>0)fvPos+=xs[i]*Math.pow(1+ri,n-i);else pvNeg+=(-xs[i])/Math.pow(1+rr,i);}if(!(pvNeg>0))return {ok:false,msg:'须有负现金流（投资流出），IRR/MIRR 无定义'};if(!(fvPos>0))return {ok:false,msg:'无正现金流（回报），IRR/MIRR 无意义'};var mirr=Math.pow(fvPos/pvNeg,1/n)-1;var roots=[];var prevR=-0.99,prevV=npvAt(prevR);for(var gp=-98;gp<=500;gp++){var cr2=gp/100,cv=npvAt(cr2);if(cv===0){roots.push(cr2);}else if(prevV!==0&&(prevV<0)!==(cv<0)){var lo=prevR,hi=cr2;for(var it2=0;it2<80;it2++){var mid=(lo+hi)/2,mv=npvAt(mid);if((npvAt(lo)<0)!==(mv<0))hi=mid;else lo=mid;}roots.push((lo+hi)/2);}prevR=cr2;prevV=cv;}var irrTxt=roots.length?roots.map(function(x){return (x*100).toFixed(2)+'%';}).join('、'):'未找到（NPV 在扫描区间内不变号）';return {ok:true,html:'<div class=\"big\">NPV = '+M(npv)+' 元</div><div class=\"row\">IRR 共 '+roots.length+' 个：'+irrTxt+(roots.length>1?'（多解！非常规现金流，请结合 NPV 判断）':'')+'</div><div class=\"row\">MIRR = '+(mirr*100).toFixed(2)+'%（再投资率 '+rein+'%，比 IRR 更贴近真实再投资假设）</div>'};",
+ "test": {
+  "inputs": {
+   "cf": "-10000,4000,4000,4000,4000",
+   "r": 10,
+   "rein": 10
+  },
+  "expect": "2679.46"
+ }
+},
+{
+ "id": "jrforex2",
+ "cat": "jr",
+ "icon": "💱",
+ "name": "外汇掉期点与远期全价",
+ "desc": "由即期价与掉期点（pips）换算远期全价与年化升贴水（jrforward 用利率平价从利率推远期，本工具从市场报价的掉期点推）",
+ "formula": "远期全价 F = 即期 S + 掉期点 × 点值（主流货币对点值 0.0001，日元对 0.01）；掉期点为正 = 远期升水、为负 = 贴水；年化升贴水率 =（F−S)÷S × 360÷天数（ACT/360 外汇惯例）",
+ "inputs": [
+  {
+   "id": "spot",
+   "label": "即期汇率 S",
+   "def": "7.2000"
+  },
+  {
+   "id": "points",
+   "label": "掉期点（pips，可负）",
+   "def": "-150"
+  },
+  {
+   "id": "pip",
+   "label": "点值",
+   "type": "select",
+   "options": [
+    {
+     "v": "0.0001",
+     "t": "0.0001（主流对）"
+    },
+    {
+     "v": "0.01",
+     "t": "0.01（日元对）"
+    }
+   ],
+   "def": "0.0001"
+  },
+  {
+   "id": "days",
+   "label": "期限",
+   "unit": "天",
+   "def": "90"
+  }
+ ],
+ "run": "var S=Number(spot),pt=Number(points),pv=Number(pip),D=Number(days);if(!(S>0))return {ok:false,msg:'即期汇率须大于 0'};if(!isFinite(pt))return {ok:false,msg:'掉期点无效'};if(!(D>=1&&D<=1825)||Math.floor(D)!==D)return {ok:false,msg:'期限须为 1~1825 的整数天'};var F=S+pt*pv;if(!(F>0))return {ok:false,msg:'掉期点过大，远期价不为正'};var ann=(F-S)/S*360/D*100;return {ok:true,html:'<div class=\"big\">远期汇率 '+F.toFixed(4)+'</div><div class=\"row\">掉期点 '+points+' 点 × 点值 '+pip+' = '+((pt*pv)>=0?'+':'')+(pt*pv).toFixed(4)+'；年化'+(ann>=0?'升水 ':'贴水 ')+Math.abs(ann).toFixed(4)+'%（'+D+' 天，ACT/360）</div><div class=\"row\">理论口径（利率平价推远期）见 jrforward，本工具为市场报价口径</div>'};",
+ "test": {
+  "inputs": {
+   "spot": 7.2,
+   "points": -150,
+   "pip": "0.0001",
+   "days": 90
+  },
+  "expect": "7.1850"
+ }
+},
+{
+ "id": "jrmetal",
+ "cat": "jr",
+ "icon": "🥇",
+ "name": "贵金属国际价换算（元/克）",
+ "desc": "国际金/银/铂价（美元/金衡盎司）换算国内元/克，含升贴水（jrgold 是买卖盈亏，shgold 是首饰计价，均不做盎司-克汇率换算）",
+ "formula": "元/克 = 美元/金衡盎司 ÷ 31.1034768（1 金衡盎司 = 31.1034768 克）× 美元兑人民币汇率；含升贴水价 = 换算价 ×（1 + 升贴水%）。金银铂换算公式相同，仅国际报价不同",
+ "inputs": [
+  {
+   "id": "metal",
+   "label": "品种",
+   "type": "select",
+   "options": [
+    {
+     "v": "gold",
+     "t": "黄金"
+    },
+    {
+     "v": "silver",
+     "t": "白银"
+    },
+    {
+     "v": "plat",
+     "t": "铂金"
+    }
+   ],
+   "def": "gold"
+  },
+  {
+   "id": "price",
+   "label": "国际价",
+   "unit": "美元/盎司",
+   "def": "2400"
+  },
+  {
+   "id": "fx",
+   "label": "美元兑人民币汇率",
+   "def": "7.20"
+  },
+  {
+   "id": "prem",
+   "label": "升贴水",
+   "unit": "%",
+   "hint": "国内价高于换算价填正数",
+   "def": "0"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var P=Number(price),FX=Number(fx),pm=Number(prem)/100;if(!(P>0))return {ok:false,msg:'国际价须大于 0'};if(!(FX>0))return {ok:false,msg:'汇率须大于 0'};if(!(pm>-1))return {ok:false,msg:'升贴水须大于 -100%'};var per=P/31.1034768*FX;var withP=per*(1+pm);var names={gold:'黄金',silver:'白银',plat:'铂金'};return {ok:true,html:'<div class=\"big\">'+(names[String(metal)]||'贵金属')+' '+M(per)+' 元/克</div><div class=\"row\">国际价 '+price+' 美元/盎司 ÷ 31.1034768 × 汇率 '+fx+';含升贴水（'+prem+'%）'+M(withP)+' 元/克，约 '+M(withP*1000)+' 元/千克</div>'};",
+ "test": {
+  "inputs": {
+   "metal": "gold",
+   "price": 2400,
+   "fx": 7.2,
+   "prem": 0
+  },
+  "expect": "555.56"
+ }
+},
+{
+ "id": "jrcredit2",
+ "cat": "jr",
+ "icon": "💳",
+ "name": "信用卡最低还款滚动模拟",
+ "desc": "每月只还最低额，逐月滚动算还清月数与总利息（jrminpay 只估 30 天利息，jrccard 是分期年化，均不做滚动模拟）",
+ "formula": "逐月模拟（上限 600 个月）：每月利息 = 余额 × 年利率÷12（日息万五约合年化 18.25%，此处按填入年利率月均摊）；最低还款 = max（余额 × 最低比例， 最低限额），不超过当期余额；还完为止统计月数与总利息。若某月最低还款 ≤ 当月利息，余额不降反升、永远还不清，会直接提示",
+ "inputs": [
+  {
+   "id": "bal",
+   "label": "当前欠款余额",
+   "unit": "元",
+   "def": "10000"
+  },
+  {
+   "id": "rate",
+   "label": "年利率",
+   "unit": "%",
+   "hint": "日息万分之五约合年化 18.25%",
+   "def": "18"
+  },
+  {
+   "id": "minpct",
+   "label": "最低还款比例",
+   "unit": "%",
+   "def": "10"
+  },
+  {
+   "id": "floor",
+   "label": "最低还款限额",
+   "unit": "元",
+   "hint": "银行常设的最低还款保底金额，无则填 0",
+   "def": "100"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var B=Number(bal),rt=Number(rate),mp=Number(minpct)/100,FL=Number(floor);if(!(B>0))return {ok:false,msg:'欠款余额须大于 0'};if(!(rt>=0&&rt<=100))return {ok:false,msg:'年利率须在 0~100% 之间'};if(!(mp>0&&mp<=1))return {ok:false,msg:'最低还款比例须在 0~100% 之间'};if(!(FL>=0))return {ok:false,msg:'最低还款限额不能为负'};var it0=B*rt/1200;var pay0=Math.min(B+it0,Math.max((B+it0)*mp,FL));if(pay0<=it0&&pay0<B+it0)return {ok:true,html:'<div class=\"big\">最低还款不足以覆盖利息</div><div class=\"row\">首月利息 '+M(it0)+' 元 ≥ 最低还款 '+M(pay0)+' 元，只还最低额余额会越滚越大，请提高还款额</div>'};var b=B,tot=0,mm=0;while(b>0.005&&mm<600){var it=b*rt/1200;b+=it;tot+=it;var pay=Math.min(b,Math.max(b*mp,FL));b-=pay;mm++;}if(b>0.005)return {ok:true,html:'<div class=\"big\">600 个月内未还清（余 '+M(b)+' 元）</div><div class=\"row\">已产生利息 '+M(tot)+' 元；最低还款比例过低，请提高还款额</div>'};return {ok:true,html:'<div class=\"big\">总利息 '+M(tot)+' 元</div><div class=\"row\">每月只还最低额需 '+mm+' 个月还清 '+M(B)+' 元欠款，总还款 '+M(B+tot)+' 元；对比：分期真实年化见 jrccard，单月最低还款利息速估见 jrminpay</div>'};",
+ "test": {
+  "inputs": {
+   "bal": 10000,
+   "rate": 18,
+   "minpct": 10,
+   "floor": 100
+  },
+  "expect": "1652.10"
+ }
+}
+);
+/* ===== R3-YD-TOPUP 运动健身补位（3）：间歇方案 / 田径场圈速 / 负分段规划 ===== */
+TOOLS.push(
+{"id": "ydtabata", "cat": "yd", "icon": "🔥", "name": "间歇训练方案生成", "desc": "Tabata 20/10×8、EMOM 每分钟整点、自定义工作/休息/轮数/组数三种间歇结构，生成总时长与结构表", "formula": "Tabata 经典方案固定为全力做 20 秒、休息 10 秒、共 8 轮，总时长 = 8×20 + 7×10 = 230 秒。EMOM（Every Minute On the Minute）：共 M 分钟，每分钟整点开始做 W 秒、其余 (60−W) 秒休息，总时长 = M×60，总工作 = M×W。自定义：每组时长 = 轮数×(工作+休息) − 休息（组内末轮后不休息）；总时长 = 组数×每组时长 + (组数−1)×组间休息；总工作 = 工作×轮数×组数。上限：每组轮数 ≤50、组数 ≤20、总轮数 ≤500、EMOM ≤180 分钟", "inputs": [{"id": "mode", "label": "训练模式", "type": "select", "def": "tabata", "options": [{"v": "tabata", "t": "Tabata（20/10×8）"}, {"v": "emom", "t": "EMOM 每分钟整点"}, {"v": "custom", "t": "自定义间歇"}]}, {"id": "emomMin", "label": "EMOM 总分钟数", "unit": "分钟", "def": "10", "when": "mode=emom", "hint": "1~180 的整数，每分钟 1 轮"}, {"id": "emomWork", "label": "每分钟工作时长", "unit": "秒", "def": "40", "when": "mode=emom", "hint": "5~55 秒，其余时间为分钟内休息"}, {"id": "work", "label": "工作时长", "unit": "秒", "def": "40", "when": "mode=custom", "hint": "(0,3600]"}, {"id": "rest", "label": "轮间休息", "unit": "秒", "def": "20", "when": "mode=custom", "hint": "[0,3600]，可为 0"}, {"id": "rounds", "label": "每组轮数", "unit": "轮", "def": "10", "when": "mode=custom", "hint": "1~50 的整数"}, {"id": "sets", "label": "组数", "unit": "组", "def": "3", "when": "mode=custom", "hint": "1~20 的整数"}, {"id": "setRest", "label": "组间休息", "unit": "秒", "def": "120", "when": "mode=custom", "hint": "[0,3600]"}], "run": "function FT(x){x=Math.round(x*10)/10;var h=Math.floor(x/3600);var m=Math.floor((x-h*3600)/60);var s=x-h*3600-m*60;var ss=s.toFixed(1);if(s<10)ss='0'+ss;if(h>0){var mm=('0'+m).slice(-2);return h+':'+mm+':'+ss;}return m+':'+ss;}function F(x){return ''+Math.round(x*10)/10;}var md=String(mode);if(md==='tabata'){var h='<div class=\"big\">Tabata 总时长 '+FT(230)+'（230 秒）</div>';h+='<div class=\"row\">经典 Tabata：全力做 20 秒 / 休息 10 秒 × 8 轮，总工作 160 秒，总休息 70 秒</div>';var t=0;for(var i=1;i<=8;i++){h+='<div class=\"row\">第'+i+'轮：'+FT(t)+'–'+FT(t+20)+' 做';t+=20;if(i<8){h+='，'+FT(t)+'–'+FT(t+10)+' 休息';t+=10;}h+='</div>';}return {ok:true,html:h};}if(md==='emom'){var M=Number(emomMin),W=Number(emomWork);if(!(M>=1&&M<=180)||Math.floor(M)!==M)return {ok:false,msg:'EMOM 总分钟数须为 1~180 的整数'};if(!(W>=5&&W<=55))return {ok:false,msg:'每分钟工作秒数须为 5~55（须小于 60 并留出休息）'};var tot=M*60,wt=M*W,rt=tot-wt;var h2='<div class=\"big\">EMOM 总时长 '+FT(tot)+'（'+tot+' 秒，共 '+M+' 轮）</div>';h2+='<div class=\"row\">每分钟整点开始：做 '+F(W)+' 秒，休息 '+F(60-W)+' 秒；总工作 '+wt+' 秒，总休息 '+rt+' 秒</div>';h2+='<div class=\"row\">第 1 分钟示例：'+FT(0)+'–'+FT(W)+' 做，'+FT(W)+'–'+FT(60)+' 休息，其后每分钟重复</div>';return {ok:true,html:h2};}if(md==='custom'){var W2=Number(work),R=Number(rest),N=Number(rounds),S=Number(sets),SR=Number(setRest);if(!(W2>0&&W2<=3600))return {ok:false,msg:'工作秒数须在 (0,3600] 之间'};if(!(R>=0&&R<=3600))return {ok:false,msg:'休息秒数须在 [0,3600] 之间'};if(!(N>=1&&N<=50)||Math.floor(N)!==N)return {ok:false,msg:'每组轮数须为 1~50 的整数'};if(!(S>=1&&S<=20)||Math.floor(S)!==S)return {ok:false,msg:'组数须为 1~20 的整数'};if(!(SR>=0&&SR<=3600))return {ok:false,msg:'组间休息须在 [0,3600] 之间'};if(N*S>500)return {ok:false,msg:'总轮数（轮数×组数）不得超过 500'};var per=N*(W2+R)-R;var tot2=S*per+(S-1)*SR;var wt2=W2*N*S;var h3='<div class=\"big\">总时长 '+FT(tot2)+'（'+tot2+' 秒）</div>';h3+='<div class=\"row\">总工作 '+wt2+' 秒，总休息 '+(tot2-wt2)+' 秒，共 '+(N*S)+' 轮</div>';for(var k=1;k<=S;k++){h3+='<div class=\"row\">第'+k+'组：做 '+F(W2)+' 秒 / 休息 '+F(R)+' 秒 × '+N+' 轮，组时长 '+FT(per);if(k<S)h3+='，其后组间休息 '+FT(SR);h3+='</div>';}return {ok:true,html:h3};}return {ok:false,msg:'未知训练模式'};", "test": {"inputs": {"mode": "tabata", "emomMin": 10, "emomWork": 40, "work": 40, "rest": 20, "rounds": 10, "sets": 3, "setRest": 120}, "expect": "230"}},
+{"id": "ydmeetrun", "cat": "yd", "icon": "🏟️", "name": "田径场圈速配算", "desc": "由目标总成绩生成 400 米标准跑道逐段圈速表，含起跑非整圈段，支持均匀与累进（后程加速）两模式", "formula": "标准 400m 跑道：段序按实际跑序——先跑起跑余段（距离 mod 400，如 1500m 先跑 300m），再跑整圈 400m。均匀模式：各段用时 = 总成绩 × 段长 ÷ 总距离。累进模式：各段配速（秒/米）沿段序线性变快，末段配速 = 首段配速 × (1 − 累进幅度)，首段配速由 Σ 配速ᵢ×段长ᵢ = 总成绩反解；累进幅度 0~30%。折算每圈配速须在 30 秒~20 分钟之间，否则按成绩不合理拒绝", "inputs": [{"id": "dist", "label": "比赛距离", "type": "select", "def": "5000", "options": [{"v": "800", "t": "800m"}, {"v": "1500", "t": "1500m"}, {"v": "3000", "t": "3000m"}, {"v": "5000", "t": "5000m"}, {"v": "10000", "t": "10000m"}]}, {"id": "tmin", "label": "目标成绩（分钟）", "unit": "分", "def": "20"}, {"id": "tsec", "label": "目标成绩（秒）", "unit": "秒", "def": "0", "hint": "0~59"}, {"id": "mode", "label": "配速模式", "type": "select", "def": "even", "options": [{"v": "even", "t": "均匀配速"}, {"v": "prog", "t": "累进（后程加速）"}]}, {"id": "progPct", "label": "累进幅度", "unit": "%", "def": "5", "when": "mode=prog", "hint": "末段配速比首段快的百分比，0~30"}], "run": "function FT(x){x=Math.round(x*10)/10;var h=Math.floor(x/3600);var m=Math.floor((x-h*3600)/60);var s=x-h*3600-m*60;var ss=s.toFixed(1);if(s<10)ss='0'+ss;if(h>0){var mm=('0'+m).slice(-2);return h+':'+mm+':'+ss;}return m+':'+ss;}var D=Number(dist);if(!(D>0))return {ok:false,msg:'请选择比赛距离'};var mm=Number(tmin),ss=Number(tsec);if(!(mm>=0)||!(ss>=0&&ss<60))return {ok:false,msg:'目标成绩无效：分钟须 ≥0，秒须为 0~59'};var T=mm*60+ss;if(!(T>0))return {ok:false,msg:'目标总成绩须大于 0'};var avg=T/D*400;if(!(avg>=30&&avg<=1200))return {ok:false,msg:'折算每圈配速超出合理范围（30 秒~20 分钟/圈），请检查成绩'};var full=Math.floor(D/400);var rem=D-full*400;var segs=[];if(rem>0)segs.push(rem);for(var i=0;i<full;i++)segs.push(400);var n=segs.length;var md=String(mode);var r=0;if(md==='prog'){r=Number(progPct)/100;if(!(r>=0&&r<=0.30))return {ok:false,msg:'累进幅度须为 0~30（%）'};}else if(md!=='even'){return {ok:false,msg:'未知配速模式'};}var paces=[];if(md==='prog'&&n>1){var den=0;for(var j=0;j<n;j++){den+=segs[j]*(1-r*j/(n-1));}var p1=T/den;for(var j2=0;j2<n;j2++)paces.push(p1*(1-r*j2/(n-1)));}else{for(var j3=0;j3<n;j3++)paces.push(T/D);}var h='<div class=\"big\">'+D+'m 目标 '+FT(T)+'｜共 '+n+' 段，平均 '+FT(avg)+' /400m</div>';var cum=0;for(var k=0;k<n;k++){var ti=paces[k]*segs[k];cum+=ti;h+='<div class=\"row\">第'+(k+1)+'段（'+segs[k]+'m）：用时 '+FT(ti)+'，累计 '+FT(cum)+'</div>';}if(md==='prog')h+='<div class=\"row\">累进模式：末段配速比首段快 '+(Math.round(r*1000)/10)+'%，首段折算 '+FT(paces[0]*400)+' /400m，末段 '+FT(paces[n-1]*400)+' /400m</div>';return {ok:true,html:h};", "test": {"inputs": {"dist": "5000", "tmin": 20, "tsec": 0, "mode": "even", "progPct": 5}, "expect": "1:36"}},
+{"id": "ydsplit", "cat": "yd", "icon": "✂️", "name": "负分段配速规划", "desc": "总距离 + 目标时间 + 后半程配速变化幅度，算前后半程各自配速与用时（负分段后半更快 / 正分段后半更慢），附逐公里累计表", "formula": "赛道前后等分（各 D/2）。负分段：后半程配速 = 前半程配速 × (1 − 幅度)；正分段：× (1 + 幅度)。由总时间 T = (D/2)×(配速₁ + 配速₂) 反解配速₁ = T ÷ [(D/2)×(2 ∓ 幅度)]。幅度 0 即匀速。折算配速须落在 2:00~30:00 /km 合理区间，否则拒绝。逐公里累计表仅在总距离 ≤50 km 时生成", "inputs": [{"id": "distKm", "label": "总距离", "unit": "km", "def": "10", "hint": "(0,500]，可填 42.195"}, {"id": "tmin", "label": "目标时间（分钟）", "unit": "分", "def": "50"}, {"id": "tsec", "label": "目标时间（秒）", "unit": "秒", "def": "0", "hint": "0~59"}, {"id": "mode", "label": "分段模式", "type": "select", "def": "neg", "options": [{"v": "neg", "t": "负分段（后半程更快）"}, {"v": "pos", "t": "正分段（后半程更慢）"}]}, {"id": "pct", "label": "后半程配速变化幅度", "unit": "%", "def": "2", "hint": "0~20，0 即匀速"}], "run": "function FT(x){x=Math.round(x*10)/10;var h=Math.floor(x/3600);var m=Math.floor((x-h*3600)/60);var s=x-h*3600-m*60;var ss=s.toFixed(1);if(s<10)ss='0'+ss;if(h>0){var mm=('0'+m).slice(-2);return h+':'+mm+':'+ss;}return m+':'+ss;}var D=Number(distKm);if(!(D>0&&D<=500))return {ok:false,msg:'总距离须在 (0,500] km 之间'};var mm=Number(tmin),ss=Number(tsec);if(!(mm>=0)||!(ss>=0&&ss<60))return {ok:false,msg:'目标时间无效：分钟须 ≥0，秒须为 0~59'};var T=mm*60+ss;if(!(T>0))return {ok:false,msg:'目标总时间须大于 0'};var pc=Number(pct);if(!(pc>=0&&pc<=20))return {ok:false,msg:'后半程配速变化幅度须为 0~20（%）'};var md=String(mode);if(md!=='neg'&&md!=='pos')return {ok:false,msg:'未知分段模式'};var r=pc/100;var f=(md==='neg')?(2-r):(2+r);var p1=T/((D/2)*f);var p2=(md==='neg')?p1*(1-r):p1*(1+r);if(!(p1>=120&&p1<=1800)||!(p2>=120&&p2<=1800))return {ok:false,msg:'折算配速超出合理范围（2:00~30:00 /km），请检查距离与目标时间'};var h1=p1*(D/2);var h2=T-h1;var h='<div class=\"big\">前半程配速 '+FT(p1)+' /km，后半程 '+FT(p2)+' /km</div>';h+='<div class=\"row\">前半 '+(D/2)+' km 用时 '+FT(h1)+'，后半 '+(D/2)+' km 用时 '+FT(h2)+'，平均配速 '+FT(T/D)+' /km</div>';if(D<=50){var fk=Math.floor(D);for(var k=1;k<=fk;k++){var ct=k<=(D/2)?k*p1:(D/2)*p1+(k-D/2)*p2;h+='<div class=\"row\">第 '+k+' km 累计 '+FT(ct)+'</div>';}if(fk<D)h+='<div class=\"row\">终点 '+D+' km 累计 '+FT(T)+'</div>';}return {ok:true,html:h};", "test": {"inputs": {"distKm": 10, "tmin": 50, "tsec": 0, "mode": "neg", "pct": 2}, "expect": "5:03"}}
 );
 
 
