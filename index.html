@@ -7542,6 +7542,262 @@ TOOLS.push(
   test:{inputs:{D:9,d:3,er:"pe",erc:2.25}, expect:"43.8952"}}
 );
 
+/* ===== R3 金融理财新增 25 工具（2026-10-21） ===== */
+TOOLS.push(
+ {id:"jrbondcvx", cat:"jr", icon:"🏛️", name:"债券凸性", desc:"按现金流逐笔折现算债券凸性与麦考利久期（与久期口径一致）",
+  formula:"逐笔现金流折现：P = Σ CFₜ÷(1+y/m)ᵗ；麦考利久期 D = Σ(t·PVₜ)÷(P·m)（年）；凸性 C = Σ[t(t+1)·PVₜ] ÷ [P·(1+y/m)²·m²]（年²），与久期同为按付息频率 m 折算的年化口径；价格近似变化 ≈ −D修正·Δy + ½·C·Δy²",
+  inputs:[
+   {id:"face", label:"债券面值", unit:"元", def:"100"},
+   {id:"cr", label:"票面利率", unit:"%", def:"5"},
+   {id:"ytm", label:"到期收益率 YTM", unit:"%", def:"4"},
+   {id:"yrs", label:"剩余期限", unit:"年", def:"5"},
+   {id:"freq", label:"付息频率", type:"select", def:"1", options:[{v:"1", t:"每年 1 次"}, {v:"2", t:"每年 2 次"}]}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var fc=Number(face),crr=Number(cr),yy=Number(ytm),nn=Number(yrs),m=Number(freq);if(!(nn>0)||nn>100)return {ok:false,msg:'剩余期限应在 0~100 年之间（过长会造成逐笔现金流计算超时）'};if(!(fc>0))return {ok:false,msg:'面值须大于 0'};if(!(crr>=0))return {ok:false,msg:'票面利率不能为负'};if(!(yy>-100))return {ok:false,msg:'到期收益率须大于 -100%'};if(!(nn>0)||Math.floor(nn)!==nn)return {ok:false,msg:'剩余期限须为正整数年'};var yp=yy/100/m,N=nn*m,cp=fc*crr/100/m,P=0,mt=0,cx=0;for(var t=1;t<=N;t++){var cf=(t===N)?cp+fc:cp;var pv=cf/Math.pow(1+yp,t);P+=pv;mt+=t*pv;cx+=t*(t+1)*pv;}if(!(P>0))return {ok:false,msg:'折现后价格不大于 0，参数异常'};var D=mt/P/m;var C=cx/(P*Math.pow(1+yp,2)*m*m);var Dm=D/(1+yp);return {ok:true,html:'<div class=\"big\">凸性 C = '+F(C)+' 年²</div><div class=\"row\">债券价格 P = '+M(P)+' 元，麦考利久期 '+F(D)+' 年，修正久期 '+F(Dm)+' 年</div><div class=\"row\">收益率变动 Δy 时价格变化率 ≈ −'+F(Dm)+'·Δy + ½×'+F(C)+'·Δy²（Δy 用小数）</div>'};",
+  test:{inputs:{face:100, cr:5, ytm:4, yrs:5, freq:"1"}, expect:"24.4766"}},
+ {id:"jrbonddy", cat:"jr", icon:"🎫", name:"债券当期收益率", desc:"年票息÷净价算当期收益率，并近似到期资本利得率",
+  formula:"当期收益率 = 年票息 ÷ 买入净价 × 100%，年票息 = 面值 × 票面利率；到期资本利得率（近似）= [(面值 − 净价) ÷ 剩余年数] ÷ 净价 × 100%；两者之和为近似到期收益率（简化口径，未计利息再投资与应计利息）",
+  inputs:[
+   {id:"price", label:"买入净价", unit:"元", def:"95"},
+   {id:"face", label:"债券面值", unit:"元", def:"100"},
+   {id:"cr", label:"票面利率", unit:"%", def:"5"},
+   {id:"yrs", label:"剩余期限", unit:"年", def:"5"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var pr=Number(price),fc=Number(face),crr=Number(cr),nn=Number(yrs);if(!(pr>0))return {ok:false,msg:'净价须大于 0'};if(!(fc>0))return {ok:false,msg:'面值须大于 0'};if(!(crr>=0))return {ok:false,msg:'票面利率不能为负'};if(!(nn>0))return {ok:false,msg:'剩余期限须大于 0'};var coup=fc*crr/100;var cy=coup/pr*100;var cg=((fc-pr)/nn)/pr*100;return {ok:true,html:'<div class=\"big\">当期收益率 = '+PC(cy)+'</div><div class=\"row\">年票息 '+M(coup)+' 元 ÷ 净价 '+M(pr)+' 元；到期资本利得率近似 '+PC(cg)+'，近似到期收益率合计 '+PC(cy+cg)+'</div><div class=\"row\">净价低于面值为折价（资本利得为正），高于面值为溢价（资本利得为负）</div>'};",
+  test:{inputs:{price:95, face:100, cr:5, yrs:5}, expect:"5.26%"}},
+ {id:"jrsortino", cat:"jr", icon:"📉", name:"索提诺比率", desc:"用下行偏差衡量每单位下行风险换来的超额收益",
+  formula:"索提诺 = (平均收益 − MAR) ÷ 下行偏差；下行偏差 = √[Σ min(rᵢ−MAR, 0)² ÷ n]（总体口径，n 为全部期数）；收益序列以 % 输入、逗号分隔，MAR 为最低可接受收益（%）；无下行期（下行偏差为 0）时拒绝计算",
+  inputs:[
+   {id:"seq", label:"各期收益率序列", unit:"%", def:"10,-5,8,-2,6", hint:"逗号分隔，如 10,-5,8,-2,6"},
+   {id:"mar", label:"最低可接受收益 MAR", unit:"%", def:"0"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}function parseSeq(s){var a=String(s).split(/[,，、\\s]+/).filter(function(x){return x!=='';}).map(Number);for(var i=0;i<a.length;i++){if(!isFinite(a[i]))return null;}return a;}function mean(a){var s=0;for(var i=0;i<a.length;i++)s+=a[i];return s/a.length;}var a=parseSeq(seq);if(!a||a.length<2)return {ok:false,msg:'收益序列至少需要 2 个数值（逗号分隔）'};var mm=Number(mar);if(!isFinite(mm))return {ok:false,msg:'MAR 无效'};var mu=mean(a);var ss=0;for(var i=0;i<a.length;i++){var d=Math.min(a[i]-mm,0);ss+=d*d;}var dd=Math.sqrt(ss/a.length);if(!(dd>0))return {ok:false,msg:'下行偏差为 0（没有低于 MAR 的期数），索提诺比率无定义'};var s=(mu-mm)/dd;return {ok:true,html:'<div class=\"big\">索提诺比率 = '+F(s)+'</div><div class=\"row\">平均收益 '+PC(mu)+'，MAR '+PC(mm)+'，下行偏差 '+PC(dd)+'（共 '+a.length+' 期）</div><div class=\"row\">只惩罚下行波动；与夏普比率口径不同，不能直接混比，必要时再年化</div>'};",
+  test:{inputs:{seq:"10,-5,8,-2,6", mar:0}, expect:"1.4118"}},
+ {id:"jrcalmar", cat:"jr", icon:"🌊", name:"卡玛比率", desc:"年化收益÷最大回撤，衡量回撤代价下的收益效率",
+  formula:"卡玛比率 = 年化收益率 ÷ 最大回撤（两者均以 % 输入，回撤填正数）；经验参考：>1 较好，>3 优秀（经验口径，非监管标准）。最大回撤为 0 时比率无定义，拒绝计算",
+  inputs:[
+   {id:"ann", label:"年化收益率", unit:"%", def:"15"},
+   {id:"dd", label:"最大回撤", unit:"%", def:"20", hint:"填正数，如回撤 20% 填 20"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var aa=Number(ann),d=Number(dd);if(!isFinite(aa))return {ok:false,msg:'年化收益率无效'};if(!(d>0))return {ok:false,msg:'最大回撤须大于 0（回撤为 0 时卡玛比率无定义）'};if(d>100)return {ok:false,msg:'最大回撤不能超过 100%'};var c=aa/d;return {ok:true,html:'<div class=\"big\">卡玛比率 = '+F(c)+'</div><div class=\"row\">年化收益 '+PC(aa)+' ÷ 最大回撤 '+PC(d)+' = '+F(c)+'</div><div class=\"row\">参考：>1 较好，>3 优秀（经验口径）；回撤窗口不同结果不可直接横比</div>'};",
+  test:{inputs:{ann:15, dd:20}, expect:"0.75"}},
+ {id:"jrtrack", cat:"jr", icon:"🎯", name:"跟踪误差与信息比率", desc:"两列收益序列算跟踪误差（超额收益标准差）与信息比率",
+  formula:"超额收益 eᵢ = 组合收益ᵢ − 基准收益ᵢ；跟踪误差 TE = e 的样本标准差（÷(n−1)）；信息比率 IR = 平均超额收益 ÷ TE。两列以 % 输入、逗号分隔，期数须一致且 ≥2；超额恒定（TE=0）时拒绝",
+  inputs:[
+   {id:"seqp", label:"组合各期收益", unit:"%", def:"10,5,-2,8", hint:"逗号分隔"},
+   {id:"seqb", label:"基准各期收益", unit:"%", def:"8,4,0,6", hint:"逗号分隔，与组合一一对应"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}function parseSeq(s){var a=String(s).split(/[,，、\\s]+/).filter(function(x){return x!=='';}).map(Number);for(var i=0;i<a.length;i++){if(!isFinite(a[i]))return null;}return a;}function mean(a){var s=0;for(var i=0;i<a.length;i++)s+=a[i];return s/a.length;}var p=parseSeq(seqp),b=parseSeq(seqb);if(!p||!b)return {ok:false,msg:'序列含无效数值（逗号分隔）'};if(p.length!==b.length)return {ok:false,msg:'组合与基准序列期数不一致'};if(p.length<2)return {ok:false,msg:'至少需要 2 期数据'};var e=[];for(var i=0;i<p.length;i++)e.push(p[i]-b[i]);var me=mean(e);var ss=0;for(i=0;i<e.length;i++)ss+=(e[i]-me)*(e[i]-me);var te=Math.sqrt(ss/(e.length-1));if(!(te>0))return {ok:false,msg:'跟踪误差为 0（超额收益恒定），信息比率无定义'};var ir=me/te;return {ok:true,html:'<div class=\"big\">跟踪误差 TE = '+PC(te)+'，信息比率 IR = '+F(ir)+'</div><div class=\"row\">平均每期超额收益 '+PC(me)+'（共 '+e.length+' 期，样本标准差口径）</div><div class=\"row\">IR > 0.5 通常认为主动管理效果较好（经验口径）</div>'};",
+  test:{inputs:{seqp:"10,5,-2,8", seqb:"8,4,0,6"}, expect:"0.3962"}},
+ {id:"jrbeta", cat:"jr", icon:"β", name:"贝塔系数 β", desc:"个股与市场两列收益序列算 β 与相关系数",
+  formula:"β = Cov(个股, 市场) ÷ Var(市场)（样本协方差与样本方差之比，与总体口径结果相同）；同时给出相关系数 ρ。两列以 % 输入、逗号分隔，期数须一致且 ≥2；市场方差为 0（市场收益全同）时拒绝",
+  inputs:[
+   {id:"seqs", label:"个股各期收益", unit:"%", def:"10,5,-2,8", hint:"逗号分隔"},
+   {id:"seqm", label:"市场各期收益", unit:"%", def:"8,4,0,6", hint:"逗号分隔，与个股一一对应"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}function parseSeq(s){var a=String(s).split(/[,，、\\s]+/).filter(function(x){return x!=='';}).map(Number);for(var i=0;i<a.length;i++){if(!isFinite(a[i]))return null;}return a;}function mean(a){var s=0;for(var i=0;i<a.length;i++)s+=a[i];return s/a.length;}var s=parseSeq(seqs),m=parseSeq(seqm);if(!s||!m)return {ok:false,msg:'序列含无效数值（逗号分隔）'};if(s.length!==m.length)return {ok:false,msg:'个股与市场序列期数不一致'};if(s.length<2)return {ok:false,msg:'至少需要 2 期数据'};var ms=mean(s),mm=mean(m),cov=0,vm=0,vs=0;for(var i=0;i<s.length;i++){cov+=(s[i]-ms)*(m[i]-mm);vm+=(m[i]-mm)*(m[i]-mm);vs+=(s[i]-ms)*(s[i]-ms);}if(!(vm>0))return {ok:false,msg:'市场收益方差为 0（序列全同值），β 无定义'};var beta=cov/vm;var rho=vs>0?cov/Math.sqrt(vs*vm):0;var txt=beta>1?'波动大于市场（进攻型）':beta<1?'波动小于市场（防御型）':'与市场同步';return {ok:true,html:'<div class=\"big\">β = '+F(beta)+'</div><div class=\"row\">与市场相关系数 ρ = '+F(rho)+'（共 '+s.length+' 期）；'+txt+'</div><div class=\"row\">β 为历史回归口径，随窗口变化；个股收益方差为 0 时 ρ 记为 0</div>'};",
+  test:{inputs:{seqs:"10,5,-2,8", seqm:"8,4,0,6"}, expect:"1.5286"}},
+ {id:"jralpha", cat:"jr", icon:"α", name:"詹森阿尔法 α", desc:"由实际收益与 CAPM 预期收益之差算詹森阿尔法",
+  formula:"α = Rp − [Rf + β × (Rm − Rf)]（詹森阿尔法，CAPM 口径）；Rp 组合实际收益、Rf 无风险利率、Rm 市场收益均以 % 输入，β 无量纲。α > 0 表示跑赢 CAPM 预期",
+  inputs:[
+   {id:"rp", label:"组合实际收益 Rp", unit:"%", def:"15"},
+   {id:"rf", label:"无风险利率 Rf", unit:"%", def:"3"},
+   {id:"beta", label:"贝塔 β", def:"1.2"},
+   {id:"rm", label:"市场收益 Rm", unit:"%", def:"10"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var p=Number(rp),f=Number(rf),b=Number(beta),m=Number(rm);if(!isFinite(p)||!isFinite(f)||!isFinite(m))return {ok:false,msg:'收益率输入无效'};if(!isFinite(b))return {ok:false,msg:'β 输入无效'};var exp=f+b*(m-f);var al=p-exp;return {ok:true,html:'<div class=\"big\">詹森 α = '+PC(al)+'</div><div class=\"row\">CAPM 预期收益 = '+PC(f)+' + '+F(b)+' × ('+PC(m)+' − '+PC(f)+') = '+PC(exp)+'；实际 '+PC(p)+' − 预期 = '+PC(al)+'</div><div class=\"row\">'+(al>0?'正 α：跑赢风险调整后预期':al<0?'负 α：跑输风险调整后预期':'α 为 0：与 CAPM 预期一致')+'</div>'};",
+  test:{inputs:{rp:15, rf:3, beta:1.2, rm:10}, expect:"3.60%"}},
+ {id:"jrtreynor", cat:"jr", icon:"🏆", name:"特雷诺比率", desc:"超额收益÷β，衡量每单位系统性风险的回报",
+  formula:"特雷诺比率 = (Rp − Rf) ÷ β；Rp、Rf 以 % 输入，结果单位为 %/单位β。β = 0 时无定义拒绝；β 为负时比率符号失真，结果会给出提示",
+  inputs:[
+   {id:"rp", label:"组合收益 Rp", unit:"%", def:"15"},
+   {id:"rf", label:"无风险利率 Rf", unit:"%", def:"3"},
+   {id:"beta", label:"贝塔 β", def:"1.2"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var p=Number(rp),f=Number(rf),b=Number(beta);if(!isFinite(p)||!isFinite(f))return {ok:false,msg:'收益率输入无效'};if(!(b!==0)||!isFinite(b))return {ok:false,msg:'β 不能为 0（特雷诺比率无定义）'};var t=(p-f)/b;var note=b<0?'<div class=\"row\">⚠️ β 为负时特雷诺比率符号失真，仅作参考</div>':'<div class=\"row\">数值越大，每单位系统性风险换来的超额收益越高</div>';return {ok:true,html:'<div class=\"big\">特雷诺比率 = '+PC(t)+'</div><div class=\"row\">('+PC(p)+' − '+PC(f)+') ÷ '+F(b)+' = '+PC(t)+'</div>'+note};",
+  test:{inputs:{rp:15, rf:3, beta:1.2}, expect:"10.00%"}},
+ {id:"jrvar", cat:"jr", icon:"⚠️", name:"风险价值 VaR", desc:"历史模拟法或参数法（正态）算单期 VaR，可切换置信度",
+  formula:"历史法：VaR = −收益序列在 (1−置信度) 处的分位收益 × 组合价值（取最差 k 期口径，k = ceil((1−置信度)×n) 的最差一期）；参数法（正态）：VaR = −(μ − z·σ) × 组合价值，z：95% 取 1.6449、99% 取 2.3263，μ/σ 为单期收益均值与标准差（%）；算得为负（即 μ−zσ>0）时 VaR 记 0。单期口径，未做时间平方根换算",
+  inputs:[
+   {id:"mode", label:"方法", type:"select", def:"hist", options:[{v:"hist", t:"历史模拟法"}, {v:"param", t:"参数法（正态）"}]},
+   {id:"amt", label:"组合价值", unit:"元", def:"100000"},
+   {id:"seq", label:"各期收益率序列", unit:"%", when:"mode=hist", def:"-8,-5,-3,-1,0,1,2,3,4,5", hint:"逗号分隔，建议 ≥10 期"},
+   {id:"mu", label:"单期收益均值 μ", unit:"%", when:"mode=param", def:"2"},
+   {id:"sigma", label:"单期收益标准差 σ", unit:"%", when:"mode=param", def:"10"},
+   {id:"conf", label:"置信度", type:"select", def:"95", options:[{v:"95", t:"95%"}, {v:"99", t:"99%"}]}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}function parseSeq(s){var a=String(s).split(/[,，、\\s]+/).filter(function(x){return x!=='';}).map(Number);for(var i=0;i<a.length;i++){if(!isFinite(a[i]))return null;}return a;}function mean(a){var s=0;for(var i=0;i<a.length;i++)s+=a[i];return s/a.length;}var A=Number(amt);if(!(A>0))return {ok:false,msg:'组合价值须大于 0'};var cf=Number(conf);var z=cf===99?2.3263:1.6449;if(String(mode)==='param'){var mu=Number(mu),sg=Number(sigma);if(!isFinite(mu))return {ok:false,msg:'μ 输入无效'};if(!(sg>=0))return {ok:false,msg:'σ 不能为负'};var vp=-(mu-z*sg);if(vp<0)vp=0;return {ok:true,html:'<div class=\"big\">VaR（'+cf+'%）= '+M(A*vp/100)+' 元</div><div class=\"row\">参数法：−(μ − zσ) = −('+PC(mu)+' − '+z+' × '+PC(sigma)+') = '+PC(vp)+'，× 组合价值 '+M(A)+' 元</div><div class=\"row\">正态假设下尾部可能低估极端风险；σ=0 时 VaR 为 0</div>'};}var a=parseSeq(seq);if(!a||a.length<5)return {ok:false,msg:'历史法至少需要 5 期收益序列（逗号分隔）'};var srt=a.slice().sort(function(x,y){return x-y;});var k=Math.max(1,Math.ceil((1-cf/100)*a.length-1e-9));var q=srt[k-1];var v=-q;if(v<0)v=0;return {ok:true,html:'<div class=\"big\">VaR（'+cf+'%）= '+M(A*v/100)+' 元</div><div class=\"row\">历史法：共 '+a.length+' 期，'+cf+'% 分位收益（第 '+k+' 差）= '+PC(q)+'，VaR = '+PC(v)+' × '+M(A)+' 元</div><div class=\"row\">含义：单期内损失超过该值的历史频率约为 '+(100-cf)+'%</div>'};",
+  test:{inputs:{mode:"hist", amt:100000, seq:"-8,-5,-3,-1,0,1,2,3,4,5", mu:2, sigma:10, conf:"95"}, expect:"8000.00"}},
+ {id:"jrcvar", cat:"jr", icon:"🕳️", name:"条件风险价值 CVaR", desc:"历史法算尾部平均损失（期望亏空 ES）",
+  formula:"CVaR（历史法）= 尾部最差 k 期收益均值的相反数 × 组合价值，k = ceil((1−置信度) × n)；CVaR ≥ 同置信度 VaR。收益以 % 输入、逗号分隔，n 至少 5 期",
+  inputs:[
+   {id:"amt", label:"组合价值", unit:"元", def:"100000"},
+   {id:"seq", label:"各期收益率序列", unit:"%", def:"-8,-6,-3,-1,0,1,2,3,4,5,-2,-4,6,7,-5,-1,2,0,3,1", hint:"逗号分隔，建议 ≥20 期"},
+   {id:"conf", label:"置信度", type:"select", def:"90", options:[{v:"90", t:"90%"}, {v:"95", t:"95%"}, {v:"99", t:"99%"}]}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}function parseSeq(s){var a=String(s).split(/[,，、\\s]+/).filter(function(x){return x!=='';}).map(Number);for(var i=0;i<a.length;i++){if(!isFinite(a[i]))return null;}return a;}function mean(a){var s=0;for(var i=0;i<a.length;i++)s+=a[i];return s/a.length;}var A=Number(amt);if(!(A>0))return {ok:false,msg:'组合价值须大于 0'};var a=parseSeq(seq);if(!a||a.length<5)return {ok:false,msg:'至少需要 5 期收益序列（逗号分隔）'};var cf=Number(conf);var srt=a.slice().sort(function(x,y){return x-y;});var k=Math.max(1,Math.ceil((1-cf/100)*a.length-1e-9));var ss=0;for(var i=0;i<k;i++)ss+=srt[i];var tail=ss/k;var v=-tail;if(v<0)v=0;return {ok:true,html:'<div class=\"big\">CVaR（'+cf+'%）= '+M(A*v/100)+' 元</div><div class=\"row\">尾部最差 '+k+' 期平均收益 '+PC(tail)+'，CVaR = '+PC(v)+' × '+M(A)+' 元（共 '+a.length+' 期）</div><div class=\"row\">CVaR 是超过 VaR 后的平均损失，必然不小于同置信度 VaR</div>'};",
+  test:{inputs:{amt:100000, seq:"-8,-6,-3,-1,0,1,2,3,4,5,-2,-4,6,7,-5,-1,2,0,3,1", conf:"90"}, expect:"7000.00"}},
+ {id:"jrmr", cat:"jr", icon:"🛡️", name:"维持担保比例", desc:"融资融券总资产÷总负债，对照警戒线与平仓线判定",
+  formula:"维持担保比例 = 信用账户总资产 ÷ 总负债 × 100%（总负债含融资融券本金、利息费用等，口径以券商对账单为准）。常用判定线：≥150% 正常、130%~150% 警戒（券商通知追加担保物）、<130% 平仓风险——具体提取线/警戒线/平仓线各券商合同可不同，以签约合同为准",
+  inputs:[
+   {id:"assets", label:"账户总资产", unit:"元", def:"300000"},
+   {id:"liab", label:"账户总负债", unit:"元", def:"150000"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var A=Number(assets),L=Number(liab);if(!(A>=0))return {ok:false,msg:'总资产不能为负'};if(!(L>0))return {ok:false,msg:'总负债须大于 0（无负债时无需计算维持担保比例）'};var r=A/L*100;var zone=r>=150?'✅ 正常（≥150%）':r>=130?'⚠️ 警戒区（130%~150%）：券商可能通知追加担保物':'🚨 平仓风险区（<130%）：未及时追加可能被强制平仓';return {ok:true,html:'<div class=\"big\">维持担保比例 = '+PC(r)+'</div><div class=\"row\">'+M(A)+' ÷ '+M(L)+' = '+PC(r)+'；'+zone+'</div><div class=\"row\">150%/130% 为常用合同线，各券商可不同，以签约合同与对账单为准</div>'};",
+  test:{inputs:{assets:300000, liab:150000}, expect:"200.00%"}},
+ {id:"jrddm2", cat:"jr", icon:"🌱", name:"两阶段股利贴现", desc:"高增长期逐年折现 + 稳定期戈登模型终值算股票内在价值",
+  formula:"P = Σ D₀(1+g₁)ᵗ÷(1+r)ᵗ（t=1..n）+ [Dₙ(1+g₂)÷(r−g₂)] ÷ (1+r)ⁿ；须 r > g₂。D₀ 为最近已付股利，g₁ 高增长期增长率，g₂ 稳定增长率，r 股权要求回报率（均 % 输入）",
+  inputs:[
+   {id:"d0", label:"最近股利 D₀", unit:"元/股", def:"1"},
+   {id:"g1", label:"高增长期增长率 g₁", unit:"%", def:"10"},
+   {id:"n", label:"高增长期年数 n", unit:"年", def:"3"},
+   {id:"g2", label:"稳定增长率 g₂", unit:"%", def:"3"},
+   {id:"r", label:"要求回报率 r", unit:"%", def:"10"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var D=Number(d0),a=Number(g1)/100,nn=Number(n),b=Number(g2)/100,rr=Number(r)/100;if(!(D>=0))return {ok:false,msg:'股利不能为负'};if(!(nn>=1)||Math.floor(nn)!==nn)return {ok:false,msg:'高增长期年数须为正整数'};if(nn>50)return {ok:false,msg:'高增长期年数上限 50 年（过长会造成逐年折现计算超时）'};if(!(rr>b))return {ok:false,msg:'要求回报率 r 须大于稳定增长率 g₂（否则戈登终值发散）'};if(!(rr>-1))return {ok:false,msg:'要求回报率须大于 -100%'};var pv=0,Dn=D;for(var t=1;t<=nn;t++){Dn=D*Math.pow(1+a,t);pv+=Dn/Math.pow(1+rr,t);}var Pn=Dn*(1+b)/(rr-b);var pvT=Pn/Math.pow(1+rr,nn);var P=pv+pvT;return {ok:true,html:'<div class=\"big\">内在价值 P = '+M(P)+' 元/股</div><div class=\"row\">高增长期股利现值 '+M(pv)+' 元 + 终值现值 '+M(pvT)+' 元（第 '+nn+' 年末终值 '+M(Pn)+' 元，第 '+nn+' 年股利 '+M(Dn)+' 元）</div><div class=\"row\">对 g₁、g₂、r 极敏感，建议多组参数交叉验证</div>'};",
+  test:{inputs:{d0:1, g1:10, n:3, g2:3, r:10}, expect:"17.71"}},
+ {id:"jrdcf", cat:"jr", icon:"🏢", name:"DCF 企业估值", desc:"自由现金流逐年折现 + 永续增长终值算企业价值与每股价值",
+  formula:"企业价值 EV = Σ FCFₜ÷(1+WACC)ᵗ + 终值÷(1+WACC)ⁿ，终值 = FCFₙ×(1+g)÷(WACC−g)（戈登永续增长口径，须 WACC > g）；股权价值 = EV − 净债务（有息负债 − 现金，可填负数表示净现金）；每股价值 = 股权价值 ÷ 总股数。FCF 逗号分隔（单位自选，全程保持一致）",
+  inputs:[
+   {id:"fcf", label:"未来各年自由现金流 FCF", def:"100,110,121", hint:"逗号分隔，单位与净债务/股数口径一致"},
+   {id:"wacc", label:"加权平均资本成本 WACC", unit:"%", def:"10"},
+   {id:"g", label:"永续增长率 g", unit:"%", def:"0"},
+   {id:"netdebt", label:"净债务", def:"181.82", hint:"有息负债−现金，净现金填负数"},
+   {id:"shares", label:"总股数", def:"100", hint:"与 FCF 单位配套，如 FCF 用万元则股数用万股"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}function parseSeq(s){var a=String(s).split(/[,，、\\s]+/).filter(function(x){return x!=='';}).map(Number);for(var i=0;i<a.length;i++){if(!isFinite(a[i]))return null;}return a;}function mean(a){var s=0;for(var i=0;i<a.length;i++)s+=a[i];return s/a.length;}var a=parseSeq(fcf);if(!a||a.length<1)return {ok:false,msg:'请输入至少 1 年自由现金流（逗号分隔）'};var w=Number(wacc)/100,g=Number(g)/100,nd=Number(netdebt),sh=Number(shares);if(!(w>g))return {ok:false,msg:'WACC 须大于永续增长率 g（否则终值发散）'};if(!(w>-1))return {ok:false,msg:'WACC 须大于 -100%'};if(!isFinite(nd))return {ok:false,msg:'净债务输入无效'};var pv=0;for(var t=1;t<=a.length;t++)pv+=a[t-1]/Math.pow(1+w,t);var tv=a[a.length-1]*(1+g)/(w-g);var pvTv=tv/Math.pow(1+w,a.length);var ev=pv+pvTv;var eq=ev-nd;var h='<div class=\"big\">企业价值 EV = '+M(ev)+'</div><div class=\"row\">FCF 现值合计 '+M(pv)+' + 终值现值 '+M(pvTv)+'（终值 '+M(tv)+'，共 '+a.length+' 年预测期）</div><div class=\"row\">股权价值 = EV − 净债务 '+M(nd)+' = '+M(eq)+'</div>';if(sh>0){h+='<div class=\"row\">每股价值 = '+M(eq/sh)+'（总股数 '+F(sh)+')</div>';}else{h+='<div class=\"row\">股数未填正数，未算每股价值</div>';}return {ok:true,html:h};",
+  test:{inputs:{fcf:"100,110,121", wacc:10, g:0, netdebt:181.82, shares:100}, expect:"1181.82"}},
+ {id:"jrroic", cat:"jr", icon:"🏭", name:"投入资本回报率 ROIC", desc:"NOPAT÷投入资本，衡量经营资本的真实回报",
+  formula:"NOPAT = EBIT × (1 − 所得税率)；投入资本 = 净资产（所有者权益）+ 有息负债 − 现金及等价物；ROIC = NOPAT ÷ 投入资本 × 100%。金额单位自选、全程一致；投入资本 ≤0 时拒绝",
+  inputs:[
+   {id:"ebit", label:"息税前利润 EBIT", unit:"万元", def:"100"},
+   {id:"tax", label:"所得税率", unit:"%", def:"25"},
+   {id:"equity", label:"净资产（所有者权益）", unit:"万元", def:"400"},
+   {id:"debt", label:"有息负债", unit:"万元", def:"200"},
+   {id:"cash", label:"现金及等价物", unit:"万元", def:"100"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var e=Number(ebit),t=Number(tax),eq=Number(equity),d=Number(debt),c=Number(cash);if(!isFinite(e))return {ok:false,msg:'EBIT 输入无效'};if(!(t>=0&&t<100))return {ok:false,msg:'所得税率应在 0~100% 之间'};if(!(eq>=0)||!(d>=0)||!(c>=0))return {ok:false,msg:'净资产/有息负债/现金不能为负'};var ic=eq+d-c;if(!(ic>0))return {ok:false,msg:'投入资本（净资产+有息负债−现金）须大于 0'};var nop=e*(1-t/100);var ro=nop/ic*100;return {ok:true,html:'<div class=\"big\">ROIC = '+PC(ro)+'</div><div class=\"row\">NOPAT = '+M(e)+' × (1 − '+PC(t)+') = '+M(nop)+'；投入资本 = '+M(eq)+' + '+M(d)+' − '+M(c)+' = '+M(ic)+'</div><div class=\"row\">ROIC 高于 WACC 才说明经营在创造价值（可与 EVA 工具对照）</div>'};",
+  test:{inputs:{ebit:100, tax:25, equity:400, debt:200, cash:100}, expect:"15.00%"}},
+ {id:"jrccc", cat:"jr", icon:"🔄", name:"现金转换周期 CCC", desc:"由存货/应收/应付周转天数算现金转换周期",
+  formula:"DIO = 存货 ÷ 营业成本 × 365；DSO = 应收账款 ÷ 营业收入 × 365；DPO = 应付账款 ÷ 营业成本 × 365；CCC = DIO + DSO − DPO（天）。金额为期末余额简化口径（严谨口径应用平均余额），单位须一致",
+  inputs:[
+   {id:"inv", label:"存货", unit:"万元", def:"100"},
+   {id:"ar", label:"应收账款", unit:"万元", def:"100"},
+   {id:"ap", label:"应付账款", unit:"万元", def:"50"},
+   {id:"rev", label:"营业收入", unit:"万元", def:"365"},
+   {id:"cogs", label:"营业成本", unit:"万元", def:"365"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var iv=Number(inv),a=Number(ar),p=Number(ap),rv=Number(rev),cg=Number(cogs);if(!(iv>=0)||!(a>=0)||!(p>=0))return {ok:false,msg:'存货/应收/应付不能为负'};if(!(rv>0))return {ok:false,msg:'营业收入须大于 0'};if(!(cg>0))return {ok:false,msg:'营业成本须大于 0'};var dio=iv/cg*365,dso=a/rv*365,dpo=p/cg*365,ccc=dio+dso-dpo;return {ok:true,html:'<div class=\"big\">现金转换周期 CCC = '+F(ccc)+' 天</div><div class=\"row\">存货周转 DIO '+F(dio)+' 天 + 应收周转 DSO '+F(dso)+' 天 − 应付周转 DPO '+F(dpo)+' 天</div><div class=\"row\">CCC 越短（甚至为负）资金占用越少；期末余额简化口径，严谨分析请用平均余额</div>'};",
+  test:{inputs:{inv:100, ar:100, ap:50, rev:365, cogs:365}, expect:"150"}},
+ {id:"jrzscore", cat:"jr", icon:"🚦", name:"Altman Z-score", desc:"上市公司原模型五因子算破产风险 Z 值并分区判定",
+  formula:"Z = 1.2·X₁ + 1.4·X₂ + 3.3·X₃ + 0.6·X₄ + 1.0·X₅（Altman 1968 上市公司原模型系数）；X₁=营运资本/总资产，X₂=留存收益/总资产，X₃=EBIT/总资产，X₄=股权市值/总负债，X₅=营收/总资产，均填小数（0.1=10%）。分区：Z>2.99 安全区，1.81~2.99 灰色区，Z<1.81 危险区",
+  inputs:[
+   {id:"x1", label:"X₁ 营运资本/总资产", def:"0.1"},
+   {id:"x2", label:"X₂ 留存收益/总资产", def:"0.1"},
+   {id:"x3", label:"X₃ EBIT/总资产", def:"0.1"},
+   {id:"x4", label:"X₄ 股权市值/总负债", def:"0.1"},
+   {id:"x5", label:"X₅ 营收/总资产", def:"0.1"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var a=[Number(x1),Number(x2),Number(x3),Number(x4),Number(x5)];for(var i=0;i<5;i++){if(!isFinite(a[i]))return {ok:false,msg:'五因子须为数值（小数，如 0.1）'};}var z=1.2*a[0]+1.4*a[1]+3.3*a[2]+0.6*a[3]+1.0*a[4];var zone=z>2.99?'✅ 安全区（Z > 2.99）':z>=1.81?'⚠️ 灰色区（1.81 ~ 2.99）：需进一步核查':'🚨 危险区（Z < 1.81）：财务困境风险高';return {ok:true,html:'<div class=\"big\">Z = '+F(z)+'</div><div class=\"row\">'+zone+'</div><div class=\"row\">1968 上市公司原模型，非上市/新兴市场有修正模型（Z′/Z″），系数与分区不同，勿混用</div>'};",
+  test:{inputs:{x1:0.1, x2:0.1, x3:0.1, x4:0.1, x5:0.1}, expect:"0.75"}},
+ {id:"jreva", cat:"jr", icon:"💎", name:"经济增加值 EVA", desc:"NOPAT 减资本成本算经济增加值",
+  formula:"EVA = NOPAT − 投入资本 × WACC，其中 NOPAT = EBIT × (1 − 所得税率)。EVA > 0 表示扣除全部资本成本（含股权成本）后仍创造价值。金额单位自选、全程一致",
+  inputs:[
+   {id:"ebit", label:"息税前利润 EBIT", unit:"万元", def:"100"},
+   {id:"tax", label:"所得税率", unit:"%", def:"25"},
+   {id:"cap", label:"投入资本", unit:"万元", def:"500"},
+   {id:"wacc", label:"加权平均资本成本 WACC", unit:"%", def:"10"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var e=Number(ebit),t=Number(tax),c=Number(cap),w=Number(wacc);if(!isFinite(e))return {ok:false,msg:'EBIT 输入无效'};if(!(t>=0&&t<100))return {ok:false,msg:'所得税率应在 0~100% 之间'};if(!(c>0))return {ok:false,msg:'投入资本须大于 0'};if(!(w>=0))return {ok:false,msg:'WACC 不能为负'};var nop=e*(1-t/100);var cc=c*w/100;var eva=nop-cc;return {ok:true,html:'<div class=\"big\">EVA = '+M(eva)+' 万元</div><div class=\"row\">NOPAT = '+M(nop)+'，资本成本 = '+M(c)+' × '+PC(w)+' = '+M(cc)+'；EVA = '+M(nop)+' − '+M(cc)+'</div><div class=\"row\">'+(eva>0?'EVA 为正：创造经济价值':eva<0?'EVA 为负：经营回报未覆盖资本成本':'EVA 为 0：恰好覆盖资本成本')+'（金额单位与输入一致）</div>'};",
+  test:{inputs:{ebit:100, tax:25, cap:500, wacc:10}, expect:"25.00"}},
+ {id:"jrinterestonly", cat:"jr", icon:"📅", name:"先息后本还款计划", desc:"每月只还利息、末期一次还本，算月息与总利息",
+  formula:"每月利息 = 本金 × 年利率 ÷ 12（按月等额利息简化口径，不按实际天数）；总利息 = 月息 × 期数；末期还款 = 本金 + 当月利息。利率为 0 时利息为 0、末期只还本金",
+  inputs:[
+   {id:"principal", label:"贷款本金", unit:"元", def:"100000"},
+   {id:"rate", label:"年利率", unit:"%", def:"6"},
+   {id:"months", label:"期限", unit:"月", def:"12"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var P=Number(principal),r=Number(rate),n=Number(months);if(!(P>0))return {ok:false,msg:'本金须大于 0'};if(!(r>=0))return {ok:false,msg:'年利率不能为负'};if(!(n>=1)||Math.floor(n)!==n)return {ok:false,msg:'期限须为正整数月'};var mi=P*r/100/12;var tot=mi*n;var last=P+mi;return {ok:true,html:'<div class=\"big\">每月利息 '+M(mi)+' 元，总利息 '+M(tot)+' 元</div><div class=\"row\">前 '+(n-1)+' 期每期只还利息 '+M(mi)+' 元；第 '+n+' 期（末期）还 '+M(last)+' 元（本金 '+M(P)+' + 利息 '+M(mi)+'）</div><div class=\"row\">总还款 '+M(P+tot)+' 元；月息按年利率÷12 简化，未按实际天数计息</div>'};",
+  test:{inputs:{principal:100000, rate:6, months:12}, expect:"6000.00"}},
+ {id:"jrpension", cat:"jr", icon:"👴", name:"养老金领取估算", desc:"个人账户养老金 + 基础养老金简化式估算月领金额",
+  formula:"月领 ≈ 个人账户养老金 + 基础养老金。个人账户养老金 = 个人账户储存额 ÷ 计发月数（退休年龄 60/55/50 岁对应 139/170/195，源自国发〔2005〕38 号计发月数表）；基础养老金（简化式）= 退休时社平工资 × (1 + 平均缴费指数) ÷ 2 × 缴费年限 × 1%。过渡性养老金、个人账户记账利息、社平口径（计发基数）等未计入，仅供估算",
+  inputs:[
+   {id:"acct", label:"个人账户储存额", unit:"元", def:"139000"},
+   {id:"age", label:"退休年龄（计发月数）", type:"select", def:"139", options:[{v:"139", t:"60 岁（139 个月）"}, {v:"170", t:"55 岁（170 个月）"}, {v:"195", t:"50 岁（195 个月）"}]},
+   {id:"avgw", label:"退休时社平工资/计发基数", unit:"元/月", def:"8000"},
+   {id:"idx", label:"平均缴费指数", def:"1", hint:"本人缴费基数与社平之比，常见 0.6~3"},
+   {id:"yrs", label:"缴费年限", unit:"年", def:"30"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var ac=Number(acct),mo=Number(age),aw=Number(avgw),ix=Number(idx),yr=Number(yrs);if(!(ac>=0))return {ok:false,msg:'个人账户储存额不能为负'};if(!(aw>0))return {ok:false,msg:'社平工资须大于 0'};if(!(ix>0))return {ok:false,msg:'平均缴费指数须大于 0'};if(!(yr>0))return {ok:false,msg:'缴费年限须大于 0'};var per=ac/mo;var base=aw*(1+ix)/2*yr*0.01;var tot=per+base;return {ok:true,html:'<div class=\"big\">估算月领 ≈ '+M(tot)+' 元/月</div><div class=\"row\">个人账户养老金 = '+M(ac)+' ÷ '+mo+' = '+M(per)+' 元；基础养老金 = '+M(aw)+' × (1 + '+F(ix)+') ÷ 2 × '+F(yr)+' × 1% = '+M(base)+' 元</div><div class=\"row\">简化估算：未计过渡性养老金与账户记账利息，实际以社保经办机构核定为准</div>'};",
+  test:{inputs:{acct:139000, age:"139", avgw:8000, idx:1, yrs:30}, expect:"3400.00"}},
+ {id:"jrhousingfund", cat:"jr", icon:"🏠", name:"公积金贷款额度估算", desc:"余额倍数法与还款能力法两口径估算，取低值",
+  formula:"余额倍数法额度 = 公积金账户余额 × 倍数（各地常见 10~25 倍，另有账户缴存时长系数差异）；还款能力法额度（简化）= 月收入 × 还款比 × 贷款月数（未折现的简化口径）；两法都算时取低值。各地另有额度上限、首付比例、房龄等限制，实际以当地公积金中心核定为准",
+  inputs:[
+   {id:"mode", label:"测算口径", type:"select", def:"both", options:[{v:"both", t:"两法都算，取低值"}, {v:"bal", t:"仅余额倍数法"}, {v:"cap", t:"仅还款能力法"}]},
+   {id:"bal", label:"账户余额", unit:"元", when:"mode=bal", def:"50000"},
+   {id:"mult", label:"余额倍数", when:"mode=bal", def:"20", hint:"各地口径不同，常见 10~25"},
+   {id:"bal2", label:"账户余额", unit:"元", when:"mode=both", def:"50000"},
+   {id:"mult2", label:"余额倍数", when:"mode=both", def:"20", hint:"各地口径不同，常见 10~25"},
+   {id:"income", label:"月收入", unit:"元", when:"mode=cap", def:"10000"},
+   {id:"rratio", label:"还款比", unit:"%", when:"mode=cap", def:"50", hint:"月还款占月收入上限，常见 50%~60%"},
+   {id:"term", label:"贷款期限", unit:"月", when:"mode=cap", def:"240"},
+   {id:"income2", label:"月收入", unit:"元", when:"mode=both", def:"10000"},
+   {id:"rratio2", label:"还款比", unit:"%", when:"mode=both", def:"50"},
+   {id:"term2", label:"贷款期限", unit:"月", when:"mode=both", def:"240"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var md=String(mode);var eb=null,ec=null;if(md==='bal'||md==='both'){var b=Number(md==='bal'?bal:bal2),mu=Number(md==='bal'?mult:mult2);if(!(b>=0))return {ok:false,msg:'账户余额不能为负'};if(!(mu>0))return {ok:false,msg:'余额倍数须大于 0'};eb=b*mu;}if(md==='cap'||md==='both'){var ic=Number(md==='cap'?income:income2),rr=Number(md==='cap'?rratio:rratio2),tm=Number(md==='cap'?term:term2);if(!(ic>0))return {ok:false,msg:'月收入须大于 0'};if(!(rr>0&&rr<=100))return {ok:false,msg:'还款比应在 (0,100%] 之间'};if(!(tm>=1)||Math.floor(tm)!==tm)return {ok:false,msg:'贷款期限须为正整数月'};ec=ic*rr/100*tm;}if(eb!==null&&ec!==null){var low=Math.min(eb,ec);return {ok:true,html:'<div class=\"big\">估算额度（取低值）= '+M(low)+' 元</div><div class=\"row\">余额倍数法 '+M(eb)+' 元，还款能力法（简化）'+M(ec)+' 元，取低 '+M(low)+' 元</div><div class=\"row\">还款能力法未折现、两法均未计当地额度上限，实际以公积金中心核定为准</div>'};}if(eb!==null)return {ok:true,html:'<div class=\"big\">余额倍数法额度 = '+M(eb)+' 元</div><div class=\"row\">各地倍数与上限口径不同，实际以公积金中心核定为准</div>'};return {ok:true,html:'<div class=\"big\">还款能力法额度（简化）= '+M(ec)+' 元</div><div class=\"row\">月收入 × 还款比 × 月数（未折现简化口径），实际以公积金中心核定为准</div>'};",
+  test:{inputs:{mode:"both", bal:50000, mult:20, bal2:50000, mult2:20, income:10000, rratio:50, term:240, income2:10000, rratio2:50, term2:240}, expect:"1000000.00"}},
+ {id:"jrlaborfee", cat:"jr", icon:"🧾", name:"劳务报酬预扣个税", desc:"按预扣预缴口径算劳务报酬应预扣税额",
+  formula:"预扣预缴应纳税所得额：每次收入 ≤4000 元减除 800 元，>4000 元减除 20%（收入 × 80%）；预扣率表（劳务报酬预扣率）：≤20000 元 20% 速算扣除 0；20000~50000 元 30% 速算扣除 2000；>50000 元 40% 速算扣除 7000（《个人所得税预扣率表二》）。年度汇算时并入综合所得，多退少补",
+  inputs:[
+   {id:"income", label:"劳务报酬收入（单次）", unit:"元", def:"40000"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var ic=Number(income);if(!(ic>0))return {ok:false,msg:'收入须大于 0'};var ti=ic<=4000?ic-800:ic*0.8;if(ti<0)ti=0;var rate,ded;if(ti<=20000){rate=0.20;ded=0;}else if(ti<=50000){rate=0.30;ded=2000;}else{rate=0.40;ded=7000;}var tax=ti*rate-ded;if(tax<0)tax=0;return {ok:true,html:'<div class=\"big\">应预扣税额 = '+M(tax)+' 元，到手 ≈ '+M(ic-tax)+' 元</div><div class=\"row\">应纳税所得额 '+M(ti)+' 元 × 预扣率 '+(rate*100)+'% − 速算扣除 '+ded+' = '+M(tax)+' 元</div><div class=\"row\">依据《个人所得税预扣率表二》；年度汇算并入综合所得后多退少补，实际税负可能不同</div>'};",
+  test:{inputs:{income:40000}, expect:"7600.00"}},
+ {id:"jrinsure", cat:"jr", icon:"☂️", name:"寿险保额估算", desc:"收入倍数法/生命价值法/需求法三口径估算寿险保额",
+  formula:"收入倍数法：保额 = 年收入 × 倍数（5/10/15 倍，经验法则）；生命价值法（简化）：保额 = 年收入 × [(1 − (1+r)^−n) ÷ r]（未来 n 年收入按折现率 r 的年金现值，未扣生活支出与通胀，r=0 时 = 年收入 × n）；需求法：保额 = 负债 + 子女教育 + 赡养支出 − 现有可变现资产",
+  inputs:[
+   {id:"mode", label:"估算方法", type:"select", def:"mult", options:[{v:"mult", t:"收入倍数法"}, {v:"life", t:"生命价值法（简化）"}, {v:"need", t:"需求法"}]},
+   {id:"income", label:"年收入", unit:"元", when:"mode=mult", def:"200000"},
+   {id:"mult", label:"收入倍数", type:"select", when:"mode=mult", def:"10", options:[{v:"5", t:"5 倍"}, {v:"10", t:"10 倍"}, {v:"15", t:"15 倍"}]},
+   {id:"income2", label:"年收入", unit:"元", when:"mode=life", def:"100000"},
+   {id:"yrs", label:"未来工作年数", unit:"年", when:"mode=life", def:"10"},
+   {id:"r", label:"折现率", unit:"%", when:"mode=life", def:"0"},
+   {id:"liab", label:"未偿负债", unit:"元", when:"mode=need", def:"500000"},
+   {id:"edu", label:"子女教育预留", unit:"元", when:"mode=need", def:"300000"},
+   {id:"sup", label:"赡养支出预留", unit:"元", when:"mode=need", def:"200000"},
+   {id:"assets", label:"现有可变现资产", unit:"元", when:"mode=need", def:"400000"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var md=String(mode);if(md==='mult'){var ic=Number(income),mu=Number(mult);if(!(ic>0))return {ok:false,msg:'年收入须大于 0'};var amt=ic*mu;return {ok:true,html:'<div class=\"big\">建议保额 ≈ '+M(amt)+' 元</div><div class=\"row\">收入倍数法：年收入 '+M(ic)+' 元 × '+mu+' 倍 = '+M(amt)+' 元</div><div class=\"row\">经验法则口径，未考虑负债与家庭支出结构，可与需求法对照</div>'};}if(md==='life'){var i2=Number(income2),n=Number(yrs),rr=Number(r)/100;if(!(i2>0))return {ok:false,msg:'年收入须大于 0'};if(!(n>=1)||Math.floor(n)!==n)return {ok:false,msg:'工作年数须为正整数'};if(!(rr>=0))return {ok:false,msg:'折现率不能为负'};var pv=rr===0?i2*n:i2*(1-Math.pow(1+rr,-n))/rr;return {ok:true,html:'<div class=\"big\">生命价值 ≈ '+M(pv)+' 元</div><div class=\"row\">年收入 '+M(i2)+' 元、未来 '+n+' 年、折现率 '+PC(rr*100)+' 的年金现值（简化：未扣个人生活支出）</div><div class=\"row\">此为经济生命价值上限口径，实际投保还需结合预算与需求法结果</div>'};}var lb=Number(liab),ed=Number(edu),sp=Number(sup),as=Number(assets);var xs=[lb,ed,sp,as];for(var i=0;i<4;i++){if(!(xs[i]>=0))return {ok:false,msg:'负债/预留/资产不能为负'};}var need=lb+ed+sp-as;if(need<0)need=0;return {ok:true,html:'<div class=\"big\">需求法保额 ≈ '+M(need)+' 元</div><div class=\"row\">负债 '+M(lb)+' + 教育 '+M(ed)+' + 赡养 '+M(sp)+' − 现有资产 '+M(as)+' = '+M(need)+' 元</div><div class=\"row\">未计配偶收入与社保抚恤，缺口为负时记 0</div>'};",
+  test:{inputs:{mode:"mult", income:200000, mult:"10", income2:100000, yrs:10, r:0, liab:500000, edu:300000, sup:200000, assets:400000}, expect:"2000000.00"}},
+ {id:"jrrealwage", cat:"jr", icon:"💹", name:"实际工资涨幅", desc:"名义涨幅扣除 CPI 后的实际购买力涨幅",
+  formula:"实际涨幅 = (1 + 名义涨幅) ÷ (1 + CPI 涨幅) − 1（费雪方程口径，非简单相减）；名义涨幅与 CPI 均以 % 输入。CPI ≤ −100% 时无意义拒绝",
+  inputs:[
+   {id:"nom", label:"名义工资涨幅", unit:"%", def:"10"},
+   {id:"cpi", label:"CPI 涨幅", unit:"%", def:"5"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var n=Number(nom),c=Number(cpi);if(!isFinite(n)||!isFinite(c))return {ok:false,msg:'涨幅输入无效'};if(!(c>-100))return {ok:false,msg:'CPI 涨幅须大于 -100%'};if(!(n>-100))return {ok:false,msg:'名义涨幅须大于 -100%'};var real=((1+n/100)/(1+c/100)-1)*100;return {ok:true,html:'<div class=\"big\">实际工资涨幅 = '+PC(real)+'</div><div class=\"row\">(1 + '+PC(n)+') ÷ (1 + '+PC(c)+') − 1 = '+PC(real)+'（简单相减得 '+(n-c).toFixed(2)+'% 只是近似）</div><div class=\"row\">'+(real>0?'购买力实际提升':real<0?'名义涨了但购买力下降（实际被通胀吃掉）':'购买力与原来持平')+'</div>'};",
+  test:{inputs:{nom:10, cpi:5}, expect:"4.76%"}},
+ {id:"jrgrossup", cat:"jr", icon:"🔍", name:"到手反推税前工资", desc:"由月到手工资、社保公积金比例反推税前月薪（月度近似）",
+  formula:"月度近似口径：税前 G 满足 到手 = G − G×社保公积金合计比例 − 个税；应纳税所得 = G×(1−比例) − 5000（每月减除费用），个税按月度换算税率表（综合所得预扣率表按月换算：≤3000 3%/0，≤12000 10%/210，≤25000 20%/1410，≤35000 25%/2660，≤55000 30%/4410，≤80000 35%/7160，>80000 45%/15160）。本工具以二分迭代求解，为月度近似——实际工资个税按累计预扣法逐月计算、另有专项附加扣除，结果会有差异",
+  inputs:[
+   {id:"net", label:"月到手工资", unit:"元", def:"10000"},
+   {id:"soc", label:"社保公积金合计比例（占税前）", unit:"%", def:"10", hint:"个人缴纳部分合计，如养老8%+医疗2%+失业0.5%+公积金12% 等按实际填"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}function taxM(ti){if(ti<=0)return 0;var B=[[3000,0.03,0],[12000,0.10,210],[25000,0.20,1410],[35000,0.25,2660],[55000,0.30,4410],[80000,0.35,7160],[1e18,0.45,15160]];for(var i=0;i<B.length;i++){if(ti<=B[i][0])return ti*B[i][1]-B[i][2];}return 0;}var nt=Number(net),sc=Number(soc);if(!(nt>0))return {ok:false,msg:'到手工资须大于 0'};if(!(sc>=0&&sc<100))return {ok:false,msg:'社保公积金比例应在 0~100% 之间'};function netOf(G){var s=G*sc/100;return G-s-taxM(G-s-5000);}var lo=nt,hi=nt*2+20000;while(netOf(hi)<nt&&hi<1e9)hi*=2;for(var i=0;i<100;i++){var mid=(lo+hi)/2;if(netOf(mid)<nt)lo=mid;else hi=mid;}var G=(lo+hi)/2;var sAmt=G*sc/100;var ti=G-sAmt-5000;var tx=taxM(ti);return {ok:true,html:'<div class=\"big\">税前月薪 ≈ '+M(G)+' 元</div><div class=\"row\">社保公积金 '+M(sAmt)+' 元（'+PC(sc)+'），应纳税所得 '+M(Math.max(ti,0))+' 元，个税 ≈ '+M(tx)+' 元；验算：'+M(G)+' − '+M(sAmt)+' − '+M(tx)+' = '+M(G-sAmt-tx)+' 元</div><div class=\"row\">月度近似：实际按累计预扣法计算且含专项附加扣除，结果会有差异</div>'};",
+  test:{inputs:{net:10000, soc:10}, expect:"11469.14"}},
+ {id:"jrforward", cat:"jr", icon:"💱", name:"远期汇率（利率平价）", desc:"由即期汇率与双边利率按利率平价算理论远期汇率",
+  formula:"F = S × (1 + rd·T) ÷ (1 + rf·T)（利率平价，单利口径）；S 为即期汇率（直接标价：1 单位外币 = S 本币），rd 本币利率、rf 外币利率（%），T 期限（年，可填小数如 0.5）。F > S 为外币远期升水，F < S 为贴水",
+  inputs:[
+   {id:"S", label:"即期汇率 S", def:"7.20", hint:"直接标价，如 USD/CNY 7.20"},
+   {id:"rd", label:"本币利率 rd", unit:"%", def:"2"},
+   {id:"rf", label:"外币利率 rf", unit:"%", def:"4"},
+   {id:"T", label:"期限 T", unit:"年", def:"1"}
+ ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}function M(x){return x.toFixed(2);}function PC(x){return x.toFixed(2)+'%';}var s=Number(S),d=Number(rd)/100,f=Number(rf)/100,t=Number(T);if(!(s>0))return {ok:false,msg:'即期汇率须大于 0'};if(!(t>0))return {ok:false,msg:'期限须大于 0'};if((1+f*t)<=0)return {ok:false,msg:'外币利率与期限组合使分母不大于 0'};if(!isFinite(d)||!isFinite(f))return {ok:false,msg:'利率输入无效'};var Fv=s*(1+d*t)/(1+f*t);var diff=(Fv/s-1)*100;return {ok:true,html:'<div class=\"big\">远期汇率 F = '+F(Fv)+'</div><div class=\"row\">F = '+F(s)+' × (1 + '+PC(d*100)+' × '+F(t)+') ÷ (1 + '+PC(f*100)+' × '+F(t)+') = '+F(Fv)+'；远期'+(diff>0?'升水':diff<0?'贴水':'平价')+' '+PC(Math.abs(diff))+'</div><div class=\"row\">利率平价理论价，未计交易成本与资本管制；高息货币远期贴水是平价结果而非贬值预测</div>'};",
+  test:{inputs:{S:7.2, rd:2, rf:4, T:1}, expect:"7.0615"}}
+);
+
 
 /* 数据驱动工具自动注册渲染器（必须在所有 TOOLS.push 之后、初始化之前执行） */
 TOOLS.forEach(function(t){ if(t.run&&!RENDER[t.id]){ RENDER[t.id]=function(tool){ renderDataTool(tool); }; } });
