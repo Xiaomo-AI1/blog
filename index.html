@@ -884,7 +884,7 @@ TOOLS.push(
  {id:"dwinchfrac", cat:"dwhs", icon:"📏", name:"英寸分数→毫米", desc:"如 1/2英寸、3/8英寸转毫米",
   formula:"mm=(整数+分子/分母)×25.4",
   inputs:[{id:"w", label:"整数部分", def:"0", min:0},{id:"n", label:"分子", def:"1", min:0},{id:"d", label:"分母", def:"2", min:1}],
-  run:"var d=Number(d); if(!(d>0)) return {ok:false,msg:\'分母须大于0\'}; var inch=Number(w)+Number(n)/d; return {ok:true,html:'<div class=\"big\">'+(inch*25.4).toFixed(2)+' mm</div><div class=\"row\">= '+inch.toFixed(4)+' 英寸</div>'};",
+  run:"var d=Number(d); if(!(d>0)) return {ok:false,msg:\'分母须大于0\'}; if(Number(w)<0||Number(n)<0) return {ok:false,msg:'整数部分与分子不能为负'}; var inch=Number(w)+Number(n)/d; return {ok:true,html:'<div class=\"big\">'+(inch*25.4).toFixed(2)+' mm</div><div class=\"row\">= '+inch.toFixed(4)+' 英寸</div>'};",
   test:{inputs:{w:0,n:1,d:2}, expect:"12.70"}},
  {id:"dwpipe", cat:"dwhs", icon:"🔧", name:"管径DN↔英寸", desc:"公称直径DN与英制管径对照",
   formula:"对照表：DN15=1/2″ DN20=3/4″ DN25=1″ DN40=1½″ DN50=2″ DN100=4″",
@@ -894,7 +894,7 @@ TOOLS.push(
  {id:"dwscrew", cat:"dwhs", icon:"🔩", name:"英制螺丝号→直径", desc:"美制螺丝号码对照公称直径",
   formula:"对照表：#6=3.5mm #8=4.2mm #10=4.8mm 1/4″=6.3mm",
   inputs:[{id:"no", label:"螺丝号码", type:"select", options:[{v:"4",t:"#4"},{v:"6",t:"#6"},{v:"8",t:"#8"},{v:"10",t:"#10"},{v:"12",t:"#12"},{v:"14",t:"1/4″"}]}],
-  run:"var m={'4':'2.8','6':'3.5','8':'4.2','10':'4.8','12':'5.5','14':'6.3'}; return {ok:true,html:'<div class=\"big\">直径 '+m[String(no)]+' mm</div>'};",
+  run:"var m={'4':'2.8','6':'3.5','8':'4.2','10':'4.8','12':'5.5','14':'6.35'}; return {ok:true,html:'<div class=\"big\">直径 '+m[String(no)]+' mm</div>'};",
   test:{inputs:{no:"8"}, expect:"4.2"}},
 );
 
@@ -2390,32 +2390,32 @@ TOOLS.push(
  {id:"ydbmi", cat:"yd", icon:"⚖️", name:"BMI指数", desc:"身体质量指数计算",
   formula:"BMI = 体重kg ÷ 身高m²",
   inputs:[{id:"bw", label:"体重", unit:"kg", def:"70", min:20, max:300},{id:"h", label:"身高", unit:"cm", def:"175", min:100, max:250}],
-  run:"if(!(h>0))return {ok:false,msg:'身高须大于0'};var bmi=bw/Math.pow(h/100,2),lv=bmi<18.5?'偏瘦':bmi<24?'正常':bmi<28?'超重':'肥胖';return {ok:true,html:'<div class=\"big\">'+bmi.toFixed(2)+'</div><div class=\"row\">'+lv+'（中国标准：18.5–24正常）</div>'};",
+  run:"if(!(h>0))return {ok:false,msg:'身高须大于0'};if(!(bw>0))return {ok:false,msg:'体重须大于0'};var bmi=bw/Math.pow(h/100,2),lv=bmi<18.5?'偏瘦':bmi<24?'正常':bmi<28?'超重':'肥胖';return {ok:true,html:'<div class=\"big\">'+bmi.toFixed(2)+'</div><div class=\"row\">'+lv+'（中国标准：18.5–24正常）</div>'};",
   test:{inputs:{bw:70,h:175}, expect:"22.86"}},
  {id:"ydbfp", cat:"yd", icon:"🥩", name:"体脂率估算", desc:"Deurenberg公式估算体脂率",
   formula:"男 1.2×BMI+0.23×年龄−16.2；女 −5.4",
   inputs:[{id:"bmi", label:"BMI", def:"22.86", min:10, max:60},{id:"age", label:"年龄", unit:"岁", def:"25", min:10, max:100},{id:"sex", label:"性别", type:"select", options:[{v:"m",t:"男"},{v:"f",t:"女"}], def:"m"}],
-  run:"var bfp=1.2*bmi+0.23*age-(sex==='m'?16.2:5.4);var lv=sex==='m'?(bfp<10?'偏低':bfp<=20?'正常':'偏高'):(bfp<18?'偏低':bfp<=28?'正常':'偏高');return {ok:true,html:'<div class=\"big\">'+bfp.toFixed(2)+'%</div><div class=\"row\">'+lv+'（估算值，仅供参考）</div>'};",
+  run:"if(!(bmi>0))return {ok:false,msg:'BMI 须大于0'};if(!(age>=0&&age<=120))return {ok:false,msg:'年龄应在 0~120 之间'};var bfp=1.2*bmi+0.23*age-(sex==='m'?16.2:5.4);if(!(bfp>0))return {ok:false,msg:'参数超出 Deurenberg 公式适用范围（极低 BMI/年幼儿童不适用）'};var lv=sex==='m'?(bfp<10?'偏低':bfp<=20?'正常':'偏高'):(bfp<18?'偏低':bfp<=28?'正常':'偏高');return {ok:true,html:'<div class=\"big\">'+bfp.toFixed(2)+'%</div><div class=\"row\">'+lv+'（估算值，仅供参考）</div>'};",
   test:{inputs:{bmi:22.86,age:25,sex:"m"}, expect:"16.98%"}},
  {id:"ydwhr", cat:"yd", icon:"📏", name:"腰臀比WHR", desc:"腰围臀围比评估腹型肥胖",
   formula:"WHR = 腰围 ÷ 臀围",
   inputs:[{id:"waist", label:"腰围", unit:"cm", def:"80", min:40, max:200},{id:"hip", label:"臀围", unit:"cm", def:"95", min:40, max:200},{id:"sex", label:"性别", type:"select", options:[{v:"m",t:"男"},{v:"f",t:"女"}], def:"m"}],
-  run:"if(!(hip>0))return {ok:false,msg:'臀围须大于0'};var r=waist/hip, bad=sex==='m'?r>=0.9:r>=0.85;return {ok:true,html:'<div class=\"big\">'+r.toFixed(2)+'</div><div class=\"row\">'+(bad?'偏高，腹型肥胖风险':'正常范围')+'</div>'};",
+  run:"if(!(hip>0))return {ok:false,msg:'臀围须大于0'};if(!(waist>0))return {ok:false,msg:'腰围须大于0'};var r=waist/hip, bad=sex==='m'?r>=0.9:r>=0.85;return {ok:true,html:'<div class=\"big\">'+r.toFixed(2)+'</div><div class=\"row\">'+(bad?'偏高，腹型肥胖风险':'正常范围')+'</div>'};",
   test:{inputs:{waist:80,hip:95,sex:"m"}, expect:"0.84"}},
  {id:"ydwhtr", cat:"yd", icon:"📐", name:"腰高比WHtR", desc:"腰围身高比，0.5为健康线",
   formula:"WHtR = 腰围 ÷ 身高",
   inputs:[{id:"waist", label:"腰围", unit:"cm", def:"80", min:40, max:200},{id:"h", label:"身高", unit:"cm", def:"175", min:100, max:250}],
-  run:"if(!(h>0))return {ok:false,msg:'身高须大于0'};var r=waist/h;return {ok:true,html:'<div class=\"big\">'+r.toFixed(2)+'</div><div class=\"row\">'+(r<0.5?'＜0.5 健康':'≥0.5 建议减腰围')+'</div>'};",
+  run:"if(!(h>0))return {ok:false,msg:'身高须大于0'};if(!(waist>0))return {ok:false,msg:'腰围须大于0'};var r=waist/h;return {ok:true,html:'<div class=\"big\">'+r.toFixed(2)+'</div><div class=\"row\">'+(r<0.5?'＜0.5 健康':'≥0.5 建议减腰围')+'</div>'};",
   test:{inputs:{waist:80,h:175}, expect:"0.46"}},
  {id:"ydideal", cat:"yd", icon:"🎯", name:"标准体重", desc:"改良Broca公式算标准体重",
   formula:"男 (身高−80)×0.7；女 (身高−70)×0.6",
   inputs:[{id:"h", label:"身高", unit:"cm", def:"175", min:100, max:250},{id:"sex", label:"性别", type:"select", options:[{v:"m",t:"男"},{v:"f",t:"女"}], def:"m"}],
-  run:"var w=sex==='m'?(h-80)*0.7:(h-70)*0.6;return {ok:true,html:'<div class=\"big\">'+w.toFixed(2)+' kg</div><div class=\"row\">标准体重 ±10% 均属正常</div>'};",
+  run:"var w=sex==='m'?(h-80)*0.7:(h-70)*0.6;if(!(w>0))return {ok:false,msg:'身高过低，改良 Broca 公式不适用'};return {ok:true,html:'<div class=\"big\">'+w.toFixed(2)+' kg</div><div class=\"row\">标准体重 ±10% 均属正常</div>'};",
   test:{inputs:{h:175,sex:"m"}, expect:"66.50 kg"}},
  {id:"ydwaterday", cat:"yd", icon:"💧", name:"每日饮水量", desc:"按体重算每天该喝多少水",
   formula:"体重kg × 35ml（运动日×40）",
   inputs:[{id:"bw", label:"体重", unit:"kg", def:"70", min:20, max:300},{id:"sport", label:"今天运动吗", type:"select", options:[{v:"35",t:"不运动"},{v:"40",t:"运动日"}], def:"35"}],
-  run:"var ml=bw*Number(sport);return {ok:true,html:'<div class=\"big\">'+ml.toFixed(0)+' ml</div><div class=\"row\">约 '+(ml/500).toFixed(1)+' 瓶500ml矿泉水</div>'};",
+  run:"if(!(bw>0))return {ok:false,msg:'体重须大于0'};var ml=bw*Number(sport);return {ok:true,html:'<div class=\"big\">'+ml.toFixed(0)+' ml</div><div class=\"row\">约 '+(ml/500).toFixed(1)+' 瓶500ml矿泉水</div>'};",
   test:{inputs:{bw:70,sport:"35"}, expect:"2450 ml"}},
  {id:"ydsleep", cat:"yd", icon:"😴", name:"睡眠周期规划", desc:"按90分钟周期推入睡时间",
   formula:"入睡 = 起床 − 周期×90分钟",
@@ -2425,7 +2425,7 @@ TOOLS.push(
  {id:"ydbp", cat:"yd", icon:"❤️", name:"血压分级评估", desc:"按收缩压舒张压分级",
   formula:"中国高血压防治指南分级",
   inputs:[{id:"sbp", label:"收缩压", unit:"mmHg", def:"135", min:60, max:260},{id:"dbp", label:"舒张压", unit:"mmHg", def:"85", min:30, max:160}],
-  run:"var lv='';if(sbp<90||dbp<60){lv='偏低';}else if(sbp<120&&dbp<80){lv='正常';}else if(sbp<140&&dbp<90){lv='正常高值';}else{lv='高血压（建议就医）';}return {ok:true,html:'<div class=\"big\">'+lv+'</div><div class=\"row\">'+sbp+'/'+dbp+' mmHg</div>'};",
+  run:"if(!(sbp>0)||!(dbp>0))return {ok:false,msg:'血压值须大于0'};var lv='';if(sbp>=140||dbp>=90){lv='高血压（建议就医）';}else if(sbp>=120||dbp>=80){lv='正常高值';}else if(sbp<90||dbp<60){lv='偏低';}else{lv='正常';}return {ok:true,html:'<div class=\"big\">'+lv+'</div><div class=\"row\">'+sbp+'/'+dbp+' mmHg</div>'};",
   test:{inputs:{sbp:135,dbp:85}, expect:"正常高值"}},
  {id:"ydhr", cat:"yd", icon:"💓", name:"心率计算", desc:"最大心率(三公式)/五区间/燃脂/Karvonen目标/乳酸阈值/静息与恢复心率评估一站式",
   formula:"最大心率：Fox 220−年龄、Tanaka 208−0.7×年龄、Gellish 207−0.7×年龄；区间按 220−年龄 的 50%~100% 分五区；Karvonen 目标=（最大−静息）×强度+静息；乳酸阈值≈最大×88%",
@@ -2454,7 +2454,7 @@ TOOLS.push(
    {id:"sex", label:"性别", when:"mode=bmr,tdee", type:"select", def:"1", options:[{v:"1",t:"男"},{v:"0",t:"女"}]},
    {id:"act", label:"活动强度", when:"mode=tdee", type:"select", def:"1.55", options:[{v:"1.2",t:"久坐不动"},{v:"1.375",t:"轻度活动"},{v:"1.55",t:"中度活动"},{v:"1.725",t:"高强度"},{v:"1.9",t:"极高强度"}]}
   ],
-  run:"var SP=[[\"walk2\",\"散步\",2.5],[\"walk\",\"步行（快走）\",3.5],[\"hike\",\"徒步\",6],[\"mount\",\"登山\",7],[\"stair\",\"爬楼梯\",8],[\"jog\",\"慢跑\",8],[\"cycle\",\"骑自行车\",7],[\"swim\",\"游泳\",8],[\"rope\",\"跳绳\",10],[\"badm\",\"羽毛球\",5.5],[\"basket\",\"篮球\",6.5],[\"soccer\",\"足球\",7],[\"pingpong\",\"乒乓球\",4],[\"tennis\",\"网球\",7.3],[\"strength\",\"力量训练\",6],[\"yoga\",\"瑜伽\",3],[\"row\",\"划船机\",7],[\"box\",\"拳击训练\",10],[\"dance\",\"舞蹈\",5],[\"golf\",\"高尔夫\",4.5],[\"ski\",\"滑雪\",7],[\"ellip\",\"椭圆机\",5.5],[\"hiit\",\"HIIT\",8]];var m=String(mode),html='';if(m==='sport'){var key=String(sport),nm='',met=0;for(var i=0;i<SP.length;i++){if(SP[i][0]===key){nm=SP[i][1];met=SP[i][2];}}var cm=Number(cmet);if(cm>0){met=cm;nm='自定义运动';}if(!(met>0))return{ok:false,msg:'请选择运动项目或填写自定义MET'};var hrs=Math.round(min/60*100)/100,kcal=met*w*min/60;var rows='';for(var j=0;j<SP.length;j++){var hl=(SP[j][0]===key&&cm<=0)?' style=\"font-weight:700;background:#fdf3e7\"':'';rows+='<tr'+hl+'><td>'+SP[j][1]+'</td><td>'+SP[j][2]+'</td><td>'+Math.round(SP[j][2]*w)+'</td></tr>';}html='<div class=\"big\">≈ '+Math.round(kcal)+' kcal</div><div class=\"row\">计算公式：热量 = MET × 体重 × 时长 = '+met+' × '+w+' kg × '+hrs+' h = '+Math.round(kcal)+' kcal（项目：'+nm+'）</div><div class=\"row\">约等于 '+(kcal/7700).toFixed(2)+' kg 脂肪（7700 kcal ≈ 1 kg 脂肪，仅供参考）</div><details style=\"margin-top:10px\"><summary style=\"cursor:pointer;font-weight:700\">运动参考消耗值（点击展开 · 按体重 '+w+' kg 折算）</summary><table class=\"ref\"><tr><th>运动</th><th>MET</th><th>kcal/小时</th></tr>'+rows+'</table><div class=\"row\">MET 数据来源：2011 Compendium of Physical Activities；每小时消耗 = MET × 体重。</div></details>';}else if(m==='climb'){var ck=w*rise*0.01;html='<div class=\"big\">≈ '+Math.round(ck)+' kcal</div><div class=\"row\">计算公式：登山爬升热量 ≈ 体重 × 爬升高度 × 0.01 = '+w+' kg × '+rise+' m × 0.01 = '+ck.toFixed(1)+' kcal</div><div class=\"row\">按人体机械效率约 25% 估算，背包负重时消耗更高。</div>';}else if(m==='run'){var rk=w*km*1.036;html='<div class=\"big\">≈ '+rk.toFixed(1)+' kcal</div><div class=\"row\">计算公式：跑步热量 ≈ 体重 × 距离 × 1.036 = '+w+' kg × '+km+' km × 1.036 = '+rk.toFixed(1)+' kcal</div>';}else{var bmr=10*w+6.25*h-5*age+(Number(sex)===1?5:-161);var sx=Number(sex)===1?'男':'女';var fstr='BMR = 10×体重 + 6.25×身高 − 5×年龄 '+(Number(sex)===1?'+ 5':'− 161')+' = 10×'+w+' + 6.25×'+h+' − 5×'+age+' '+(Number(sex)===1?'+ 5':'− 161')+' = '+Math.round(bmr)+' kcal/天（'+sx+'，Mifflin-St Jeor 公式）';if(m==='bmr'){html='<div class=\"big\">BMR ≈ '+Math.round(bmr)+' kcal/天</div><div class=\"row\">计算公式：'+fstr+'</div><div class=\"row\">完全静息状态下一天的消耗。</div>';}else{var td=bmr*Number(act);html='<div class=\"big\">TDEE ≈ '+Math.round(td)+' kcal/天</div><div class=\"row\">计算公式：'+fstr+'</div><div class=\"row\">TDEE = BMR × 活动系数 = '+Math.round(bmr)+' × '+act+' = '+Math.round(td)+' kcal/天</div><div class=\"row\">减脂每天少吃 300–500 kcal，增肌多吃 200–300 kcal（仅供参考）。</div>';}}return{ok:true,html:html};",
+  run:"var SP=[[\"walk2\",\"散步\",2.5],[\"walk\",\"步行（快走）\",3.5],[\"hike\",\"徒步\",6],[\"mount\",\"登山\",7],[\"stair\",\"爬楼梯\",8],[\"jog\",\"慢跑\",8],[\"cycle\",\"骑自行车\",7],[\"swim\",\"游泳\",8],[\"rope\",\"跳绳\",10],[\"badm\",\"羽毛球\",5.5],[\"basket\",\"篮球\",6.5],[\"soccer\",\"足球\",7],[\"pingpong\",\"乒乓球\",4],[\"tennis\",\"网球\",7.3],[\"strength\",\"力量训练\",6],[\"yoga\",\"瑜伽\",3],[\"row\",\"划船机\",7],[\"box\",\"拳击训练\",10],[\"dance\",\"舞蹈\",5],[\"golf\",\"高尔夫\",4.5],[\"ski\",\"滑雪\",7],[\"ellip\",\"椭圆机\",5.5],[\"hiit\",\"HIIT\",8]];var m=String(mode),html='';if(m==='sport'){var key=String(sport),nm='',met=0;for(var i=0;i<SP.length;i++){if(SP[i][0]===key){nm=SP[i][1];met=SP[i][2];}}var cm=Number(cmet);if(cm>0){met=cm;nm='自定义运动';}if(!(met>0))return{ok:false,msg:'请选择运动项目或填写自定义MET'};if(!(Number(w)>0))return{ok:false,msg:'体重须大于 0'};if(!(Number(min)>0))return{ok:false,msg:'运动时长须大于 0'};var hrs=Math.round(min/60*100)/100,kcal=met*w*min/60;var rows='';for(var j=0;j<SP.length;j++){var hl=(SP[j][0]===key&&cm<=0)?' style=\"font-weight:700;background:#fdf3e7\"':'';rows+='<tr'+hl+'><td>'+SP[j][1]+'</td><td>'+SP[j][2]+'</td><td>'+Math.round(SP[j][2]*w)+'</td></tr>';}html='<div class=\"big\">≈ '+Math.round(kcal)+' kcal</div><div class=\"row\">计算公式：热量 = MET × 体重 × 时长 = '+met+' × '+w+' kg × '+hrs+' h = '+Math.round(kcal)+' kcal（项目：'+nm+'）</div><div class=\"row\">约等于 '+(kcal/7700).toFixed(2)+' kg 脂肪（7700 kcal ≈ 1 kg 脂肪，仅供参考）</div><details style=\"margin-top:10px\"><summary style=\"cursor:pointer;font-weight:700\">运动参考消耗值（点击展开 · 按体重 '+w+' kg 折算）</summary><table class=\"ref\"><tr><th>运动</th><th>MET</th><th>kcal/小时</th></tr>'+rows+'</table><div class=\"row\">MET 数据来源：2011 Compendium of Physical Activities；每小时消耗 = MET × 体重。</div></details>';}else if(m==='climb'){if(!(Number(w)>0))return{ok:false,msg:'体重须大于 0'};if(!(Number(rise)>=0))return{ok:false,msg:'爬升高度不能为负'};var ck=w*rise*0.01;html='<div class=\"big\">≈ '+Math.round(ck)+' kcal</div><div class=\"row\">计算公式：登山爬升热量 ≈ 体重 × 爬升高度 × 0.01 = '+w+' kg × '+rise+' m × 0.01 = '+ck.toFixed(1)+' kcal</div><div class=\"row\">按人体机械效率约 25% 估算，背包负重时消耗更高。</div>';}else if(m==='run'){if(!(Number(w)>0))return{ok:false,msg:'体重须大于 0'};if(!(Number(km)>0))return{ok:false,msg:'跑步距离须大于 0'};var rk=w*km*1.036;html='<div class=\"big\">≈ '+rk.toFixed(1)+' kcal</div><div class=\"row\">计算公式：跑步热量 ≈ 体重 × 距离 × 1.036 = '+w+' kg × '+km+' km × 1.036 = '+rk.toFixed(1)+' kcal</div>';}else{if(!(Number(w)>0))return{ok:false,msg:'体重须大于 0'};if(!(Number(h)>0))return{ok:false,msg:'身高须大于 0'};if(!(Number(age)>=0&&Number(age)<=120))return{ok:false,msg:'年龄应在 0~120 之间'};var bmr=10*w+6.25*h-5*age+(Number(sex)===1?5:-161);var sx=Number(sex)===1?'男':'女';var fstr='BMR = 10×体重 + 6.25×身高 − 5×年龄 '+(Number(sex)===1?'+ 5':'− 161')+' = 10×'+w+' + 6.25×'+h+' − 5×'+age+' '+(Number(sex)===1?'+ 5':'− 161')+' = '+Math.round(bmr)+' kcal/天（'+sx+'，Mifflin-St Jeor 公式）';if(m==='bmr'){html='<div class=\"big\">BMR ≈ '+Math.round(bmr)+' kcal/天</div><div class=\"row\">计算公式：'+fstr+'</div><div class=\"row\">完全静息状态下一天的消耗。</div>';}else{var td=bmr*Number(act);html='<div class=\"big\">TDEE ≈ '+Math.round(td)+' kcal/天</div><div class=\"row\">计算公式：'+fstr+'</div><div class=\"row\">TDEE = BMR × 活动系数 = '+Math.round(bmr)+' × '+act+' = '+Math.round(td)+' kcal/天</div><div class=\"row\">减脂每天少吃 300–500 kcal，增肌多吃 200–300 kcal（仅供参考）。</div>';}}return{ok:true,html:html};",
   test:{inputs:{mode:"sport",sport:"jog",cmet:"0",w:65,min:60,rise:300,km:5,h:170,age:30,sex:"1",act:"1.55"}, expect:"520"}},
  {id:"ydswimpace", cat:"yd", icon:"🏊", name:"游泳百米配速", desc:"算每100米游速",
   formula:"配速 = 总秒数 ÷ (距离/100)",
@@ -2464,17 +2464,17 @@ TOOLS.push(
  {id:"ydlap", cat:"yd", icon:"🔄", name:"跑道圈数换算", desc:"距离换算成400米圈数",
   formula:"圈数 = 米 ÷ 400",
   inputs:[{id:"m", label:"距离", unit:"米", def:"5000", min:100, max:100000}],
-  run:"return {ok:true,html:'<div class=\"big\">'+(m/400).toFixed(1)+' 圈</div><div class=\"row\">标准400米跑道</div>'};",
+  run:"if(!(m>=0))return {ok:false,msg:'距离不能为负'};return {ok:true,html:'<div class=\"big\">'+(m/400).toFixed(1)+' 圈</div><div class=\"row\">标准400米跑道</div>'};",
   test:{inputs:{m:5000}, expect:"12.5 圈"}},
  {id:"ydbike", cat:"yd", icon:"🚴", name:"骑行座高设置", desc:"109%法则算合适座垫高度",
   formula:"座高 = 腿内侧长 × 0.883",
   inputs:[{id:"leg", label:"腿内侧长", unit:"cm", def:"80", min:50, max:120, hint:"赤脚靠墙，书本顶到裆部量地面"}],
-  run:"return {ok:true,html:'<div class=\"big\">'+(leg*0.883).toFixed(2)+' cm</div><div class=\"row\">座垫顶到脚踏最低点的距离</div>'};",
+  run:"if(!(leg>0))return {ok:false,msg:'腿内侧长须大于0'};return {ok:true,html:'<div class=\"big\">'+(leg*0.883).toFixed(2)+' cm</div><div class=\"row\">座垫顶到脚踏最低点的距离</div>'};",
   test:{inputs:{leg:80}, expect:"70.64 cm"}},
  {id:"ydstride", cat:"yd", icon:"👣", name:"跑步步幅估算", desc:"按身高估算跑步步幅",
   formula:"步幅 ≈ 身高 × 0.65%",
   inputs:[{id:"h", label:"身高", unit:"cm", def:"175", min:100, max:250}],
-  run:"var s=h*0.0065;return {ok:true,html:'<div class=\"big\">'+s.toFixed(2)+' m</div><div class=\"row\">每步约 '+s.toFixed(2)+' 米（估算）</div>'};",
+  run:"if(!(h>0))return {ok:false,msg:'身高须大于0'};var s=h*0.0065;return {ok:true,html:'<div class=\"big\">'+s.toFixed(2)+' m</div><div class=\"row\">每步约 '+s.toFixed(2)+' 米（估算）</div>'};",
   test:{inputs:{h:175}, expect:"1.14 m"}},
  {id:"ydburntime", cat:"yd", icon:"⏳", name:"减1kg运动时长", desc:"减1公斤脂肪要运动多久",
   formula:"7700kcal ÷ 每小时消耗",
@@ -2484,7 +2484,7 @@ TOOLS.push(
  {id:"yddeload", cat:"yd", icon:"🧊", name:"减载周训练量", desc:"算减载周该练多少",
   formula:"减载量 = 正常量 × 比例",
   inputs:[{id:"vol", label:"正常周训练量", unit:"kg", def:"10000", min:0},{id:"pct", label:"减载比例", type:"select", options:[{v:"40",t:"40%"},{v:"50",t:"50%"},{v:"60",t:"60%"}], def:"50"}],
-  run:"return {ok:true,html:'<div class=\"big\">'+(vol*Number(pct)/100).toFixed(0)+' kg</div><div class=\"row\">减载周训练量（每4-6周一次）</div>'};",
+  run:"if(!(vol>=0))return {ok:false,msg:'训练量不能为负'};return {ok:true,html:'<div class=\"big\">'+(vol*Number(pct)/100).toFixed(0)+' kg</div><div class=\"row\">减载周训练量（每4-6周一次）</div>'};",
   test:{inputs:{vol:10000,pct:"50"}, expect:"5000 kg"}},
  {id:"ydflex", cat:"yd", icon:"🤸", name:"体前屈等级", desc:"坐位体前屈成绩评级",
   formula:"成人男标准（cm）",
@@ -2499,7 +2499,7 @@ TOOLS.push(
  {id:"ydcooldown", cat:"yd", icon:"❄️", name:"冷身拉伸建议", desc:"按运动时长给拉伸时间建议",
   formula:"拉伸 ≈ 时长×15%（5–15分钟）",
   inputs:[{id:"mins", label:"运动时长", unit:"分钟", def:"60", min:5, max:300}],
-  run:"var s=mins*0.15;if(s<5)s=5;if(s>15)s=15;return {ok:true,html:'<div class=\"big\">'+s.toFixed(0)+' 分钟</div><div class=\"row\">运动后冷身拉伸建议时长</div>'};",
+  run:"if(!(mins>=0))return {ok:false,msg:'运动时长不能为负'};var s=mins*0.15;if(s<5)s=5;if(s>15)s=15;return {ok:true,html:'<div class=\"big\">'+s.toFixed(0)+' 分钟</div><div class=\"row\">运动后冷身拉伸建议时长</div>'};",
   test:{inputs:{mins:60}, expect:"9 分钟"}},
 );
 /* ===== WAVE-4F 补位工具（去重后补足500） ===== */
@@ -2852,7 +2852,7 @@ TOOLS.push(
   inputs:[
    {id:"d", label:"12 分钟跑距离", unit:"m", def:"3000", min:0}
   ],
-  run:"var D=Number(d);if(!(D>600))return {ok:false,msg:'距离须大于 600 m 才有意义'};var vo=(D-504.9)/44.73,pace=720/D;var pm=Math.floor(pace),ps=Math.round((pace-pm)*60);return {ok:true,html:'<div class=\"big\">VO₂max ≈ '+vo.toFixed(1)+' ml/kg/min</div><div class=\"row\">平均配速 '+pm+':'+(ps<10?'0':'')+ps+' /km；该公式为 Cooper 1968 年人群估算，个体误差约 ±10%</div>'};",
+  run:"var D=Number(d);if(!(D>600))return {ok:false,msg:'距离须大于 600 m 才有意义'};var vo=(D-504.9)/44.73,psec=720000/D;var pm=Math.floor(psec/60),ps=Math.round(psec-pm*60);if(ps===60){pm+=1;ps=0;}return {ok:true,html:'<div class=\"big\">VO₂max ≈ '+vo.toFixed(1)+' ml/kg/min</div><div class=\"row\">平均配速 '+pm+':'+(ps<10?'0':'')+ps+' /km；该公式为 Cooper 1968 年人群估算，个体误差约 ±10%</div>'};",
   test:{inputs:{"d": 3000}, expect:"55.8"}},
  {id:"kfisbn", cat:"kf", icon:"📚", name:"ISBN-13 校验位", desc:"由前 12 位算 ISBN-13 校验位，或校验完整 13 位",
   formula:"ISBN-13：前 12 位奇数位×1、偶数位×3 求和，校验位 =（10 − 总和 mod 10）mod 10",
@@ -3886,7 +3886,7 @@ TOOLS.push(
    {id:"dist", label:"距离", type:"select", options:[{v:"5",t:"5公里"},{v:"10",t:"10公里"},{v:"21.0975",t:"半程马拉松"},{v:"42.195",t:"全程马拉松"}], def:"10"},
    {id:"pace", label:"配速", unit:"分/公里", def:"6", min:2, max:15}
   ],
-  run:"var d=Number(dist), mins=d*pace, h=Math.floor(mins/60), m=Math.round(mins%60); return {ok:true,html:'<div class=\"big\">预计 '+h+'小时'+m+'分</div>'};",
+  run:"var d=Number(dist);if(!(pace>0))return {ok:false,msg:'配速须大于0'};var mins=d*pace, h=Math.floor(mins/60), m=Math.round(mins%60); return {ok:true,html:'<div class=\"big\">预计 '+h+'小时'+m+'分</div>'};",
   test:{inputs:{dist:"10",pace:6}, expect:"预计 1小时0分"}},
  {id:"ydpace2", cat:"yd", icon:"⏱", name:"配速反推", desc:"定目标完赛时间，反推每公里要跑多快",
   formula:"所需配速 = 目标总时间 ÷ 距离",
@@ -3900,7 +3900,7 @@ TOOLS.push(
  {id:"ydvo2max", cat:"yd", icon:"🫁", name:"最大摄氧量估算", desc:"Cooper 12分钟跑估算VO2max",
   formula:"VO2max = (12分钟跑距离 − 504.9) ÷ 44.73",
   inputs:[{id:"d12", label:"12分钟跑距离", unit:"米", def:"2400", min:500, max:5000}],
-  run:"var vo2=(d12-504.9)/44.73; return {ok:true,html:'<div class=\"big\">VO2max ≈ '+vo2.toFixed(1)+' ml/kg/min</div><div class=\"row\">Cooper公式，仅供参考</div>'};",
+  run:"if(!(d12>504.9))return {ok:false,msg:'12 分钟跑距离须大于 504.9 m（否则 Cooper 公式无意义）'};var vo2=(d12-504.9)/44.73; return {ok:true,html:'<div class=\"big\">VO2max ≈ '+vo2.toFixed(1)+' ml/kg/min</div><div class=\"row\">Cooper公式，仅供参考</div>'};",
   test:{inputs:{d12:2400}, expect:"42.4"}},
  {id:"ydinterval", cat:"yd", icon:"🔁", name:"间歇跑配速", desc:"按5K成绩推算400/800/1000米间歇配速",
   formula:"间歇配速 = 5K配速 × 系数（400m取0.92，800m取0.95，1000m取0.98）",
@@ -3908,7 +3908,7 @@ TOOLS.push(
    {id:"t5", label:"5K完赛时间", unit:"分钟", def:"25", min:12, max:60},
    {id:"sel", label:"间歇距离", type:"select", options:[{v:"0.4",t:"400米"},{v:"0.8",t:"800米"},{v:"1.0",t:"1000米"}], def:"0.4"}
   ],
-  run:"var p5=t5/5, ratio={\"0.4\":0.92,\"0.8\":0.95,\"1.0\":0.98}[sel], ip=p5*ratio, lap=ip*Number(sel), sec=Math.round(lap*60), mm=Math.floor(sec/60), ss=sec%60; return {ok:true,html:'<div class=\"big\">每圈 '+mm+'分'+ss+'秒</div><div class=\"row\">间歇配速 '+ip.toFixed(2)+' 分/公里</div>'};",
+  run:"if(!(t5>0))return {ok:false,msg:'5K 完赛时间须大于0'};var p5=t5/5, ratio={\"0.4\":0.92,\"0.8\":0.95,\"1.0\":0.98}[sel], ip=p5*ratio, lap=ip*Number(sel), sec=Math.round(lap*60), mm=Math.floor(sec/60), ss=sec%60; return {ok:true,html:'<div class=\"big\">每圈 '+mm+'分'+ss+'秒</div><div class=\"row\">间歇配速 '+ip.toFixed(2)+' 分/公里</div>'};",
   test:{inputs:{t5:25,sel:"0.4"}, expect:"每圈 1分50秒"}},
  {id:"ydmarathon", cat:"yd", icon:"🏁", name:"马拉松配速表", desc:"定全马目标成绩，生成每公里配速",
   formula:"配速 = 目标总时间 ÷ 42.195",
@@ -3924,7 +3924,7 @@ TOOLS.push(
    {id:"w", label:"重量", unit:"kg", def:"100", min:1, max:500},
    {id:"reps", label:"次数", unit:"次", def:"8", min:1, max:30}
   ],
-  run:"var rm=w*(1+reps/30); return {ok:true,html:'<div class=\"big\">1RM ≈ '+rm.toFixed(1)+' kg</div><div class=\"row\">Epley公式，仅供参考</div>'};",
+  run:"if(!(w>0))return {ok:false,msg:'重量须大于0'};if(!(reps>=1))return {ok:false,msg:'次数至少为 1'};var rm=w*(1+reps/30); return {ok:true,html:'<div class=\"big\">1RM ≈ '+rm.toFixed(1)+' kg</div><div class=\"row\">Epley公式，仅供参考</div>'};",
   test:{inputs:{w:100,reps:8}, expect:"126.7"}},
  {id:"ydvolume", cat:"yd", icon:"📊", name:"训练容量", desc:"组数×次数×重量算训练量",
   formula:"训练容量 = 组数 × 次数 × 重量",
@@ -3933,7 +3933,7 @@ TOOLS.push(
    {id:"reps", label:"每组次数", unit:"次", def:"8", min:1, max:100},
    {id:"w", label:"重量", unit:"kg", def:"100", min:1, max:500}
   ],
-  run:"var v=sets*reps*w; return {ok:true,html:'<div class=\"big\">'+v+' kg</div><div class=\"row\">训练容量 = 组数×次数×重量</div>'};",
+  run:"if(!(sets>=0)||!(reps>=0)||!(w>=0))return {ok:false,msg:'组数、次数与重量不能为负'};var v=sets*reps*w; return {ok:true,html:'<div class=\"big\">'+v+' kg</div><div class=\"row\">训练容量 = 组数×次数×重量</div>'};",
   test:{inputs:{sets:5,reps:8,w:100}, expect:"4000 kg"}},
  {id:"ydlift", cat:"yd", icon:"🏋", name:"各动作1RM换算", desc:"深蹲卧推硬拉等动作估算1RM",
   formula:"1RM = 重量 × (1 + 次数 ÷ 30)",
@@ -3942,7 +3942,7 @@ TOOLS.push(
    {id:"w", label:"重量", unit:"kg", def:"100", min:1, max:500},
    {id:"reps", label:"次数", unit:"次", def:"5", min:1, max:30}
   ],
-  run:"var rm=w*(1+reps/30); return {ok:true,html:'<div class=\"big\">'+act+' 1RM ≈ '+rm.toFixed(1)+' kg</div>'};",
+  run:"if(!(w>0))return {ok:false,msg:'重量须大于0'};if(!(reps>=1))return {ok:false,msg:'次数至少为 1'};var rm=w*(1+reps/30); return {ok:true,html:'<div class=\"big\">'+act+' 1RM ≈ '+rm.toFixed(1)+' kg</div>'};",
   test:{inputs:{act:"深蹲",w:100,reps:5}, expect:"116.7"}},
  {id:"ydplate", cat:"yd", icon:"🔩", name:"杠铃片配重", desc:"目标重量算每边怎么配片",
   formula:"每边 = (目标 − 杠铃杆20kg) ÷ 2，按大片优先组合",
@@ -3964,7 +3964,7 @@ TOOLS.push(
    {id:"m", label:"分", unit:"min", def:"4", min:2, max:10},
    {id:"s", label:"秒", unit:"s", def:"10", min:0, max:59}
   ],
-  run:"var std={\"w800\":[210,360],\"m1000\":[200,390]}[item], tot=m*60+s, sc=100-(tot-std[0])/(std[1]-std[0])*40; sc=Math.max(0,Math.min(100,sc)); return {ok:true,html:'<div class=\"big\">'+sc.toFixed(1)+' 分</div><div class=\"row\">简化评分标准，仅供参考</div>'};",
+  run:"var std={\"w800\":[210,360],\"m1000\":[200,390]}[item], tot=m*60+s;if(!(tot>0))return {ok:false,msg:'成绩时间须大于0'};var sc=100-(tot-std[0])/(std[1]-std[0])*40; sc=Math.max(0,Math.min(100,sc)); return {ok:true,html:'<div class=\"big\">'+sc.toFixed(1)+' 分</div><div class=\"row\">简化评分标准，仅供参考</div>'};",
   test:{inputs:{item:"w800",m:4,s:10}, expect:"89.3 分"}},
  
  {id:"ydscore", cat:"yd", icon:"📊", name:"体测评分", desc:"仰卧起坐/引体向上/立定跳远简化评分",
@@ -3973,17 +3973,17 @@ TOOLS.push(
    {id:"item", label:"测试项目", type:"select", def:"50,20", options:[{v:"50,20",t:"仰卧起坐（1分钟/个）"},{v:"15,5",t:"引体向上（个）"},{v:"260,180",t:"立定跳远（cm）"}]},
    {id:"n", label:"成绩", def:"40", min:0, max:320, hint:"个数或厘米，按所选项目填"}
   ],
-  run:"var p=String(item).split(','),full=Number(p[0]),pass=Number(p[1]);var sc=n>=full?100:n<=pass?60:60+(n-pass)/(full-pass)*40;return {ok:true,html:'<div class=\"big\">'+sc.toFixed(1)+' 分</div><div class=\"row\">简化评分，仅供参考</div>'};",
+  run:"var p=String(item).split(','),full=Number(p[0]),pass=Number(p[1]);var N=Number(n);if(!(N>=0))return {ok:false,msg:'成绩不能为负'};var sc=N>=full?100:N>=pass?60+(N-pass)/(full-pass)*40:60*N/pass;return {ok:true,html:'<div class=\"big\">'+sc.toFixed(1)+' 分</div><div class=\"row\">简化评分，仅供参考</div>'};",
   test:{inputs:{item:"50,20",n:40}, expect:"86.7 分"}},
  {id:"ydplank", cat:"yd", icon:"🧘", name:"平板支撑等级", desc:"按坚持秒数评等级",
   formula:"<60秒新手，<120秒进阶，<180秒优秀，否则大神",
   inputs:[{id:"sec", label:"坚持时间", unit:"秒", def:"90", min:1, max:600}],
-  run:"var lv=sec<60?'新手':sec<120?'进阶':sec<180?'优秀':'大神'; return {ok:true,html:'<div class=\"big\">'+lv+'</div><div class=\"row\">坚持 '+sec+' 秒</div>'};",
+  run:"if(!(sec>=0))return {ok:false,msg:'坚持时间不能为负'};var lv=sec<60?'新手':sec<120?'进阶':sec<180?'优秀':'大神'; return {ok:true,html:'<div class=\"big\">'+lv+'</div><div class=\"row\">坚持 '+sec+' 秒</div>'};",
   test:{inputs:{sec:90}, expect:"进阶"}},
  {id:"ydpushup", cat:"yd", icon:"👊", name:"俯卧撑等级", desc:"按连续个数评等级",
   formula:"<10个新手，<25个进阶，<50个优秀，否则大神",
   inputs:[{id:"n", label:"连续个数", unit:"个", def:"30", min:1, max:200}],
-  run:"var lv=n<10?'新手':n<25?'进阶':n<50?'优秀':'大神'; return {ok:true,html:'<div class=\"big\">'+lv+'</div><div class=\"row\">连续 '+n+' 个</div>'};",
+  run:"if(!(n>=0))return {ok:false,msg:'个数不能为负'};var lv=n<10?'新手':n<25?'进阶':n<50?'优秀':'大神'; return {ok:true,html:'<div class=\"big\">'+lv+'</div><div class=\"row\">连续 '+n+' 个</div>'};",
   test:{inputs:{n:30}, expect:"优秀"}},
  {id:"ydprotein", cat:"yd", icon:"🍗", name:"蛋白质需求", desc:"按体重和目标算每日蛋白质",
   formula:"蛋白质 = 体重 × 系数（减脂1.8，增肌2.0，维持1.6 g/kg）",
@@ -3991,7 +3991,7 @@ TOOLS.push(
    {id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200},
    {id:"goal", label:"目标", type:"select", options:[{v:"1.8",t:"减脂"},{v:"2.0",t:"增肌"},{v:"1.6",t:"维持"}], def:"2.0"}
   ],
-  run:"var p=bw*Number(goal); return {ok:true,html:'<div class=\"big\">'+p.toFixed(0)+' g/天</div><div class=\"row\">仅供参考</div>'};",
+  run:"if(!(bw>0))return {ok:false,msg:'体重须大于0'};var p=bw*Number(goal); return {ok:true,html:'<div class=\"big\">'+p.toFixed(0)+' g/天</div><div class=\"row\">仅供参考</div>'};",
   test:{inputs:{bw:70,goal:"2.0"}, expect:"140 g/天"}},
  {id:"ydfatloss", cat:"yd", icon:"⚖", name:"减脂热量缺口", desc:"定减重目标，算每日热量缺口",
   formula:"每日缺口 = (当前−目标)kg × 7700 ÷ 天数",
@@ -4005,7 +4005,7 @@ TOOLS.push(
  {id:"ydsurplus", cat:"yd", icon:"📈", name:"增肌热量盈余", desc:"按体重算增肌期每日盈余",
   formula:"建议盈余 ≈ 体重 × 5 kcal/天（约300~500）",
   inputs:[{id:"bw", label:"体重", unit:"kg", def:"70", min:30, max:200}],
-  run:"var s=bw*5; return {ok:true,html:'<div class=\"big\">+'+s.toFixed(0)+' kcal/天</div><div class=\"row\">建议盈余300~500kcal/天</div>'};",
+  run:"if(!(bw>0))return {ok:false,msg:'体重须大于0'};var s=Math.min(500,Math.max(300,bw*5)); return {ok:true,html:'<div class=\"big\">+'+s.toFixed(0)+' kcal/天</div><div class=\"row\">建议盈余300~500kcal/天</div>'};",
   test:{inputs:{bw:70}, expect:"+350 kcal/天"}},
  {id:"ydwater", cat:"yd", icon:"💧", name:"运动补水量", desc:"按时长和强度算运动中补水",
   formula:"补水 = 时长÷15 × 每15分钟补水量（低150/中200/高250ml）",
@@ -4013,12 +4013,12 @@ TOOLS.push(
    {id:"mins", label:"运动时长", unit:"分钟", def:"60", min:10, max:600},
    {id:"inten", label:"强度", type:"select", options:[{v:"150",t:"低强度"},{v:"200",t:"中强度"},{v:"250",t:"高强度"}], def:"200"}
   ],
-  run:"var w=Math.round(mins/15*Number(inten)); return {ok:true,html:'<div class=\"big\">约 '+w+' ml</div><div class=\"row\">运动中补水建议，少量多次</div>'};",
+  run:"if(!(mins>=0))return {ok:false,msg:'运动时长不能为负'};var w=Math.round(mins/15*Number(inten)); return {ok:true,html:'<div class=\"big\">约 '+w+' ml</div><div class=\"row\">运动中补水建议，少量多次</div>'};",
   test:{inputs:{mins:60,inten:"200"}, expect:"800 ml"}}
 );
 TOOLS.push(
  {id:"ydcarbs", cat:"yd", icon:"🍌", name:"运动碳水补充", desc:"长时间运动算碳水补充量",
-  formula:"60分钟内无需补充；之后按每小时约45g",
+  formula:"60分钟内无需补充；超过 60 分钟按运动总时长 × 每小时约45g 估算总量",
   inputs:[{id:"mins", label:"运动时长", unit:"分钟", def:"120", min:30, max:600}],
   run:"if(mins<60) return {ok:true,html:'<div class=\"big\">无需额外补充</div><div class=\"row\">60分钟内运动一般无需补碳水</div>'}; var c=mins/60*45; return {ok:true,html:'<div class=\"big\">约 '+c.toFixed(0)+' g</div><div class=\"row\">每小时30~60g碳水</div>'};",
   test:{inputs:{mins:120}, expect:"90 g"}},
@@ -4028,7 +4028,7 @@ TOOLS.push(
    {id:"steps", label:"步数", unit:"步", def:"10000", min:100, max:100000},
    {id:"height", label:"身高", unit:"cm", def:"170", min:120, max:220}
   ],
-  run:"var stride=height*0.0045, km=steps*stride/1000; return {ok:true,html:'<div class=\"big\">约 '+km.toFixed(2)+' km</div><div class=\"row\">步幅约 '+stride.toFixed(2)+' m</div>'};",
+  run:"if(!(steps>=0))return {ok:false,msg:'步数不能为负'};if(!(height>0))return {ok:false,msg:'身高须大于0'};var stride=height*0.0045, km=steps*stride/1000; return {ok:true,html:'<div class=\"big\">约 '+km.toFixed(2)+' km</div><div class=\"row\">步幅约 '+stride.toFixed(2)+' m</div>'};",
   test:{inputs:{steps:10000,height:170}, expect:"7.65 km"}},
  {id:"ydrest", cat:"yd", icon:"⏸", name:"组间休息建议", desc:"按训练目标给组间休息时间",
   formula:"增肌90~120秒，力量3~5分钟，减脂30~60秒，耐力30秒以内",
@@ -4051,7 +4051,7 @@ TOOLS.push(
    {id:"sport", label:"运动类型", type:"select", options:[{v:"跑步",t:"跑步"},{v:"力量训练",t:"力量训练"},{v:"球类",t:"球类"},{v:"游泳",t:"游泳"}], def:"跑步"},
    {id:"mins", label:"运动时长", unit:"分钟", def:"60", min:10, max:600}
   ],
-  run:"var base={\"跑步\":5,\"力量训练\":10,\"球类\":8,\"游泳\":5}[sport], warm=base+Math.round(mins/60*3); return {ok:true,html:'<div class=\"big\">热身约 '+warm+' 分钟</div><div class=\"row\">正式训练前动态热身</div>'};",
+  run:"if(!(mins>=0))return {ok:false,msg:'运动时长不能为负'};var base={\"跑步\":5,\"力量训练\":10,\"球类\":8,\"游泳\":5}[sport], warm=base+Math.round(mins/60*3); return {ok:true,html:'<div class=\"big\">热身约 '+warm+' 分钟</div><div class=\"row\">正式训练前动态热身</div>'};",
   test:{inputs:{sport:"跑步",mins:60}, expect:"热身约 8 分钟"}},
  {id:"ydshoe", cat:"yd", icon:"👟", name:"跑鞋更换周期", desc:"按月跑量算跑鞋多久该换",
   formula:"更换月数 = 800 ÷ 月跑量（跑鞋寿命约800km）",
@@ -4061,7 +4061,7 @@ TOOLS.push(
  {id:"ydcadence", cat:"yd", icon:"🦶", name:"跑步步频评估", desc:"按步频评估跑步效率",
   formula:"<160偏低，<180良好，否则优秀",
   inputs:[{id:"cad", label:"步频", unit:"步/分钟", def:"175", min:120, max:220}],
-  run:"var lv=cad<160?'偏低':cad<180?'良好':'优秀'; return {ok:true,html:'<div class=\"big\">'+cad+' spm · '+lv+'</div><div class=\"row\">180左右被认为较经济</div>'};",
+  run:"if(!(cad>0))return {ok:false,msg:'步频须大于0'};var lv=cad<160?'偏低':cad<180?'良好':'优秀'; return {ok:true,html:'<div class=\"big\">'+cad+' spm · '+lv+'</div><div class=\"row\">180左右被认为较经济</div>'};",
   test:{inputs:{cad:175}, expect:"良好"}},
  {id:"ydgoal", cat:"yd", icon:"🎯", name:"减重目标周期", desc:"定减重目标，算需要多少周",
   formula:"周数 = (当前−目标) ÷ 每周减重",
@@ -4706,7 +4706,7 @@ TOOLS.push(
    {id:"from_db", label:"从", when:"cat=db", type:"select", def:"dBW", options:[{v:"dBm",t:"分贝毫瓦(dBm)"},{v:"dBW",t:"分贝瓦(dBW)"},{v:"W",t:"瓦(W)"},{v:"mW",t:"毫瓦(mW)"},{v:"kW",t:"千瓦(kW)"}]},
    {id:"to_db", label:"到", when:"cat=db", type:"select", def:"dBm", options:[{v:"dBm",t:"分贝毫瓦(dBm)"},{v:"dBW",t:"分贝瓦(dBW)"},{v:"W",t:"瓦(W)"},{v:"mW",t:"毫瓦(mW)"},{v:"kW",t:"千瓦(kW)"}]}
   ],
-  run:"var K={\"len\": {\"m\": 1, \"km\": 1000, \"cm\": 0.01, \"mm\": 0.001, \"um\": 1e-06, \"nm\": 1e-09, \"in\": 0.0254, \"ft\": 0.3048, \"yd\": 0.9144, \"mi\": 1609.344, \"nmi\": 1852, \"chi\": 0.3333333333333333, \"cun\": 0.03333333333333333, \"zhang\": 3.3333333333333335, \"ly\": 9460730472580800.0, \"au\": 149597870700.0, \"pc\": 3.085677581491367e+16}, \"area\": {\"m2\": 1, \"km2\": 1000000.0, \"cm2\": 0.0001, \"mm2\": 1e-06, \"ha\": 10000.0, \"mu\": 666.6666666666666, \"acre\": 4046.8564224, \"ft2\": 0.09290304, \"in2\": 0.00064516}, \"vol\": {\"L\": 1, \"mL\": 0.001, \"m3\": 1000, \"cm3\": 0.001, \"mm3\": 1e-06, \"gal_us\": 3.785411784, \"gal_uk\": 4.54609, \"qt_us\": 0.946352946, \"pt_us\": 0.473176473, \"cup_us\": 0.2365882365, \"tbsp_us\": 0.01478676478125, \"tsp_us\": 0.00492892159375, \"floz_us\": 0.0295735295625, \"bbl\": 158.987294928}, \"mass\": {\"kg\": 1, \"g\": 0.001, \"mg\": 1e-06, \"t\": 1000, \"jin\": 0.5, \"liang\": 0.05, \"lb\": 0.45359237, \"oz\": 0.028349523125, \"ozt\": 0.0311034768, \"ct\": 0.0002, \"stone\": 6.35029318, \"ton_us\": 907.18474, \"ton_uk\": 1016.0469088}, \"speed\": {\"ms\": 1, \"kmh\": 0.2777777777777778, \"mph\": 0.44704, \"fts\": 0.3048, \"knot\": 0.5144444444444445, \"mach\": 340.29}, \"accel\": {\"ms2\": 1, \"g0\": 9.80665, \"khms\": 0.2777777777777778, \"fts2\": 0.3048, \"gal\": 0.01}, \"press\": {\"Pa\": 1, \"kPa\": 1000, \"MPa\": 1000000.0, \"hPa\": 100, \"bar\": 100000.0, \"mbar\": 100, \"psi\": 6894.757293168, \"ksi\": 6894757.293168, \"mmHg\": 133.322387415, \"torr\": 133.322387415, \"atm\": 101325, \"inHg\": 3386.389, \"inH2O\": 249.0889}, \"energy\": {\"J\": 1, \"kJ\": 1000, \"cal\": 4.184, \"kcal\": 4184, \"Wh\": 3600, \"kWh\": 3600000.0, \"eV\": 1.602176634e-19, \"BTU\": 1055.05585262, \"ftlb\": 1.3558179483314003, \"therm\": 105505585.262}, \"power\": {\"W\": 1, \"kW\": 1000, \"MW\": 1000000.0, \"hp_m\": 735.49875, \"hp_i\": 745.6998715822702, \"BTUh\": 0.2930710701722222, \"fplbs\": 1.3558179483314003, \"RT\": 3516.85}, \"time\": {\"s\": 1, \"ms\": 0.001, \"min\": 60, \"h\": 3600, \"day\": 86400, \"week\": 604800, \"month\": 2629746, \"year\": 31557600}, \"angle\": {\"rad\": 1, \"deg\": 0.017453292519943295, \"grad\": 0.015707963267948967, \"turn\": 6.283185307179586, \"arcmin\": 0.0002908882086657216, \"arcsec\": 4.84813681109536e-06}, \"data\": {\"B\": 1, \"KB\": 1024, \"MB\": 1048576, \"GB\": 1073741824, \"TB\": 1099511627776, \"PB\": 1125899906842624, \"bit\": 0.125, \"Kb\": 128, \"Mb\": 131072, \"Gb\": 134217728}, \"rate\": {\"bps\": 1, \"kbps\": 1000, \"Mbps\": 1000000.0, \"Gbps\": 1000000000.0, \"KBs\": 8000, \"MBs\": 8000000.0}, \"flow\": {\"m3s\": 1, \"Ls\": 0.001, \"Lm\": 1.6666666666666667e-05, \"m3h\": 0.0002777777777777778, \"gpm\": 6.30902e-05, \"cfm\": 0.0004719474432}, \"density\": {\"kgm3\": 1, \"gcm3\": 1000, \"glm3\": 1, \"lbft3\": 16.01846337396014}, \"force\": {\"N\": 1, \"kN\": 1000, \"dyn\": 1e-05, \"lbf\": 4.4482216152605, \"kgf\": 9.80665, \"ozf\": 0.2780138509537812}, \"torque\": {\"Nm\": 1, \"kNm\": 1000, \"kgfm\": 9.80665, \"lbfft\": 1.3558179483314003, \"lbfin\": 0.1129848250276167}, \"freq\": {\"Hz\": 1, \"kHz\": 1000, \"MHz\": 1000000.0, \"GHz\": 1000000000.0, \"rpm\": 0.016666666666666666, \"rps\": 1}, \"visc\": {\"Pas\": 1, \"P\": 0.1, \"cP\": 0.001}, \"charge\": {\"C\": 1, \"mC\": 0.001, \"uC\": 1e-06, \"nC\": 1e-09, \"Ah\": 3600, \"mAh\": 3.6}, \"current\": {\"A\": 1, \"mA\": 0.001, \"uA\": 1e-06, \"kA\": 1000}, \"volt\": {\"V\": 1, \"mV\": 0.001, \"uV\": 1e-06, \"kV\": 1000, \"MV\": 1000000.0}, \"res\": {\"ohm\": 1, \"kohm\": 1000, \"Mohm\": 1000000.0, \"mohm\": 0.001}, \"cond\": {\"S\": 1, \"mS\": 0.001, \"uS\": 1e-06, \"nS\": 1e-09}, \"flux\": {\"Wb\": 1, \"mWb\": 0.001, \"Mx\": 1e-08}, \"illum\": {\"lux\": 1, \"fc\": 10.76391041670972, \"ph\": 10000.0}, \"typog\": {\"mm\": 1, \"cm\": 10, \"in\": 25.4, \"pt\": 0.35277777777777775, \"pica\": 4.233333333333333, \"px\": 0.26458333333333334}, \"conc\": {\"ppm\": 1, \"mgL\": 1, \"gL\": 1000, \"pct\": 10000, \"ppb\": 0.001}, \"hard\": {\"mgL\": 1, \"dH\": 17.848, \"fH\": 10, \"eH\": 14.254}, \"proof\": {\"abv\": 1, \"proof_us\": 0.5, \"proof_uk\": 0.5715}, \"linden\": {\"tex\": 1, \"dtex\": 0.1, \"den\": 0.1111111111111111}, \"sugar\": {\"mmol\": 1, \"mgdl\": 0.05550621669626999}, \"chol\": {\"mmol\": 1, \"mgdl\": 0.02585983966899405}, \"creat\": {\"umol\": 1, \"mgdl\": 88.4}};var LB={\"len\": {\"m\": \"米(m)\", \"km\": \"千米(km)\", \"cm\": \"厘米(cm)\", \"mm\": \"毫米(mm)\", \"um\": \"微米(μm)\", \"nm\": \"纳米(nm)\", \"in\": \"英寸(in)\", \"ft\": \"英尺(ft)\", \"yd\": \"码(yd)\", \"mi\": \"英里(mi)\", \"nmi\": \"海里(nmi)\", \"chi\": \"市尺\", \"cun\": \"市寸\", \"zhang\": \"市丈\", \"ly\": \"光年(ly)\", \"au\": \"天文单位(AU)\", \"pc\": \"秒差距(pc)\"}, \"area\": {\"m2\": \"平方米(㎡)\", \"km2\": \"平方千米(k㎡)\", \"cm2\": \"平方厘米(c㎡)\", \"mm2\": \"平方毫米(mm²)\", \"ha\": \"公顷\", \"mu\": \"亩\", \"acre\": \"英亩\", \"ft2\": \"平方英尺(ft²)\", \"in2\": \"平方英寸(in²)\"}, \"vol\": {\"L\": \"升(L)\", \"mL\": \"毫升(mL)\", \"m3\": \"立方米(m³)\", \"cm3\": \"立方厘米(cm³)\", \"mm3\": \"立方毫米(mm³)\", \"gal_us\": \"美制加仑(gal)\", \"gal_uk\": \"英制加仑(gal)\", \"qt_us\": \"美制夸脱(qt)\", \"pt_us\": \"美制品脱(pt)\", \"cup_us\": \"美制杯(cup)\", \"tbsp_us\": \"汤匙(tbsp)\", \"tsp_us\": \"茶匙(tsp)\", \"floz_us\": \"美制液盎司(fl oz)\", \"bbl\": \"石油桶(bbl)\"}, \"mass\": {\"kg\": \"千克(kg)\", \"g\": \"克(g)\", \"mg\": \"毫克(mg)\", \"t\": \"吨(t)\", \"jin\": \"斤\", \"liang\": \"两\", \"lb\": \"磅(lb)\", \"oz\": \"盎司(oz)\", \"ozt\": \"金衡盎司(ozt)\", \"ct\": \"克拉(ct)\", \"stone\": \"英石(st)\", \"ton_us\": \"美吨\", \"ton_uk\": \"英吨\"}, \"speed\": {\"ms\": \"米/秒(m/s)\", \"kmh\": \"千米/时(km/h)\", \"mph\": \"英里/时(mph)\", \"fts\": \"英尺/秒(ft/s)\", \"knot\": \"节(kn)\", \"mach\": \"马赫(15℃海平面)\"}, \"accel\": {\"ms2\": \"米/秒²(m/s²)\", \"g0\": \"重力加速度(g)\", \"khms\": \"千米/时·秒(km/h/s)\", \"fts2\": \"英尺/秒²(ft/s²)\", \"gal\": \"伽(Gal)\"}, \"press\": {\"Pa\": \"帕(Pa)\", \"kPa\": \"千帕(kPa)\", \"MPa\": \"兆帕(MPa)\", \"hPa\": \"百帕(hPa)\", \"bar\": \"巴(bar)\", \"mbar\": \"毫巴(mbar)\", \"psi\": \"磅/平方英寸(psi)\", \"ksi\": \"千磅/平方英寸(ksi)\", \"mmHg\": \"毫米汞柱(mmHg)\", \"torr\": \"托(Torr)\", \"atm\": \"标准大气压(atm)\", \"inHg\": \"英寸汞柱(inHg)\", \"inH2O\": \"英寸水柱(inH₂O)\"}, \"energy\": {\"J\": \"焦耳(J)\", \"kJ\": \"千焦(kJ)\", \"cal\": \"卡(cal)\", \"kcal\": \"千卡(kcal)\", \"Wh\": \"瓦时(Wh)\", \"kWh\": \"千瓦时(kWh)\", \"eV\": \"电子伏特(eV)\", \"BTU\": \"英热单位(BTU)\", \"ftlb\": \"英尺磅(ft·lbf)\", \"therm\": \"色姆(therm)\"}, \"power\": {\"W\": \"瓦(W)\", \"kW\": \"千瓦(kW)\", \"MW\": \"兆瓦(MW)\", \"hp_m\": \"公制马力(PS)\", \"hp_i\": \"英制马力(hp)\", \"BTUh\": \"BTU/时\", \"fplbs\": \"英尺磅/秒(ft·lbf/s)\", \"RT\": \"制冷吨(RT)\"}, \"time\": {\"s\": \"秒(s)\", \"ms\": \"毫秒(ms)\", \"min\": \"分钟(min)\", \"h\": \"小时(h)\", \"day\": \"天(d)\", \"week\": \"周\", \"month\": \"月(平均)\", \"year\": \"年(平均)\"}, \"angle\": {\"rad\": \"弧度(rad)\", \"deg\": \"度(°)\", \"grad\": \"梯度(grad)\", \"turn\": \"周\", \"arcmin\": \"角分(′)\", \"arcsec\": \"角秒(″)\"}, \"data\": {\"B\": \"字节(B)\", \"KB\": \"千字节(KB)\", \"MB\": \"兆字节(MB)\", \"GB\": \"吉字节(GB)\", \"TB\": \"太字节(TB)\", \"PB\": \"拍字节(PB)\", \"bit\": \"比特(bit)\", \"Kb\": \"千比特(Kb)\", \"Mb\": \"兆比特(Mb)\", \"Gb\": \"吉比特(Gb)\"}, \"rate\": {\"bps\": \"比特/秒(bps)\", \"kbps\": \"千比特/秒(kbps)\", \"Mbps\": \"兆比特/秒(Mbps)\", \"Gbps\": \"吉比特/秒(Gbps)\", \"KBs\": \"千字节/秒(KB/s)\", \"MBs\": \"兆字节/秒(MB/s)\"}, \"flow\": {\"m3s\": \"立方米/秒(m³/s)\", \"Ls\": \"升/秒(L/s)\", \"Lm\": \"升/分(L/min)\", \"m3h\": \"立方米/时(m³/h)\", \"gpm\": \"美制加仑/分(gpm)\", \"cfm\": \"立方英尺/分(cfm)\"}, \"density\": {\"kgm3\": \"千克/立方米(kg/m³)\", \"gcm3\": \"克/立方厘米(g/cm³)\", \"glm3\": \"克/升(g/L)\", \"lbft3\": \"磅/立方英尺(lb/ft³)\"}, \"force\": {\"N\": \"牛顿(N)\", \"kN\": \"千牛(kN)\", \"dyn\": \"达因(dyn)\", \"lbf\": \"磅力(lbf)\", \"kgf\": \"千克力(kgf)\", \"ozf\": \"盎司力(ozf)\"}, \"torque\": {\"Nm\": \"牛米(N·m)\", \"kNm\": \"千牛米(kN·m)\", \"kgfm\": \"千克力米(kgf·m)\", \"lbfft\": \"磅力英尺(lbf·ft)\", \"lbfin\": \"磅力英寸(lbf·in)\"}, \"freq\": {\"Hz\": \"赫兹(Hz)\", \"kHz\": \"千赫兹(kHz)\", \"MHz\": \"兆赫兹(MHz)\", \"GHz\": \"吉赫兹(GHz)\", \"rpm\": \"转/分(rpm)\", \"rps\": \"转/秒(rps)\"}, \"visc\": {\"Pas\": \"帕秒(Pa·s)\", \"P\": \"泊(P)\", \"cP\": \"厘泊(cP)\"}, \"charge\": {\"C\": \"库仑(C)\", \"mC\": \"毫库(mC)\", \"uC\": \"微库(μC)\", \"nC\": \"纳库(nC)\", \"Ah\": \"安时(Ah)\", \"mAh\": \"毫安时(mAh)\"}, \"current\": {\"A\": \"安培(A)\", \"mA\": \"毫安(mA)\", \"uA\": \"微安(μA)\", \"kA\": \"千安(kA)\"}, \"volt\": {\"V\": \"伏特(V)\", \"mV\": \"毫伏(mV)\", \"uV\": \"微伏(μV)\", \"kV\": \"千伏(kV)\", \"MV\": \"兆伏(MV)\"}, \"res\": {\"ohm\": \"欧姆(Ω)\", \"kohm\": \"千欧(kΩ)\", \"Mohm\": \"兆欧(MΩ)\", \"mohm\": \"毫欧(mΩ)\"}, \"cond\": {\"S\": \"西门子(S)\", \"mS\": \"毫西门子(mS)\", \"uS\": \"微西门子(μS)\", \"nS\": \"纳西门子(nS)\"}, \"flux\": {\"Wb\": \"韦伯(Wb)\", \"mWb\": \"毫韦伯(mWb)\", \"Mx\": \"麦克斯韦(Mx)\"}, \"illum\": {\"lux\": \"勒克斯(lx)\", \"fc\": \"英尺烛光(fc)\", \"ph\": \"辐透(ph)\"}, \"typog\": {\"mm\": \"毫米(mm)\", \"cm\": \"厘米(cm)\", \"in\": \"英寸(in)\", \"pt\": \"磅(pt)\", \"pica\": \"派卡(pica)\", \"px\": \"像素(px,96dpi)\"}, \"conc\": {\"ppm\": \"百万分比(ppm)\", \"mgL\": \"毫克/升(mg/L)\", \"gL\": \"克/升(g/L)\", \"pct\": \"百分比(%)\", \"ppb\": \"十亿分比(ppb)\"}, \"hard\": {\"mgL\": \"毫克/升(mg/L as CaCO₃)\", \"dH\": \"德国度(°dH)\", \"fH\": \"法国度(°fH)\", \"eH\": \"英国度(°e)\"}, \"proof\": {\"abv\": \"酒精度(%vol)\", \"proof_us\": \"美制证明度(proof)\", \"proof_uk\": \"英制证明度(proof)\"}, \"linden\": {\"tex\": \"特克斯(tex)\", \"dtex\": \"分特(dtex)\", \"den\": \"旦尼尔(D)\"}, \"sugar\": {\"mmol\": \"毫摩尔/升(mmol/L)\", \"mgdl\": \"毫克/分升(mg/dL)\"}, \"chol\": {\"mmol\": \"毫摩尔/升(mmol/L)\", \"mgdl\": \"毫克/分升(mg/dL)\"}, \"creat\": {\"umol\": \"微摩尔/升(μmol/L)\", \"mgdl\": \"毫克/分升(mg/dL)\"}, \"temp\": {\"C\": \"摄氏度(°C)\", \"F\": \"华氏度(°F)\", \"K\": \"开尔文(K)\"}, \"fuel\": {\"l100km\": \"升/百公里(L/100km)\", \"mpg_us\": \"美制英里/加仑(mpg)\", \"mpg_uk\": \"英制英里/加仑(mpg)\", \"kml\": \"千米/升(km/L)\"}, \"pace\": {\"kmh\": \"千米/时(km/h)\", \"ms\": \"米/秒(m/s)\", \"minkm\": \"配速(分/公里)\", \"minmi\": \"配速(分/英里)\"}, \"db\": {\"dBm\": \"分贝毫瓦(dBm)\", \"dBW\": \"分贝瓦(dBW)\", \"W\": \"瓦(W)\", \"mW\": \"毫瓦(mW)\", \"kW\": \"千瓦(kW)\"}};var CN={\"len\": \"长度\", \"area\": \"面积\", \"vol\": \"体积容积\", \"mass\": \"质量重量\", \"temp\": \"温度\", \"speed\": \"速度\", \"accel\": \"加速度\", \"press\": \"压力\", \"energy\": \"能量热量\", \"power\": \"功率\", \"fuel\": \"油耗\", \"time\": \"时间\", \"angle\": \"角度\", \"data\": \"数据存储\", \"rate\": \"传输速率\", \"flow\": \"体积流量\", \"density\": \"密度\", \"force\": \"力\", \"torque\": \"扭矩\", \"freq\": \"频率转速\", \"visc\": \"动力黏度\", \"charge\": \"电荷量\", \"current\": \"电流\", \"volt\": \"电压\", \"res\": \"电阻\", \"cond\": \"电导\", \"flux\": \"磁通量\", \"illum\": \"照度\", \"typog\": \"排版印刷\", \"conc\": \"浓度\", \"hard\": \"水硬度\", \"proof\": \"酒精度\", \"linden\": \"线密度\", \"sugar\": \"血糖\", \"chol\": \"胆固醇\", \"creat\": \"肌酐\", \"pace\": \"配速速度\", \"db\": \"分贝功率\"};var FP={len:from_len,area:from_area,vol:from_vol,mass:from_mass,temp:from_temp,speed:from_speed,accel:from_accel,press:from_press,energy:from_energy,power:from_power,fuel:from_fuel,time:from_time,angle:from_angle,data:from_data,rate:from_rate,flow:from_flow,density:from_density,force:from_force,torque:from_torque,freq:from_freq,visc:from_visc,charge:from_charge,current:from_current,volt:from_volt,res:from_res,cond:from_cond,flux:from_flux,illum:from_illum,typog:from_typog,conc:from_conc,hard:from_hard,proof:from_proof,linden:from_linden,sugar:from_sugar,chol:from_chol,creat:from_creat,pace:from_pace,db:from_db};var TP={len:to_len,area:to_area,vol:to_vol,mass:to_mass,temp:to_temp,speed:to_speed,accel:to_accel,press:to_press,energy:to_energy,power:to_power,fuel:to_fuel,time:to_time,angle:to_angle,data:to_data,rate:to_rate,flow:to_flow,density:to_density,force:to_force,torque:to_torque,freq:to_freq,visc:to_visc,charge:to_charge,current:to_current,volt:to_volt,res:to_res,cond:to_cond,flux:to_flux,illum:to_illum,typog:to_typog,conc:to_conc,hard:to_hard,proof:to_proof,linden:to_linden,sugar:to_sugar,chol:to_chol,creat:to_creat,pace:to_pace,db:to_db};function f(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';if(Math.abs(x)>=1e15||Math.abs(x)<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(v===''||!isFinite(x))return {ok:false,msg:'请输入有效数值'};var fu=FP[cat],tu=TP[cat];if(fu===undefined||tu===undefined)return {ok:false,msg:'请选择类别与单位'};var r,note='';if(cat==='temp'){var c=fu==='C'?x:fu==='F'?(x-32)*5/9:x-273.15;r=tu==='C'?c:tu==='F'?c*9/5+32:c+273.15;}else if(cat==='fuel'){if(x<0)return {ok:false,msg:'油耗不能为负'};var b=fu==='l100km'?x:fu==='mpg_us'?235.2145833/x:fu==='mpg_uk'?282.4809363/x:100/x;r=tu==='l100km'?b:tu==='mpg_us'?235.2145833/b:tu==='mpg_uk'?282.4809363/b:100/b;note='油耗为倒数关系，0 油耗显示为超出范围';}else if(cat==='pace'){if(x<=0)return {ok:false,msg:'配速与速度须大于 0'};var sp=fu==='kmh'?x:fu==='ms'?x*3.6:fu==='minkm'?60/x:96.56064/x;r=tu==='kmh'?sp:tu==='ms'?sp/3.6:tu==='minkm'?60/sp:96.56064/sp;}else if(cat==='db'){var w=fu==='dBm'?Math.pow(10,(x-30)/10):fu==='dBW'?Math.pow(10,x/10):fu==='W'?x:fu==='mW'?x/1000:x*1000;if((tu==='dBm'||tu==='dBW')&&!(w>0))return {ok:false,msg:'功率须大于 0 才能换算为分贝'};r=tu==='dBm'?10*Math.log10(w)+30:tu==='dBW'?10*Math.log10(w):tu==='W'?w:tu==='mW'?w*1000:w/1000;note='分贝为对数关系';}else{var tb=K[cat];if(!tb||tb[fu]===undefined||tb[tu]===undefined)return {ok:false,msg:'请选择单位'};r=x*tb[fu]/tb[tu];}var lb=LB[cat];return {ok:true,html:'<div class=\"big\">'+f(x)+' '+lb[fu]+' = '+f(r)+' '+lb[tu]+'</div><div class=\"row\">单位换算 · '+CN[cat]+(note?' · '+note:'')+'</div>'};",
+  run:"var K={\"len\": {\"m\": 1, \"km\": 1000, \"cm\": 0.01, \"mm\": 0.001, \"um\": 1e-06, \"nm\": 1e-09, \"in\": 0.0254, \"ft\": 0.3048, \"yd\": 0.9144, \"mi\": 1609.344, \"nmi\": 1852, \"chi\": 0.3333333333333333, \"cun\": 0.03333333333333333, \"zhang\": 3.3333333333333335, \"ly\": 9460730472580800.0, \"au\": 149597870700.0, \"pc\": 3.085677581491367e+16}, \"area\": {\"m2\": 1, \"km2\": 1000000.0, \"cm2\": 0.0001, \"mm2\": 1e-06, \"ha\": 10000.0, \"mu\": 666.6666666666666, \"acre\": 4046.8564224, \"ft2\": 0.09290304, \"in2\": 0.00064516}, \"vol\": {\"L\": 1, \"mL\": 0.001, \"m3\": 1000, \"cm3\": 0.001, \"mm3\": 1e-06, \"gal_us\": 3.785411784, \"gal_uk\": 4.54609, \"qt_us\": 0.946352946, \"pt_us\": 0.473176473, \"cup_us\": 0.2365882365, \"tbsp_us\": 0.01478676478125, \"tsp_us\": 0.00492892159375, \"floz_us\": 0.0295735295625, \"bbl\": 158.987294928}, \"mass\": {\"kg\": 1, \"g\": 0.001, \"mg\": 1e-06, \"t\": 1000, \"jin\": 0.5, \"liang\": 0.05, \"lb\": 0.45359237, \"oz\": 0.028349523125, \"ozt\": 0.0311034768, \"ct\": 0.0002, \"stone\": 6.35029318, \"ton_us\": 907.18474, \"ton_uk\": 1016.0469088}, \"speed\": {\"ms\": 1, \"kmh\": 0.2777777777777778, \"mph\": 0.44704, \"fts\": 0.3048, \"knot\": 0.5144444444444445, \"mach\": 340.29}, \"accel\": {\"ms2\": 1, \"g0\": 9.80665, \"khms\": 0.2777777777777778, \"fts2\": 0.3048, \"gal\": 0.01}, \"press\": {\"Pa\": 1, \"kPa\": 1000, \"MPa\": 1000000.0, \"hPa\": 100, \"bar\": 100000.0, \"mbar\": 100, \"psi\": 6894.757293168, \"ksi\": 6894757.293168, \"mmHg\": 133.322387415, \"torr\": 133.322387415, \"atm\": 101325, \"inHg\": 3386.389, \"inH2O\": 249.0889}, \"energy\": {\"J\": 1, \"kJ\": 1000, \"cal\": 4.184, \"kcal\": 4184, \"Wh\": 3600, \"kWh\": 3600000.0, \"eV\": 1.602176634e-19, \"BTU\": 1055.05585262, \"ftlb\": 1.3558179483314003, \"therm\": 105505585.262}, \"power\": {\"W\": 1, \"kW\": 1000, \"MW\": 1000000.0, \"hp_m\": 735.49875, \"hp_i\": 745.6998715822702, \"BTUh\": 0.2930710701722222, \"fplbs\": 1.3558179483314003, \"RT\": 3516.85}, \"time\": {\"s\": 1, \"ms\": 0.001, \"min\": 60, \"h\": 3600, \"day\": 86400, \"week\": 604800, \"month\": 2629746, \"year\": 31557600}, \"angle\": {\"rad\": 1, \"deg\": 0.017453292519943295, \"grad\": 0.015707963267948967, \"turn\": 6.283185307179586, \"arcmin\": 0.0002908882086657216, \"arcsec\": 4.84813681109536e-06}, \"data\": {\"B\": 1, \"KB\": 1024, \"MB\": 1048576, \"GB\": 1073741824, \"TB\": 1099511627776, \"PB\": 1125899906842624, \"bit\": 0.125, \"Kb\": 128, \"Mb\": 131072, \"Gb\": 134217728}, \"rate\": {\"bps\": 1, \"kbps\": 1000, \"Mbps\": 1000000.0, \"Gbps\": 1000000000.0, \"KBs\": 8000, \"MBs\": 8000000.0}, \"flow\": {\"m3s\": 1, \"Ls\": 0.001, \"Lm\": 1.6666666666666667e-05, \"m3h\": 0.0002777777777777778, \"gpm\": 6.30902e-05, \"cfm\": 0.0004719474432}, \"density\": {\"kgm3\": 1, \"gcm3\": 1000, \"glm3\": 1, \"lbft3\": 16.01846337396014}, \"force\": {\"N\": 1, \"kN\": 1000, \"dyn\": 1e-05, \"lbf\": 4.4482216152605, \"kgf\": 9.80665, \"ozf\": 0.2780138509537812}, \"torque\": {\"Nm\": 1, \"kNm\": 1000, \"kgfm\": 9.80665, \"lbfft\": 1.3558179483314003, \"lbfin\": 0.1129848250276167}, \"freq\": {\"Hz\": 1, \"kHz\": 1000, \"MHz\": 1000000.0, \"GHz\": 1000000000.0, \"rpm\": 0.016666666666666666, \"rps\": 1}, \"visc\": {\"Pas\": 1, \"P\": 0.1, \"cP\": 0.001}, \"charge\": {\"C\": 1, \"mC\": 0.001, \"uC\": 1e-06, \"nC\": 1e-09, \"Ah\": 3600, \"mAh\": 3.6}, \"current\": {\"A\": 1, \"mA\": 0.001, \"uA\": 1e-06, \"kA\": 1000}, \"volt\": {\"V\": 1, \"mV\": 0.001, \"uV\": 1e-06, \"kV\": 1000, \"MV\": 1000000.0}, \"res\": {\"ohm\": 1, \"kohm\": 1000, \"Mohm\": 1000000.0, \"mohm\": 0.001}, \"cond\": {\"S\": 1, \"mS\": 0.001, \"uS\": 1e-06, \"nS\": 1e-09}, \"flux\": {\"Wb\": 1, \"mWb\": 0.001, \"Mx\": 1e-08}, \"illum\": {\"lux\": 1, \"fc\": 10.76391041670972, \"ph\": 10000.0}, \"typog\": {\"mm\": 1, \"cm\": 10, \"in\": 25.4, \"pt\": 0.35277777777777775, \"pica\": 4.233333333333333, \"px\": 0.26458333333333334}, \"conc\": {\"ppm\": 1, \"mgL\": 1, \"gL\": 1000, \"pct\": 10000, \"ppb\": 0.001}, \"hard\": {\"mgL\": 1, \"dH\": 17.848, \"fH\": 10, \"eH\": 14.254}, \"proof\": {\"abv\": 1, \"proof_us\": 0.5, \"proof_uk\": 0.5715}, \"linden\": {\"tex\": 1, \"dtex\": 0.1, \"den\": 0.1111111111111111}, \"sugar\": {\"mmol\": 1, \"mgdl\": 0.05550621669626999}, \"chol\": {\"mmol\": 1, \"mgdl\": 0.02585983966899405}, \"creat\": {\"umol\": 1, \"mgdl\": 88.4}};var LB={\"len\": {\"m\": \"米(m)\", \"km\": \"千米(km)\", \"cm\": \"厘米(cm)\", \"mm\": \"毫米(mm)\", \"um\": \"微米(μm)\", \"nm\": \"纳米(nm)\", \"in\": \"英寸(in)\", \"ft\": \"英尺(ft)\", \"yd\": \"码(yd)\", \"mi\": \"英里(mi)\", \"nmi\": \"海里(nmi)\", \"chi\": \"市尺\", \"cun\": \"市寸\", \"zhang\": \"市丈\", \"ly\": \"光年(ly)\", \"au\": \"天文单位(AU)\", \"pc\": \"秒差距(pc)\"}, \"area\": {\"m2\": \"平方米(㎡)\", \"km2\": \"平方千米(k㎡)\", \"cm2\": \"平方厘米(c㎡)\", \"mm2\": \"平方毫米(mm²)\", \"ha\": \"公顷\", \"mu\": \"亩\", \"acre\": \"英亩\", \"ft2\": \"平方英尺(ft²)\", \"in2\": \"平方英寸(in²)\"}, \"vol\": {\"L\": \"升(L)\", \"mL\": \"毫升(mL)\", \"m3\": \"立方米(m³)\", \"cm3\": \"立方厘米(cm³)\", \"mm3\": \"立方毫米(mm³)\", \"gal_us\": \"美制加仑(gal)\", \"gal_uk\": \"英制加仑(gal)\", \"qt_us\": \"美制夸脱(qt)\", \"pt_us\": \"美制品脱(pt)\", \"cup_us\": \"美制杯(cup)\", \"tbsp_us\": \"汤匙(tbsp)\", \"tsp_us\": \"茶匙(tsp)\", \"floz_us\": \"美制液盎司(fl oz)\", \"bbl\": \"石油桶(bbl)\"}, \"mass\": {\"kg\": \"千克(kg)\", \"g\": \"克(g)\", \"mg\": \"毫克(mg)\", \"t\": \"吨(t)\", \"jin\": \"斤\", \"liang\": \"两\", \"lb\": \"磅(lb)\", \"oz\": \"盎司(oz)\", \"ozt\": \"金衡盎司(ozt)\", \"ct\": \"克拉(ct)\", \"stone\": \"英石(st)\", \"ton_us\": \"美吨\", \"ton_uk\": \"英吨\"}, \"speed\": {\"ms\": \"米/秒(m/s)\", \"kmh\": \"千米/时(km/h)\", \"mph\": \"英里/时(mph)\", \"fts\": \"英尺/秒(ft/s)\", \"knot\": \"节(kn)\", \"mach\": \"马赫(15℃海平面)\"}, \"accel\": {\"ms2\": \"米/秒²(m/s²)\", \"g0\": \"重力加速度(g)\", \"khms\": \"千米/时·秒(km/h/s)\", \"fts2\": \"英尺/秒²(ft/s²)\", \"gal\": \"伽(Gal)\"}, \"press\": {\"Pa\": \"帕(Pa)\", \"kPa\": \"千帕(kPa)\", \"MPa\": \"兆帕(MPa)\", \"hPa\": \"百帕(hPa)\", \"bar\": \"巴(bar)\", \"mbar\": \"毫巴(mbar)\", \"psi\": \"磅/平方英寸(psi)\", \"ksi\": \"千磅/平方英寸(ksi)\", \"mmHg\": \"毫米汞柱(mmHg)\", \"torr\": \"托(Torr)\", \"atm\": \"标准大气压(atm)\", \"inHg\": \"英寸汞柱(inHg)\", \"inH2O\": \"英寸水柱(inH₂O)\"}, \"energy\": {\"J\": \"焦耳(J)\", \"kJ\": \"千焦(kJ)\", \"cal\": \"卡(cal)\", \"kcal\": \"千卡(kcal)\", \"Wh\": \"瓦时(Wh)\", \"kWh\": \"千瓦时(kWh)\", \"eV\": \"电子伏特(eV)\", \"BTU\": \"英热单位(BTU)\", \"ftlb\": \"英尺磅(ft·lbf)\", \"therm\": \"色姆(therm)\"}, \"power\": {\"W\": \"瓦(W)\", \"kW\": \"千瓦(kW)\", \"MW\": \"兆瓦(MW)\", \"hp_m\": \"公制马力(PS)\", \"hp_i\": \"英制马力(hp)\", \"BTUh\": \"BTU/时\", \"fplbs\": \"英尺磅/秒(ft·lbf/s)\", \"RT\": \"制冷吨(RT)\"}, \"time\": {\"s\": \"秒(s)\", \"ms\": \"毫秒(ms)\", \"min\": \"分钟(min)\", \"h\": \"小时(h)\", \"day\": \"天(d)\", \"week\": \"周\", \"month\": \"月(平均)\", \"year\": \"年(平均)\"}, \"angle\": {\"rad\": \"弧度(rad)\", \"deg\": \"度(°)\", \"grad\": \"梯度(grad)\", \"turn\": \"周\", \"arcmin\": \"角分(′)\", \"arcsec\": \"角秒(″)\"}, \"data\": {\"B\": \"字节(B)\", \"KB\": \"千字节(KB)\", \"MB\": \"兆字节(MB)\", \"GB\": \"吉字节(GB)\", \"TB\": \"太字节(TB)\", \"PB\": \"拍字节(PB)\", \"bit\": \"比特(bit)\", \"Kb\": \"千比特(Kb)\", \"Mb\": \"兆比特(Mb)\", \"Gb\": \"吉比特(Gb)\"}, \"rate\": {\"bps\": \"比特/秒(bps)\", \"kbps\": \"千比特/秒(kbps)\", \"Mbps\": \"兆比特/秒(Mbps)\", \"Gbps\": \"吉比特/秒(Gbps)\", \"KBs\": \"千字节/秒(KB/s)\", \"MBs\": \"兆字节/秒(MB/s)\"}, \"flow\": {\"m3s\": \"立方米/秒(m³/s)\", \"Ls\": \"升/秒(L/s)\", \"Lm\": \"升/分(L/min)\", \"m3h\": \"立方米/时(m³/h)\", \"gpm\": \"美制加仑/分(gpm)\", \"cfm\": \"立方英尺/分(cfm)\"}, \"density\": {\"kgm3\": \"千克/立方米(kg/m³)\", \"gcm3\": \"克/立方厘米(g/cm³)\", \"glm3\": \"克/升(g/L)\", \"lbft3\": \"磅/立方英尺(lb/ft³)\"}, \"force\": {\"N\": \"牛顿(N)\", \"kN\": \"千牛(kN)\", \"dyn\": \"达因(dyn)\", \"lbf\": \"磅力(lbf)\", \"kgf\": \"千克力(kgf)\", \"ozf\": \"盎司力(ozf)\"}, \"torque\": {\"Nm\": \"牛米(N·m)\", \"kNm\": \"千牛米(kN·m)\", \"kgfm\": \"千克力米(kgf·m)\", \"lbfft\": \"磅力英尺(lbf·ft)\", \"lbfin\": \"磅力英寸(lbf·in)\"}, \"freq\": {\"Hz\": \"赫兹(Hz)\", \"kHz\": \"千赫兹(kHz)\", \"MHz\": \"兆赫兹(MHz)\", \"GHz\": \"吉赫兹(GHz)\", \"rpm\": \"转/分(rpm)\", \"rps\": \"转/秒(rps)\"}, \"visc\": {\"Pas\": \"帕秒(Pa·s)\", \"P\": \"泊(P)\", \"cP\": \"厘泊(cP)\"}, \"charge\": {\"C\": \"库仑(C)\", \"mC\": \"毫库(mC)\", \"uC\": \"微库(μC)\", \"nC\": \"纳库(nC)\", \"Ah\": \"安时(Ah)\", \"mAh\": \"毫安时(mAh)\"}, \"current\": {\"A\": \"安培(A)\", \"mA\": \"毫安(mA)\", \"uA\": \"微安(μA)\", \"kA\": \"千安(kA)\"}, \"volt\": {\"V\": \"伏特(V)\", \"mV\": \"毫伏(mV)\", \"uV\": \"微伏(μV)\", \"kV\": \"千伏(kV)\", \"MV\": \"兆伏(MV)\"}, \"res\": {\"ohm\": \"欧姆(Ω)\", \"kohm\": \"千欧(kΩ)\", \"Mohm\": \"兆欧(MΩ)\", \"mohm\": \"毫欧(mΩ)\"}, \"cond\": {\"S\": \"西门子(S)\", \"mS\": \"毫西门子(mS)\", \"uS\": \"微西门子(μS)\", \"nS\": \"纳西门子(nS)\"}, \"flux\": {\"Wb\": \"韦伯(Wb)\", \"mWb\": \"毫韦伯(mWb)\", \"Mx\": \"麦克斯韦(Mx)\"}, \"illum\": {\"lux\": \"勒克斯(lx)\", \"fc\": \"英尺烛光(fc)\", \"ph\": \"辐透(ph)\"}, \"typog\": {\"mm\": \"毫米(mm)\", \"cm\": \"厘米(cm)\", \"in\": \"英寸(in)\", \"pt\": \"磅(pt)\", \"pica\": \"派卡(pica)\", \"px\": \"像素(px,96dpi)\"}, \"conc\": {\"ppm\": \"百万分比(ppm)\", \"mgL\": \"毫克/升(mg/L)\", \"gL\": \"克/升(g/L)\", \"pct\": \"百分比(%)\", \"ppb\": \"十亿分比(ppb)\"}, \"hard\": {\"mgL\": \"毫克/升(mg/L as CaCO₃)\", \"dH\": \"德国度(°dH)\", \"fH\": \"法国度(°fH)\", \"eH\": \"英国度(°e)\"}, \"proof\": {\"abv\": \"酒精度(%vol)\", \"proof_us\": \"美制证明度(proof)\", \"proof_uk\": \"英制证明度(proof)\"}, \"linden\": {\"tex\": \"特克斯(tex)\", \"dtex\": \"分特(dtex)\", \"den\": \"旦尼尔(D)\"}, \"sugar\": {\"mmol\": \"毫摩尔/升(mmol/L)\", \"mgdl\": \"毫克/分升(mg/dL)\"}, \"chol\": {\"mmol\": \"毫摩尔/升(mmol/L)\", \"mgdl\": \"毫克/分升(mg/dL)\"}, \"creat\": {\"umol\": \"微摩尔/升(μmol/L)\", \"mgdl\": \"毫克/分升(mg/dL)\"}, \"temp\": {\"C\": \"摄氏度(°C)\", \"F\": \"华氏度(°F)\", \"K\": \"开尔文(K)\"}, \"fuel\": {\"l100km\": \"升/百公里(L/100km)\", \"mpg_us\": \"美制英里/加仑(mpg)\", \"mpg_uk\": \"英制英里/加仑(mpg)\", \"kml\": \"千米/升(km/L)\"}, \"pace\": {\"kmh\": \"千米/时(km/h)\", \"ms\": \"米/秒(m/s)\", \"minkm\": \"配速(分/公里)\", \"minmi\": \"配速(分/英里)\"}, \"db\": {\"dBm\": \"分贝毫瓦(dBm)\", \"dBW\": \"分贝瓦(dBW)\", \"W\": \"瓦(W)\", \"mW\": \"毫瓦(mW)\", \"kW\": \"千瓦(kW)\"}};var CN={\"len\": \"长度\", \"area\": \"面积\", \"vol\": \"体积容积\", \"mass\": \"质量重量\", \"temp\": \"温度\", \"speed\": \"速度\", \"accel\": \"加速度\", \"press\": \"压力\", \"energy\": \"能量热量\", \"power\": \"功率\", \"fuel\": \"油耗\", \"time\": \"时间\", \"angle\": \"角度\", \"data\": \"数据存储\", \"rate\": \"传输速率\", \"flow\": \"体积流量\", \"density\": \"密度\", \"force\": \"力\", \"torque\": \"扭矩\", \"freq\": \"频率转速\", \"visc\": \"动力黏度\", \"charge\": \"电荷量\", \"current\": \"电流\", \"volt\": \"电压\", \"res\": \"电阻\", \"cond\": \"电导\", \"flux\": \"磁通量\", \"illum\": \"照度\", \"typog\": \"排版印刷\", \"conc\": \"浓度\", \"hard\": \"水硬度\", \"proof\": \"酒精度\", \"linden\": \"线密度\", \"sugar\": \"血糖\", \"chol\": \"胆固醇\", \"creat\": \"肌酐\", \"pace\": \"配速速度\", \"db\": \"分贝功率\"};var FP={len:from_len,area:from_area,vol:from_vol,mass:from_mass,temp:from_temp,speed:from_speed,accel:from_accel,press:from_press,energy:from_energy,power:from_power,fuel:from_fuel,time:from_time,angle:from_angle,data:from_data,rate:from_rate,flow:from_flow,density:from_density,force:from_force,torque:from_torque,freq:from_freq,visc:from_visc,charge:from_charge,current:from_current,volt:from_volt,res:from_res,cond:from_cond,flux:from_flux,illum:from_illum,typog:from_typog,conc:from_conc,hard:from_hard,proof:from_proof,linden:from_linden,sugar:from_sugar,chol:from_chol,creat:from_creat,pace:from_pace,db:from_db};var TP={len:to_len,area:to_area,vol:to_vol,mass:to_mass,temp:to_temp,speed:to_speed,accel:to_accel,press:to_press,energy:to_energy,power:to_power,fuel:to_fuel,time:to_time,angle:to_angle,data:to_data,rate:to_rate,flow:to_flow,density:to_density,force:to_force,torque:to_torque,freq:to_freq,visc:to_visc,charge:to_charge,current:to_current,volt:to_volt,res:to_res,cond:to_cond,flux:to_flux,illum:to_illum,typog:to_typog,conc:to_conc,hard:to_hard,proof:to_proof,linden:to_linden,sugar:to_sugar,chol:to_chol,creat:to_creat,pace:to_pace,db:to_db};function f(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';if(Math.abs(x)>=1e15||Math.abs(x)<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(v===''||!isFinite(x))return {ok:false,msg:'请输入有效数值'};var fu=FP[cat],tu=TP[cat];if(fu===undefined||tu===undefined)return {ok:false,msg:'请选择类别与单位'};var r,note='';if(cat==='temp'){var c=fu==='C'?x:fu==='F'?(x-32)*5/9:x-273.15;if(c<-273.150001)return {ok:false,msg:'温度不能低于绝对零度（−273.15℃）'};r=tu==='C'?c:tu==='F'?c*9/5+32:c+273.15;}else if(cat==='fuel'){if(x<0)return {ok:false,msg:'油耗不能为负'};var b=fu==='l100km'?x:fu==='mpg_us'?235.2145833/x:fu==='mpg_uk'?282.4809363/x:100/x;r=tu==='l100km'?b:tu==='mpg_us'?235.2145833/b:tu==='mpg_uk'?282.4809363/b:100/b;note='油耗为倒数关系，0 油耗显示为超出范围';}else if(cat==='pace'){if(x<=0)return {ok:false,msg:'配速与速度须大于 0'};var sp=fu==='kmh'?x:fu==='ms'?x*3.6:fu==='minkm'?60/x:96.56064/x;r=tu==='kmh'?sp:tu==='ms'?sp/3.6:tu==='minkm'?60/sp:96.56064/sp;}else if(cat==='db'){var w=fu==='dBm'?Math.pow(10,(x-30)/10):fu==='dBW'?Math.pow(10,x/10):fu==='W'?x:fu==='mW'?x/1000:x*1000;if((tu==='dBm'||tu==='dBW')&&!(w>0))return {ok:false,msg:'功率须大于 0 才能换算为分贝'};r=tu==='dBm'?10*Math.log10(w)+30:tu==='dBW'?10*Math.log10(w):tu==='W'?w:tu==='mW'?w*1000:w/1000;note='分贝为对数关系';}else{var tb=K[cat];if(!tb||tb[fu]===undefined||tb[tu]===undefined)return {ok:false,msg:'请选择单位'};r=x*tb[fu]/tb[tu];}var lb=LB[cat];return {ok:true,html:'<div class=\"big\">'+f(x)+' '+lb[fu]+' = '+f(r)+' '+lb[tu]+'</div><div class=\"row\">单位换算 · '+CN[cat]+(note?' · '+note:'')+'</div>'};",
   test:{inputs:{cat:"len",v:1,from_len:"km",to_len:"m"}, expect:"1000"}},
 );
 /* ===== WAVE-1D 日常生活 ===== */
@@ -11957,6 +11957,542 @@ TOOLS.push(
  {"id":"hxatomic2","cat":"hx","icon":"⚛️","name":"电子排布（1~36 号元素）","desc":"由原子序数给出分层排布、亚层排布式与价电子数","formula":"按构造原理填充顺序 1s 2s 2p 3s 3p 4s 3d 4p…（n+0.7l 规则近似）；含 Cr(24)、Cu(29) 的半满/全满特例修正；价电子按最外层（含未满 d 层过渡金属按教材口径给出最外层电子）口径注记。区别于已有同位素/电负性类工具，本工具专做电子排布","inputs":[{"id":"z","label":"原子序数 Z","def":"26"}],"run":"var Z=Number(z);if(!(Z>=1&&Z<=36)||Math.floor(Z)!==Z)return {ok:false,msg:'Z 须为 1~36 的整数（本表节选至 Kr）'};var ORDER=[['1s',2],['2s',2],['2p',6],['3s',2],['3p',6],['4s',2],['3d',10],['4p',6]];var rem=Z,conf=[],shells=[0,0,0,0];for(var i=0;i<ORDER.length&&rem>0;i++){var nm=ORDER[i][0],cap=ORDER[i][1];var take=Math.min(cap,rem);if(Z===24&&nm==='4s')take=1;if(Z===24&&nm==='3d')take=5;if(Z===29&&nm==='4s')take=1;if(Z===29&&nm==='3d')take=10;rem-=take;conf.push(nm+take);shells[Number(nm[0])-1]+=take;}function sup(n){return '<sup>'+n+'</sup>';}var cs=conf.map(function(c){return c.replace(/(\\d+)$/,function(m){return sup(m);});}).join(' ');var outer=shells[3]>0?shells[3]:shells[2];return {ok:true,html:'<div class=\\\"big\\\">'+Z+' 号元素：'+cs+'</div><div class=\\\"row\\\">分层排布 K/L/M/N = '+shells.join(' / ')+'；最外层电子 '+outer+' 个'+((Z===24||Z===29)?'（半满/全满稳定特例，已按特例修正）':'')+'</div>'};","test":{"inputs":{"z":26},"expect":"3d<sup>6</sup>"}},
  {"id":"hxdecay2","cat":"hx","icon":"☢️","name":"同位素年代反推（通用半衰期）","desc":"任意同位素：由残留比例反推年代，或由时间求残留","formula":"N/N₀ = (1/2)^(t/t½)；反推 t = t½·ln(N₀/N)/ln2。区别于 hxc14（固定 ¹⁴C、t½=5730 年）与 hxdecay（仅求 λ、τ），本工具适用于任意同位素与任意时间单位（单位自洽即可）","inputs":[{"id":"mode","label":"模式","def":"age","type":"select","options":[{"v":"age","t":"由残留比例求年代"},{"v":"rem","t":"由时间求残留比例"}]},{"id":"hl","label":"半衰期 t½","def":"5730"},{"id":"frac","label":"残留比例 N/N₀","def":"25","unit":"%","when":"mode=age"},{"id":"tt","label":"经历时间 t","def":"11460","when":"mode=rem"}],"run":"function F(x){if(x===0)return '0';if(!isFinite(x))return '超出表示范围';var ax=Math.abs(x);if(ax>=1e6||ax<1e-3)return x.toExponential(3);var s=x.toFixed(4);if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\\.$/,'');return s;}var HL=Number(hl);if(!(HL>0)||HL>1e15)return {ok:false,msg:'半衰期须大于 0'};if(String(mode)==='rem'){var t=Number(tt);if(!(t>=0))return {ok:false,msg:'时间不能为负'};var f2=Math.pow(0.5,t/HL)*100;return {ok:true,html:'<div class=\\\"big\\\">残留 '+F(f2)+'%</div><div class=\\\"row\\\">经历了 '+F(t/HL)+' 个半衰期</div>'};}var fr=Number(frac);if(!(fr>0&&fr<=100))return {ok:false,msg:'残留比例须在 (0,100] %'};if(fr===100)return {ok:true,html:'<div class=\\\"big\\\">年代 t = 0</div><div class=\\\"row\\\">残留 100%，未发生衰变</div>'};var age=HL*Math.log(100/fr)/Math.log(2);return {ok:true,html:'<div class=\\\"big\\\">年代 t ≈ '+F(age)+'</div><div class=\\\"row\\\">相当于 '+F(Math.log(100/fr)/Math.log(2))+' 个半衰期（时间单位与半衰期一致）</div>'};","test":{"inputs":{"mode":"age","hl":5730,"frac":25},"expect":"11460"}},
  {"id":"hxmassspec","cat":"hx","icon":"🎯","name":"同位素丰度反推（双同位素）","desc":"由平均原子量与两同位素质量反推各自丰度","formula":"设轻同位素质子量 m₁、重同位素 m₂、平均原子量 M̄：丰度 x₁ = (m₂ − M̄)/(m₂ − m₁)，x₂ = 1 − x₁。区别于 hxisotope（已知丰度求平均量），本工具反推丰度（如 Cl：34.96885/36.96590、M̄=35.453 → 约 75.8%/24.2%）","inputs":[{"id":"m1","label":"轻同位素质量 m₁","def":"34.96885"},{"id":"m2","label":"重同位素质量 m₂","def":"36.96590"},{"id":"avg","label":"平均原子量","def":"35.453"}],"run":"function F(x){if(x===0)return '0';if(!isFinite(x))return '超出表示范围';var ax=Math.abs(x);if(ax>=1e6||ax<1e-3)return x.toExponential(3);var s=x.toFixed(4);if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\\.$/,'');return s;}var M1=Number(m1),M2=Number(m2),AV=Number(avg);if(!(M1>0)||!(M2>M1))return {ok:false,msg:'须有 m₂ > m₁ > 0'};if(!(AV>=M1&&AV<=M2))return {ok:false,msg:'平均原子量须落在两同位素质量之间'};var x1=(M2-AV)/(M2-M1);return {ok:true,html:'<div class=\\\"big\\\">轻同位素丰度 '+(x1*100).toFixed(2)+'% ，重同位素 '+((1-x1)*100).toFixed(2)+'%</div><div class=\\\"row\\\">验算平均量：'+(x1*M1+(1-x1)*M2).toFixed(4)+'（输入 '+AV+'）</div>'};","test":{"inputs":{"m1":34.96885,"m2":36.9659,"avg":35.453},"expect":"75.76"}}
+);
+/* ===== R3-SX3 数学第三轮 25 工具（+1000 波次） ===== */
+TOOLS.push(
+ {id:"sxgauss", cat:"sx", icon:"🧮", name:"线性方程组求解（高斯消元）", desc:"增广矩阵文本输入，行阶梯化判定唯一解/无解/无穷多解并回代求解（n≤6）",
+  formula:"增广矩阵每行 n 个系数 + 1 个常数项；高斯-约旦消元（部分主元）化行最简形：rank(A)<rank([A|b]) 无解，rank<n 无穷多解，否则唯一解。与 sxlinear1/2（固定 1/2 元）分工：本工具任意 n 元文本版",
+  inputs:[
+   {id:"mat", label:"增广矩阵（每行一行，逗号分隔）", type:"text", def:"2,1,5\n1,3,10", hint:"如 2x+y=5、x+3y=10 输入两行 2,1,5 与 1,3,10"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function PM(s){var rows=String(s).split(/\\n/).map(function(r){return r.trim();}).filter(function(r){return r.length>0;});if(rows.length===1&&rows[0].indexOf(';')>=0)rows=rows[0].split(';');return rows.map(function(r){return r.split(/[,\\s，]+/).filter(function(v){return v.length>0;}).map(Number);});}var A=PM(mat);var n=A.length;if(n<1||n>6)return {ok:false,msg:'方程个数须在 1~6'};var i,j,k;for(i=0;i<n;i++){if(A[i].length!==n+1)return {ok:false,msg:'每行须恰为 '+(n+1)+' 个数（系数+常数）'};for(j=0;j<=n;j++)if(!isFinite(A[i][j]))return {ok:false,msg:'矩阵元素须为数值'};}var M=A.map(function(r){return r.slice();});var piv=[],row=0;for(var col=0;col<n&&row<n;col++){var best=row;for(i=row+1;i<n;i++)if(Math.abs(M[i][col])>Math.abs(M[best][col]))best=i;if(Math.abs(M[best][col])<1e-12)continue;var tmp=M[row];M[row]=M[best];M[best]=tmp;var pv=M[row][col];for(j=0;j<=n;j++)M[row][j]/=pv;for(i=0;i<n;i++){if(i!==row&&M[i][col]!==0){var f=M[i][col];for(j=0;j<=n;j++)M[i][j]-=f*M[row][j];}}piv.push(col);row++;}var rankA=piv.length,rankAug=rankA;for(i=0;i<n;i++){var allz=true;for(j=0;j<n;j++)if(Math.abs(M[i][j])>1e-9)allz=false;if(allz&&Math.abs(M[i][n])>1e-9)rankAug=rankA+1;}if(rankAug>rankA)return {ok:true,html:'<div class=\\\"big\\\">无解</div><div class=\\\"row\\\">rank(A) = '+rankA+' < rank([A|b]) = '+rankAug+'，方程组不相容</div>'};if(rankA<n)return {ok:true,html:'<div class=\\\"big\\\">无穷多解</div><div class=\\\"row\\\">rank = '+rankA+' < 未知数 '+n+'，自由未知量 '+(n-rankA)+' 个；特解（自由量取 0）：'+piv.map(function(c,idx){return 'x'+(c+1)+' = '+F(M[idx][n]);}).join('，')+'</div>'};var sol=[];for(i=0;i<n;i++)sol[piv[i]]=M[i][n];var parts=[];for(i=0;i<n;i++)parts.push('x'+(i+1)+' = '+F(sol[i]));return {ok:true,html:'<div class=\\\"big\\\">'+parts.join('，')+'</div><div class=\\\"row\\\">唯一解（rank = '+rankA+' = 未知数个数）</div>'};",
+  test:{inputs:{mat:"2,1,5\n1,3,10"}, expect:"x1 = 1，x2 = 3"}},
+ {id:"sxrank", cat:"sx", icon:"📐", name:"矩阵秩与行列式（通用文本版）", desc:"任意 m×n 文本矩阵的秩；方阵同时给出行列式（LU/高斯消元）",
+  formula:"高斯消元（部分主元，相对容差）数非零主元得秩；方阵 det = 主元积 × 行交换符号。与 sxmatdet（固定阶数）分工：本工具通用尺寸文本版，尺寸上限 8×8",
+  inputs:[
+   {id:"mat", label:"矩阵（每行一行，逗号分隔）", type:"text", def:"1,2\n3,4", hint:"每行元素个数须一致"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function PM(s){var rows=String(s).split(/\\n/).map(function(r){return r.trim();}).filter(function(r){return r.length>0;});if(rows.length===1&&rows[0].indexOf(';')>=0)rows=rows[0].split(';');return rows.map(function(r){return r.split(/[,\\s，]+/).filter(function(v){return v.length>0;}).map(Number);});}var A=PM(mat);var m=A.length;if(m<1||m>8)return {ok:false,msg:'行数须在 1~8'};var n=A[0].length;if(n<1||n>8)return {ok:false,msg:'列数须在 1~8'};var i,j;for(i=0;i<m;i++){if(A[i].length!==n)return {ok:false,msg:'各行元素个数须一致'};for(j=0;j<n;j++)if(!isFinite(A[i][j]))return {ok:false,msg:'矩阵元素须为数值'};}var mx=0;for(i=0;i<m;i++)for(j=0;j<n;j++)mx=Math.max(mx,Math.abs(A[i][j]));var tol=1e-10*Math.max(1,mx);var M=A.map(function(r){return r.slice();});var rank=0,detProd=1,sign=1,row=0;for(var col=0;col<n&&row<m;col++){var best=row;for(i=row+1;i<m;i++)if(Math.abs(M[i][col])>Math.abs(M[best][col]))best=i;if(Math.abs(M[best][col])<=tol)continue;if(best!==row){var t=M[row];M[row]=M[best];M[best]=t;sign=-sign;}detProd*=M[row][col];var pv=M[row][col];for(i=row+1;i<m;i++){var f=M[i][col]/pv;for(j=col;j<n;j++)M[i][j]-=f*M[row][j];}rank++;row++;}var sq=(m===n);var det=sq?(rank<n?0:sign*detProd):null;return {ok:true,html:'<div class=\\\"big\\\">秩 = '+rank+(sq?'，det = '+F(det):'')+'</div><div class=\\\"row\\\">矩阵 '+m+'×'+n+(sq?(Math.abs(det)<=tol?'（奇异矩阵，det = 0）':'（非奇异）'):'（非方阵，无行列式）')+'</div>'};",
+  test:{inputs:{mat:"1,2\n3,4"}, expect:"det = -2"}},
+ {id:"sxmatrixinv2", cat:"sx", icon:"🔄", name:"矩阵求逆进阶（n 阶高斯-约旦）", desc:"n 阶方阵（2≤n≤6）高斯-约旦消元求逆，奇异矩阵明确拒绝",
+  formula:"[A|I] 行变换化为 [I|A⁻¹]（部分主元）；主元≈0 即奇异无逆。与 sxmatinv（2×2 伴随式）、sxmat3（3×3）分工：本工具 n 阶通用文本版",
+  inputs:[
+   {id:"mat", label:"方阵（每行一行，逗号分隔）", type:"text", def:"4,7\n2,6", hint:"2~6 阶方阵"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function PM(s){var rows=String(s).split(/\\n/).map(function(r){return r.trim();}).filter(function(r){return r.length>0;});if(rows.length===1&&rows[0].indexOf(';')>=0)rows=rows[0].split(';');return rows.map(function(r){return r.split(/[,\\s，]+/).filter(function(v){return v.length>0;}).map(Number);});}var A=PM(mat);var n=A.length;if(n<2||n>6)return {ok:false,msg:'阶数须在 2~6'};var i,j,k;for(i=0;i<n;i++){if(A[i].length!==n)return {ok:false,msg:'须为方阵：每行 '+n+' 个数'};for(j=0;j<n;j++)if(!isFinite(A[i][j]))return {ok:false,msg:'矩阵元素须为数值'};}var M=A.map(function(r,i2){var row2=r.slice();for(j=0;j<n;j++)row2.push(i2===j?1:0);return row2;});for(var col=0;col<n;col++){var best=col;for(i=col+1;i<n;i++)if(Math.abs(M[i][col])>Math.abs(M[best][col]))best=i;if(Math.abs(M[best][col])<1e-12)return {ok:false,msg:'矩阵奇异（行列式为 0），不可逆'};var t=M[col];M[col]=M[best];M[best]=t;var pv=M[col][col];for(j=0;j<2*n;j++)M[col][j]/=pv;for(i=0;i<n;i++){if(i!==col&&M[i][col]!==0){var f=M[i][col];for(j=0;j<2*n;j++)M[i][j]-=f*M[col][j];}}}var rowsOut=[];for(i=0;i<n;i++){var cells=[];for(j=0;j<n;j++)cells.push(F(M[i][n+j]));rowsOut.push('['+cells.join(', ')+']');}return {ok:true,html:'<div class=\\\"big\\\">A⁻¹ = '+rowsOut.join('; ')+'</div><div class=\\\"row\\\">'+n+' 阶逆矩阵（高斯-约旦消元）</div>'};",
+  test:{inputs:{mat:"4,7\n2,6"}, expect:"0.6"}},
+ {id:"sxpolyroot", cat:"sx", icon:"🌿", name:"多项式求根进阶（全根）", desc:"2~6 次多项式全部根（含复根、重根），Durand-Kerner 同步迭代",
+  formula:"Durand-Kerner 法：z_k ← z_k − P(z_k) / Π_{j≠k}(z_k − z_j)，初值取 Cauchy 界圆上 (0.4+0.9i)^k；迭代上限 500，收敛判据修正量 <1e-10。与 sxquad（二次公式）、sxnewton（单实根）分工：本工具一次给全根",
+  inputs:[
+   {id:"coef", label:"系数（高次→常数，逗号分隔）", type:"text", def:"1,-6,11,-6", hint:"如 x³−6x²+11x−6 输入 1,-6,11,-6"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}var parts=String(coef).split(/[,\\s，]+/).filter(function(v){return v.length>0;});var cf=parts.map(Number);var i,j;for(i=0;i<cf.length;i++)if(!isFinite(cf[i]))return {ok:false,msg:'系数须为数值'};while(cf.length>0&&cf[0]===0)cf.shift();var deg=cf.length-1;if(deg<2||deg>6)return {ok:false,msg:'次数须在 2~6（首项系数非 0）'};var a=[];for(i=0;i<=deg;i++)a.push(cf[i]/cf[0]);var bound=1;for(i=1;i<=deg;i++)bound=Math.max(bound,1+Math.abs(a[i]));var zr=[],zi=[];var pr=1,pi=0;for(i=0;i<deg;i++){var tr=pr*0.4-pi*0.9,ti=pr*0.9+pi*0.4;pr=tr;pi=ti;zr.push(bound*pr);zi.push(bound*pi);}function ev(re,im){var rr=a[0],ri=0;for(var k2=1;k2<=deg;k2++){var tr2=rr*re-ri*im+a[k2],ti2=rr*im+ri*re;rr=tr2;ri=ti2;}return [rr,ri];}var conv=false;for(var it=0;it<500;it++){var maxc=0;var nr=zr.slice(),ni=zi.slice();for(i=0;i<deg;i++){var pv=ev(zr[i],zi[i]);var dr=1,di=0;for(j=0;j<deg;j++){if(j===i)continue;var ddr=zr[i]-zr[j],ddi=zi[i]-zi[j];var tr3=dr*ddr-di*ddi,ti3=dr*ddi+di*ddr;dr=tr3;di=ti3;}var den=dr*dr+di*di;if(den===0)return {ok:false,msg:'迭代中出现重合根，无法继续（可微调系数重试）'};var cr=(pv[0]*dr+pv[1]*di)/den,ci=(pv[1]*dr-pv[0]*di)/den;nr[i]=zr[i]-cr;ni[i]=zi[i]-ci;maxc=Math.max(maxc,Math.abs(cr)+Math.abs(ci));}zr=nr;zi=ni;if(maxc<1e-10){conv=true;break;}}if(!conv)return {ok:false,msg:'500 次迭代未收敛（可能存在高重根），已拒绝输出近似值'};var roots=[];for(i=0;i<deg;i++)roots.push([zr[i],zi[i]]);roots.sort(function(p,q){return (p[0]-q[0])||(p[1]-q[1]);});var out=[];for(i=0;i<deg;i++){var re=roots[i][0],im=roots[i][1];if(Math.abs(re)<1e-9)re=0;if(Math.abs(im)<1e-9)im=0;if(Math.abs(im)<1e-7)out.push(F(re));else out.push(F(re)+(im>=0?' + ':' - ')+F(Math.abs(im))+'i');}return {ok:true,html:'<div class=\\\"big\\\">根: '+out.join(', ')+'</div><div class=\\\"row\\\">'+deg+' 次多项式共 '+deg+' 个根（计重数），Durand-Kerner 迭代 '+(it+1)+' 步收敛</div>'};",
+  test:{inputs:{coef:"1,-6,11,-6"}, expect:"根: 1, 2, 3"}},
+ {id:"sxlagrange", cat:"sx", icon:"📈", name:"拉格朗日/牛顿插值", desc:"点列文本→插值多项式系数与指定点估值（拉格朗日基 + 牛顿差商双口径核对）",
+  formula:"P(x) = Σ yᵢ·Π_{j≠i}(x − xⱼ)/(xᵢ − xⱼ)；差商表给出牛顿形式，二者数值一致。与 sxinterp（两点线性插值）分工：本工具任意 n 点高次插值，点数上限 10",
+  inputs:[
+   {id:"pts", label:"数据点（x,y 分号分隔）", type:"text", def:"0,1;1,3;2,9", hint:"如 0,1;1,3;2,9，x 互不相同"},
+   {id:"xe", label:"估值点 x", def:"1.5"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}var rows=String(pts).split(/[;；]+/).filter(function(v){return v.trim().length>0;});if(rows.length<2)return {ok:false,msg:'至少需要 2 个数据点'};if(rows.length>10)return {ok:false,msg:'数据点上限 10'};var xs=[],ys=[],i,j,k;for(i=0;i<rows.length;i++){var pr=rows[i].split(/[,\\s，]+/).filter(function(v){return v.length>0;});if(pr.length!==2)return {ok:false,msg:'每个点须为 x,y 两个数值'};var px=Number(pr[0]),py=Number(pr[1]);if(!isFinite(px)||!isFinite(py))return {ok:false,msg:'点列须为数值'};xs.push(px);ys.push(py);}for(i=0;i<xs.length;i++)for(j=i+1;j<xs.length;j++)if(xs[i]===xs[j])return {ok:false,msg:'x 值不能重复'};var xv=Number(xe);if(!isFinite(xv))return {ok:false,msg:'估值点须为数值'};var n=xs.length;var val=0;for(i=0;i<n;i++){var term=ys[i];for(j=0;j<n;j++){if(j!==i)term*=(xv-xs[j])/(xs[i]-xs[j]);}val+=term;}var coef=new Array(n).fill(0);for(i=0;i<n;i++){var basis=[1];for(j=0;j<n;j++){if(j===i)continue;var nb=new Array(basis.length+1).fill(0);for(k=0;k<basis.length;k++){nb[k]+=basis[k]*(-xs[j]);nb[k+1]+=basis[k];}basis=nb;}var den=1;for(j=0;j<n;j++){if(j!==i)den*=(xs[i]-xs[j]);}var w=ys[i]/den;for(k=0;k<basis.length;k++)coef[k]+=basis[k]*w;}var terms=[];for(k=n-1;k>=0;k--){if(Math.abs(coef[k])<1e-12)continue;terms.push(F(coef[k])+(k===0?'':(k===1?'x':'x^'+k)));}var poly=terms.length?terms.join(' + ').split('+ -').join('- '):'0';return {ok:true,html:'<div class=\\\"big\\\">P('+F(xv)+') = '+F(val)+'</div><div class=\\\"row\\\">插值多项式 P(x) = '+poly+'</div>'};",
+  test:{inputs:{pts:"0,1;1,3;2,9", xe:1.5}, expect:"5.5"}},
+ {id:"sxspline", cat:"sx", icon:"〰️", name:"三次样条插值（自然边界）", desc:"点列文本→自然三次样条，指定点估值（二阶导数两端为 0）",
+  formula:"每段 Sᵢ(x) 为三次多项式，节点处二阶导连续；自然边界 M₀ = Mₙ = 0，内部 M 由三对角方程（Thomas 消元）解出。与 sxlagrange（整体多项式）分工：样条分段、更抗 Runge 振荡",
+  inputs:[
+   {id:"pts", label:"数据点（x,y 分号分隔，x 递增）", type:"text", def:"0,0;1,1;2,8;3,27", hint:"至少 3 点，x 严格递增"},
+   {id:"xe", label:"估值点 x（须在节点区间内）", def:"1.5"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}var rows=String(pts).split(/[;；]+/).filter(function(v){return v.trim().length>0;});if(rows.length<3)return {ok:false,msg:'至少需要 3 个数据点'};if(rows.length>20)return {ok:false,msg:'数据点上限 20'};var xs=[],ys=[],i;for(i=0;i<rows.length;i++){var pr=rows[i].split(/[,\\s，]+/).filter(function(v){return v.length>0;});if(pr.length!==2)return {ok:false,msg:'每个点须为 x,y 两个数值'};var px=Number(pr[0]),py=Number(pr[1]);if(!isFinite(px)||!isFinite(py))return {ok:false,msg:'点列须为数值'};xs.push(px);ys.push(py);}var n=xs.length-1;for(i=1;i<=n;i++)if(!(xs[i]>xs[i-1]))return {ok:false,msg:'x 须严格递增'};var xv=Number(xe);if(!isFinite(xv))return {ok:false,msg:'估值点须为数值'};if(xv<xs[0]||xv>xs[n])return {ok:false,msg:'估值点须在节点区间 ['+F(xs[0])+', '+F(xs[n])+'] 内（样条不外推）'};var h=[];for(i=0;i<n;i++)h.push(xs[i+1]-xs[i]);var M=new Array(n+1).fill(0);if(n>1){var m=n-1;var A=[],B=[],C=[],D=[];for(i=0;i<m;i++){var ii=i+1;A.push(h[ii-1]);B.push(2*(h[ii-1]+h[ii]));C.push(h[ii]);D.push(6*((ys[ii+1]-ys[ii])/h[ii]-(ys[ii]-ys[ii-1])/h[ii-1]));}for(i=1;i<m;i++){var w=A[i]/B[i-1];B[i]-=w*C[i-1];D[i]-=w*D[i-1];}M[n-1]=D[m-1]/B[m-1];for(i=m-2;i>=0;i--)M[i+1]=(D[i]-C[i]*M[i+2])/B[i];}var seg=n-1;for(i=0;i<n;i++){if(xv<=xs[i+1]){seg=i;break;}}var hh=h[seg],A2=(xs[seg+1]-xv)/hh,B2=(xv-xs[seg])/hh;var val=A2*ys[seg]+B2*ys[seg+1]+((A2*A2*A2-A2)*M[seg]+(B2*B2*B2-B2)*M[seg+1])*hh*hh/6;return {ok:true,html:'<div class=\\\"big\\\">S('+F(xv)+') = '+F(val)+'</div><div class=\\\"row\\\">所在段 ['+F(xs[seg])+', '+F(xs[seg+1])+']，自然样条（端点二阶导 = 0）</div>'};",
+  test:{inputs:{pts:"0,0;1,1;2,8;3,27", xe:1.5}, expect:"3.15"}},
+ {id:"sxfourier", cat:"sx", icon:"🌊", name:"离散傅里叶变换 DFT", desc:"实序列文本→复频谱与幅值谱，标出主导频率分量",
+  formula:"X[k] = Σₙ x[n]·e^(−2πikn/N)，幅值 |X[k]|；N 上限 64（O(N²) 直接求和）。主导分量在 1≤k≤N/2 中取幅值最大者",
+  inputs:[
+   {id:"seq", label:"实序列（逗号分隔）", type:"text", def:"1,0,-1,0", hint:"2~64 个数"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}var a=String(seq).split(/[,;\\s，；]+/).filter(function(v){return v.length>0;}).map(Number);var N=a.length;if(N<2||N>64)return {ok:false,msg:'序列长度须在 2~64'};var k,n2;for(n2=0;n2<N;n2++)if(!isFinite(a[n2]))return {ok:false,msg:'序列须为数值'};var mags=[];for(k=0;k<N;k++){var re=0,im=0;for(n2=0;n2<N;n2++){var ang=-2*Math.PI*k*n2/N;re+=a[n2]*Math.cos(ang);im+=a[n2]*Math.sin(ang);}var mg=Math.sqrt(re*re+im*im);mags.push(mg<1e-10?0:mg);}var dom=1,dm=-1;for(k=1;k<=Math.floor(N/2);k++){if(mags[k]>dm){dm=mags[k];dom=k;}}return {ok:true,html:'<div class=\\\"big\\\">幅值谱: '+mags.map(F).join(', ')+'</div><div class=\\\"row\\\">主导分量 k = '+dom+'（幅值 '+F(dm)+'），直流分量 X[0] = '+F(mags[0])+'</div>'};",
+  test:{inputs:{seq:"1,0,-1,0"}, expect:"0, 2, 0, 2"}},
+ {id:"sxconv", cat:"sx", icon:"🔀", name:"离散卷积计算", desc:"两序列线性卷积（多项式乘积/信号卷积），输出全长序列",
+  formula:"(a∗b)[n] = Σ_k a[k]·b[n − k]，输出长度 = len(a) + len(b) − 1；每序列上限 50",
+  inputs:[
+   {id:"a", label:"序列 a（逗号分隔）", type:"text", def:"1,2,3"},
+   {id:"b", label:"序列 b（逗号分隔）", type:"text", def:"1,1"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function P(s){return String(s).split(/[,;\\s，；]+/).filter(function(v){return v.length>0;}).map(Number);}var A=P(a),B=P(b);if(A.length<1||A.length>50||B.length<1||B.length>50)return {ok:false,msg:'每序列长度须在 1~50'};var i,j;for(i=0;i<A.length;i++)if(!isFinite(A[i]))return {ok:false,msg:'序列 a 须为数值'};for(j=0;j<B.length;j++)if(!isFinite(B[j]))return {ok:false,msg:'序列 b 须为数值'};var out=new Array(A.length+B.length-1).fill(0);for(i=0;i<A.length;i++)for(j=0;j<B.length;j++)out[i+j]+=A[i]*B[j];return {ok:true,html:'<div class=\\\"big\\\">a∗b = '+out.map(F).join(', ')+'</div><div class=\\\"row\\\">输出长度 '+out.length+' = '+A.length+' + '+B.length+' − 1</div>'};",
+  test:{inputs:{a:"1,2,3", b:"1,1"}, expect:"1, 3, 5, 3"}},
+ {id:"sxcorr", cat:"sx", icon:"🔗", name:"相关系数进阶（Pearson/Spearman）", desc:"双变量相关：Pearson 线性相关与 Spearman 秩相关（并列秩取平均）双分支",
+  formula:"Pearson r = Sxy/√(Sxx·Syy)；Spearman 对秩次作 Pearson（并列取平均秩）。与 sxlinfit（回归直线）分工：本工具专做相关强度与秩相关。每列 3~500 个数且等长",
+  inputs:[
+   {id:"mode", label:"相关类型", type:"select", def:"pearson", options:[{v:"pearson",t:"Pearson 线性相关"},{v:"spearman",t:"Spearman 秩相关"}]},
+   {id:"xs", label:"变量 X（逗号分隔）", type:"text", def:"1,2,3,4,5"},
+   {id:"ys", label:"变量 Y（逗号分隔）", type:"text", def:"2,4,5,4,5"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function P(s){return String(s).split(/[,;\\s，；]+/).filter(function(v){return v.length>0;}).map(Number);}var X=P(xs),Y=P(ys);if(X.length!==Y.length)return {ok:false,msg:'X 与 Y 个数须相等'};var n=X.length;if(n<3||n>500)return {ok:false,msg:'每列个数须在 3~500'};var i;for(i=0;i<n;i++)if(!isFinite(X[i])||!isFinite(Y[i]))return {ok:false,msg:'数据须为数值'};function rank(v){var idx=v.map(function(val,ix){return [val,ix];}).sort(function(p,q){return p[0]-q[0];});var r=new Array(v.length);var i2=0;while(i2<idx.length){var j2=i2;while(j2+1<idx.length&&idx[j2+1][0]===idx[i2][0])j2++;var avg=(i2+j2)/2+1;for(var k2=i2;k2<=j2;k2++)r[idx[k2][1]]=avg;i2=j2+1;}return r;}function pearson(U,V){var mu=0,mv=0;for(var i3=0;i3<U.length;i3++){mu+=U[i3];mv+=V[i3];}mu/=U.length;mv/=U.length;var sxy=0,sxx=0,syy=0;for(i3=0;i3<U.length;i3++){var du=U[i3]-mu,dv=V[i3]-mv;sxy+=du*dv;sxx+=du*du;syy+=dv*dv;}if(sxx===0||syy===0)return null;return sxy/Math.sqrt(sxx*syy);}var sp=(String(mode)==='spearman');var r=sp?pearson(rank(X),rank(Y)):pearson(X,Y);if(r===null)return {ok:false,msg:'某列为常数（方差为 0），相关系数无定义'};var deg=Math.abs(r)>=0.8?'强':(Math.abs(r)>=0.5?'中等':(Math.abs(r)>=0.3?'弱':'很弱'));var dir=r>0?'正相关':(r<0?'负相关':'零相关');return {ok:true,html:'<div class=\\\"big\\\">'+(sp?'ρ':'r')+' = '+F(r)+'</div><div class=\\\"row\\\">'+(sp?'Spearman 秩相关':'Pearson 线性相关')+'：'+deg+dir+'（|r| 参考：≥0.8 强、≥0.5 中等、≥0.3 弱）</div>'};",
+  test:{inputs:{mode:"pearson", xs:"1,2,3,4,5", ys:"2,4,5,4,5"}, expect:"0.7746"}}
+);
+TOOLS.push(
+ {id:"sxanova", cat:"sx", icon:"🧪", name:"单因素方差分析 ANOVA", desc:"分组数据文本→组间/组内平方和、F 统计量与 p 值",
+  formula:"F = [SSB/(k−1)] / [SSW/(N−k)]；p 由 F 分布经不完全贝塔函数 I 计算。分组以分号分隔、组内逗号分隔，2~8 组、每组≥2 个",
+  inputs:[
+   {id:"groups", label:"分组数据（组间分号，组内逗号）", type:"text", def:"1,2,3;4,5,6;7,8,9", hint:"如 1,2,3;4,5,6;7,8,9"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function LG(z){var c=[0.9999999999998099,676.5203681218851,-1259.1392167224028,771.3234287776531,-176.6150291621406,12.507343278686905,-0.1385710952657201,9.984369578019572e-6,1.5056327351493116e-7];if(z<0.5)return Math.log(Math.PI)-Math.log(Math.sin(Math.PI*z))-LG(1-z);z-=1;var x=c[0];for(var i=1;i<9;i++)x+=c[i]/(z+i);var t=z+7.5;return 0.9189385332046727+(z+0.5)*Math.log(t)-t+Math.log(x);}function BC(a,b,x){var c=1,d=1-(a+b)*x/(a+1);if(Math.abs(d)<1e-300)d=1e-300;d=1/d;var h=d;for(var m=1;m<=200;m++){var m2=2*m;var aa=m*(b-m)*x/((a-1+m2)*(a+m2));d=1+aa*d;if(Math.abs(d)<1e-300)d=1e-300;c=1+aa/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;h*=d*c;aa=-(a+m)*(a+b+m)*x/((a+m2)*(a+1+m2));d=1+aa*d;if(Math.abs(d)<1e-300)d=1e-300;c=1+aa/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;var del=d*c;h*=del;if(Math.abs(del-1)<3e-14)break;}return h;}function IB(x,a,b){if(x<=0)return 0;if(x>=1)return 1;var bt=Math.exp(LG(a+b)-LG(a)-LG(b)+a*Math.log(x)+b*Math.log(1-x));if(x<(a+1)/(a+b+2))return bt*BC(a,b,x)/a;return 1-bt*BC(b,a,1-x)/b;}function P(s){return String(s).split(/[,\\s，]+/).filter(function(v){return v.length>0;}).map(Number);}var gs=String(groups).split(/[;；]+/).filter(function(v){return v.trim().length>0;}).map(P);var k=gs.length;if(k<2||k>8)return {ok:false,msg:'组数须在 2~8'};var i,j,N=0,means=[],all=[];for(i=0;i<k;i++){if(gs[i].length<2)return {ok:false,msg:'每组至少 2 个观测'};for(j=0;j<gs[i].length;j++){if(!isFinite(gs[i][j]))return {ok:false,msg:'数据须为数值'};all.push(gs[i][j]);}N+=gs[i].length;if(N>200)return {ok:false,msg:'总样本量上限 200'};var s=0;for(j=0;j<gs[i].length;j++)s+=gs[i][j];means.push(s/gs[i].length);}var gm=0;for(i=0;i<N;i++)gm+=all[i];gm/=N;var ssb=0,ssw=0;for(i=0;i<k;i++){ssb+=gs[i].length*(means[i]-gm)*(means[i]-gm);for(j=0;j<gs[i].length;j++)ssw+=(gs[i][j]-means[i])*(gs[i][j]-means[i]);}if(ssw===0)return {ok:false,msg:'组内方差为 0，F 无定义'};var dfb=k-1,dfw=N-k;var Fv=(ssb/dfb)/(ssw/dfw);var p=IB(dfw/(dfw+dfb*Fv),dfw/2,dfb/2);return {ok:true,html:'<div class=\\\"big\\\">F = '+F(Fv)+'</div><div class=\\\"row\\\">df = ('+dfb+', '+dfw+')，p = '+F(p)+'；SSB = '+F(ssb)+'，SSW = '+F(ssw)+'；'+(p<0.05?'p < 0.05，组间均值差异显著':'p ≥ 0.05，未达显著')+'</div>'};",
+  test:{inputs:{groups:"1,2,3;4,5,6;7,8,9"}, expect:"F = 27"}},
+ {id:"sxttest", cat:"sx", icon:"📏", name:"t 检验（假设检验专项）", desc:"单样本 t 检验与双样本（合并方差）t 检验，给出 t、自由度与双侧 p 值",
+  formula:"单样本 t = (x̄ − μ₀)/(s/√n)，df = n−1；双样本合并方差 sₚ²，df = n₁+n₂−2；p 经不完全贝塔函数计算。与 sxci（置信区间）分工：本工具做显著性检验",
+  inputs:[
+   {id:"mode", label:"检验类型", type:"select", def:"one", options:[{v:"one",t:"单样本 t 检验"},{v:"two",t:"双样本 t 检验（等方差）"}]},
+   {id:"data1", label:"样本 1（逗号分隔）", type:"text", def:"2,4,4,4,5,5,7,9"},
+   {id:"data2", label:"样本 2（逗号分隔）", type:"text", def:"1,2,3,4", when:"mode=two"},
+   {id:"mu", label:"检验均值 μ₀", def:"4", when:"mode=one"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function LG(z){var c=[0.9999999999998099,676.5203681218851,-1259.1392167224028,771.3234287776531,-176.6150291621406,12.507343278686905,-0.1385710952657201,9.984369578019572e-6,1.5056327351493116e-7];if(z<0.5)return Math.log(Math.PI)-Math.log(Math.sin(Math.PI*z))-LG(1-z);z-=1;var x=c[0];for(var i=1;i<9;i++)x+=c[i]/(z+i);var t=z+7.5;return 0.9189385332046727+(z+0.5)*Math.log(t)-t+Math.log(x);}function BC(a,b,x){var c=1,d=1-(a+b)*x/(a+1);if(Math.abs(d)<1e-300)d=1e-300;d=1/d;var h=d;for(var m=1;m<=200;m++){var m2=2*m;var aa=m*(b-m)*x/((a-1+m2)*(a+m2));d=1+aa*d;if(Math.abs(d)<1e-300)d=1e-300;c=1+aa/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;h*=d*c;aa=-(a+m)*(a+b+m)*x/((a+m2)*(a+1+m2));d=1+aa*d;if(Math.abs(d)<1e-300)d=1e-300;c=1+aa/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;var del=d*c;h*=del;if(Math.abs(del-1)<3e-14)break;}return h;}function IB(x,a,b){if(x<=0)return 0;if(x>=1)return 1;var bt=Math.exp(LG(a+b)-LG(a)-LG(b)+a*Math.log(x)+b*Math.log(1-x));if(x<(a+1)/(a+b+2))return bt*BC(a,b,x)/a;return 1-bt*BC(b,a,1-x)/b;}function P(s){return String(s).split(/[,;\\s，；]+/).filter(function(v){return v.length>0;}).map(Number);}function MS(v){var m=0,i;for(i=0;i<v.length;i++)m+=v[i];m/=v.length;var s2=0;for(i=0;i<v.length;i++)s2+=(v[i]-m)*(v[i]-m);return [m,s2/(v.length-1)];}var A=P(data1);if(A.length<2||A.length>500)return {ok:false,msg:'样本 1 个数须在 2~500'};var i;for(i=0;i<A.length;i++)if(!isFinite(A[i]))return {ok:false,msg:'数据须为数值'};var r1=MS(A);var t,df;if(String(mode)==='two'){var B=P(data2);if(B.length<2||B.length>500)return {ok:false,msg:'样本 2 个数须在 2~500'};for(i=0;i<B.length;i++)if(!isFinite(B[i]))return {ok:false,msg:'数据须为数值'};var r2=MS(B);var sp2=((A.length-1)*r1[1]+(B.length-1)*r2[1])/(A.length+B.length-2);if(sp2===0)return {ok:false,msg:'两样本方差均为 0，t 无定义'};t=(r1[0]-r2[0])/Math.sqrt(sp2*(1/A.length+1/B.length));df=A.length+B.length-2;}else{var mu0=Number(mu);if(!isFinite(mu0))return {ok:false,msg:'μ₀ 须为数值'};if(r1[1]===0)return {ok:false,msg:'样本方差为 0，t 无定义'};t=(r1[0]-mu0)/Math.sqrt(r1[1]/A.length);df=A.length-1;}var p=IB(df/(df+t*t),df/2,0.5);return {ok:true,html:'<div class=\\\"big\\\">t = '+F(t)+'</div><div class=\\\"row\\\">df = '+df+'，双侧 p = '+F(p)+'；'+(p<0.05?'p < 0.05，拒绝原假设':'p ≥ 0.05，不拒绝原假设')+'</div>'};",
+  test:{inputs:{mode:"one", data1:"2,4,4,4,5,5,7,9", data2:"1,2,3,4", mu:4}, expect:"1.3229"}},
+ {id:"sxztest", cat:"sx", icon:"🎯", name:"比例 z 检验", desc:"单样本比例检验（对 p₀）与两样本比例差检验（合并比例），双侧 p 值",
+  formula:"单样本 z = (p̂ − p₀)/√(p₀(1−p₀)/n)；两样本用合并比例 p̂ 计标准误；p = 2(1 − Φ(|z|))，Φ 经误差函数近似（精度约 1e-7）",
+  inputs:[
+   {id:"mode", label:"检验类型", type:"select", def:"one", options:[{v:"one",t:"单样本比例"},{v:"two",t:"两样本比例差"}]},
+   {id:"x", label:"样本 1 成功次数", def:"60"},
+   {id:"n", label:"样本 1 总数", def:"100"},
+   {id:"p0", label:"原假设比例 p₀", def:"0.5", when:"mode=one"},
+   {id:"x2", label:"样本 2 成功次数", def:"40", when:"mode=two"},
+   {id:"n2", label:"样本 2 总数", def:"80", when:"mode=two"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function ERF(x){var s=x<0?-1:1;var ax=Math.abs(x);var t=1/(1+0.3275911*ax);var y=1-((((1.061405429*t-1.453152027)*t+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-ax*ax);return s*y;}function PHI(z){return 0.5*(1+ERF(z/Math.SQRT2));}var X=Number(x),N=Number(n);if(!(N>=1)||Math.floor(N)!==N)return {ok:false,msg:'样本 1 总数须为正整数'};if(!(X>=0)||Math.floor(X)!==X||X>N)return {ok:false,msg:'样本 1 成功次数须为 0~n 的整数'};var z;if(String(mode)==='two'){var X2=Number(x2),N2=Number(n2);if(!(N2>=1)||Math.floor(N2)!==N2)return {ok:false,msg:'样本 2 总数须为正整数'};if(!(X2>=0)||Math.floor(X2)!==X2||X2>N2)return {ok:false,msg:'样本 2 成功次数须为 0~n₂ 的整数'};var pp=(X+X2)/(N+N2);if(pp===0||pp===1)return {ok:false,msg:'合并比例为 0 或 1，标准误为 0，z 无定义'};z=(X/N-X2/N2)/Math.sqrt(pp*(1-pp)*(1/N+1/N2));}else{var P0=Number(p0);if(!(P0>0&&P0<1))return {ok:false,msg:'p₀ 须在 (0,1)'};z=(X/N-P0)/Math.sqrt(P0*(1-P0)/N);}var p=2*(1-PHI(Math.abs(z)));if(p<0)p=0;return {ok:true,html:'<div class=\\\"big\\\">z = '+F(z)+'，p = '+F(p)+'</div><div class=\\\"row\\\">双侧检验；'+(p<0.05?'p < 0.05，拒绝原假设':'p ≥ 0.05，不拒绝原假设')+'</div>'};",
+  test:{inputs:{mode:"one", x:60, n:100, p0:0.5, x2:40, n2:80}, expect:"0.0455"}},
+ {id:"sxregress2", cat:"sx", icon:"📉", name:"多元线性回归", desc:"多自变量最小二乘回归：正规方程求系数、R² 与调整 R²",
+  formula:"β = (XᵀX)⁻¹Xᵀy（高斯-约旦解正规方程，奇异即共线性拒绝）；数据行以分号分隔、行内末列为 y、自变量 1~4 个。与 sxlinfit（一元）分工：本工具多元版",
+  inputs:[
+   {id:"data", label:"数据行（x1,…,xp,y 分号分隔）", type:"text", def:"0,0,1;1,0,3;0,1,4;1,1,6;2,1,8", hint:"每行列数一致，末列为因变量 y"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}var rows=String(data).split(/[;；\\n]+/).filter(function(v){return v.trim().length>0;}).map(function(r){return r.split(/[,\\s，]+/).filter(function(v){return v.length>0;}).map(Number);});var n=rows.length;if(n<3||n>200)return {ok:false,msg:'数据行数须在 3~200'};var cols=rows[0].length;if(cols<2||cols>5)return {ok:false,msg:'每行列数须在 2~5（自变量 1~4 个 + y）'};var i,j,k;for(i=0;i<n;i++){if(rows[i].length!==cols)return {ok:false,msg:'各行列数须一致'};for(j=0;j<cols;j++)if(!isFinite(rows[i][j]))return {ok:false,msg:'数据须为数值'};}var p=cols-1;if(n<=p+1)return {ok:false,msg:'样本量须大于参数个数 + 1'};var q=p+1;var XtX=[],XtY=[];for(i=0;i<q;i++){XtX.push(new Array(q).fill(0));XtY.push(0);}for(k=0;k<n;k++){var xv=[1];for(j=0;j<p;j++)xv.push(rows[k][j]);var yv=rows[k][p];for(i=0;i<q;i++){XtY[i]+=xv[i]*yv;for(j=0;j<q;j++)XtX[i][j]+=xv[i]*xv[j];}}var M=XtX.map(function(r,i2){return r.concat([XtY[i2]]);});for(var col=0;col<q;col++){var best=col;for(i=col+1;i<q;i++)if(Math.abs(M[i][col])>Math.abs(M[best][col]))best=i;if(Math.abs(M[best][col])<1e-12)return {ok:false,msg:'XᵀX 奇异（自变量共线性），无法求解'};var t=M[col];M[col]=M[best];M[best]=t;var pv=M[col][col];for(j=0;j<=q;j++)M[col][j]/=pv;for(i=0;i<q;i++){if(i!==col&&M[i][col]!==0){var f=M[i][col];for(j=0;j<=q;j++)M[i][j]-=f*M[col][j];}}}var beta=[];for(i=0;i<q;i++)beta.push(M[i][q]);var ym=0;for(k=0;k<n;k++)ym+=rows[k][p];ym/=n;var sst=0,sse=0;for(k=0;k<n;k++){var pred=beta[0];for(j=0;j<p;j++)pred+=beta[j+1]*rows[k][j];sse+=(rows[k][p]-pred)*(rows[k][p]-pred);sst+=(rows[k][p]-ym)*(rows[k][p]-ym);}var r2=sst===0?1:1-sse/sst;var adj=1-(1-r2)*(n-1)/(n-p-1);var bparts=['β₀ = '+F(beta[0])];for(j=0;j<p;j++)bparts.push('β'+(j+1)+' = '+F(beta[j+1]));return {ok:true,html:'<div class=\\\"big\\\">'+bparts.join('，')+'</div><div class=\\\"row\\\">R² = '+F(r2)+'，调整 R² = '+F(adj)+'，n = '+n+'</div>'};",
+  test:{inputs:{data:"0,0,1;1,0,3;0,1,4;1,1,6;2,1,8"}, expect:"β1 = 2"}},
+ {id:"sxnewtonsys", cat:"sx", icon:"🎯", name:"非线性方程组牛顿法", desc:"二元非线性方程组牛顿迭代（预置方程组，解析雅可比）",
+  formula:"[x,y] ← [x,y] − J⁻¹F；迭代上限 50，收敛判据步长 <1e-12，雅可比行列式≈0 或发散时拒绝。预置：圆∩直线 / 圆∩抛物线 / 乘积∩和",
+  inputs:[
+   {id:"mode", label:"方程组", type:"select", def:"circle", options:[{v:"circle",t:"x²+y²=4 且 x−y=0"},{v:"parab",t:"y=x² 且 x²+y²=2"},{v:"prod",t:"xy=2 且 x+y=3"}]},
+   {id:"x0", label:"初值 x₀", def:"1"},
+   {id:"y0", label:"初值 y₀", def:"1.2"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}var SYS={circle:function(x,y){return [x*x+y*y-4,x-y,2*x,2*y,1,-1];},parab:function(x,y){return [y-x*x,x*x+y*y-2,-2*x,1,2*x,2*y];},prod:function(x,y){return [x*y-2,x+y-3,y,x,1,1];}};var fn=SYS[String(mode)]||SYS.circle;var x=Number(x0),y=Number(y0);if(!isFinite(x)||!isFinite(y))return {ok:false,msg:'初值须为数值'};var it=0,ok=false;for(it=0;it<50;it++){var r=fn(x,y);var det=r[2]*r[5]-r[3]*r[4];if(Math.abs(det)<1e-14)return {ok:false,msg:'雅可比行列式接近 0，牛顿法失效（换初值重试）'};var dx=(-r[0]*r[5]+r[3]*r[1])/det;var dy=(-r[2]*r[1]+r[0]*r[4])/det;x+=dx;y+=dy;if(!isFinite(x)||!isFinite(y)||Math.abs(x)>1e8||Math.abs(y)>1e8)return {ok:false,msg:'迭代发散（换初值重试）'};if(Math.abs(dx)+Math.abs(dy)<1e-12){ok=true;it++;break;}}if(!ok)return {ok:false,msg:'50 次迭代未收敛（换初值重试）'};return {ok:true,html:'<div class=\\\"big\\\">x = '+F(x)+'，y = '+F(y)+'</div><div class=\\\"row\\\">牛顿法 '+it+' 步收敛（解依初值而定，方程组可能多解）</div>'};",
+  test:{inputs:{mode:"circle", x0:1, y0:1.2}, expect:"1.4142"}},
+ {id:"sxrunge", cat:"sx", icon:"〰️", name:"龙格库塔 RK4 解 ODE", desc:"四阶龙格库塔法数值求解一阶 ODE 初值问题（预置函数集）",
+  formula:"k₁..k₄ 加权：y ← y + h(k₁ + 2k₂ + 2k₃ + k₄)/6，全局误差 O(h⁴)。与 sxode（欧拉法 O(h)）分工：本工具高精度 RK4；步数上限 2000",
+  inputs:[
+   {id:"fsel", label:"微分方程 y' =", type:"select", def:"y", options:[{v:"y",t:"y"},{v:"x",t:"x"},{v:"xy",t:"x·y"},{v:"xpy",t:"x + y"},{v:"ex",t:"e^x"}]},
+   {id:"x0", label:"初值 x₀", def:"0"},
+   {id:"y0", label:"初值 y₀", def:"1"},
+   {id:"h", label:"步长 h", def:"0.1"},
+   {id:"steps", label:"步数（≤2000）", def:"10"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}var FS={y:function(x,y){return y;},x:function(x,y){return x;},xy:function(x,y){return x*y;},xpy:function(x,y){return x+y;},ex:function(x,y){return Math.exp(x);}};var f=FS[String(fsel)]||FS.y;var x=Number(x0),y=Number(y0),hh=Number(h),ns=Number(steps);if(!isFinite(x)||!isFinite(y))return {ok:false,msg:'初值须为数值'};if(!(hh>0)||!isFinite(hh))return {ok:false,msg:'步长 h 须大于 0'};if(!isFinite(ns)||ns!==Math.floor(ns)||ns<1)return {ok:false,msg:'步数须为正整数'};if(ns>2000)return {ok:false,msg:'步数上限 2000'};for(var i=0;i<ns;i++){var k1=f(x,y),k2=f(x+hh/2,y+hh/2*k1),k3=f(x+hh/2,y+hh/2*k2),k4=f(x+hh,y+hh*k3);y=y+hh/6*(k1+2*k2+2*k3+k4);x=x+hh;if(!isFinite(y))return {ok:false,msg:'数值溢出：解发散或步长过大'};}return {ok:true,html:'<div class=\\\"big\\\">y('+F(x)+') ≈ '+F(y)+'</div><div class=\\\"row\\\">RK4 全局误差 O(h⁴)，远优于欧拉法 O(h)</div>'};",
+  test:{inputs:{fsel:"y", x0:0, y0:1, h:0.1, steps:10}, expect:"2.7183"}},
+ {id:"sxtrapz2", cat:"sx", icon:"∫", name:"数值积分进阶（自适应辛普森）", desc:"自适应辛普森求积：递归细分 + Richardson 误差估计，容差可调",
+  formula:"S(a,b) 与左右半和之差估计误差，|S₂ − S|/15 ≤ ε 时接受 S₂ + (S₂ − S)/15；递归深度上限 20。与 sxinteg（定步长梯形/辛普森）分工：本工具自适应控误差",
+  inputs:[
+   {id:"fn", label:"被积函数", type:"select", def:"sin", options:[{v:"x2",t:"x²"},{v:"x3",t:"x³"},{v:"sin",t:"sin x"},{v:"cos",t:"cos x"},{v:"exp",t:"eˣ"},{v:"ln",t:"ln x"},{v:"inv",t:"1/x"},{v:"sqrt",t:"√x"}]},
+   {id:"a", label:"下限 a", def:"0"},
+   {id:"b", label:"上限 b", def:"3.14159265"},
+   {id:"tol", label:"容差 ε", def:"0.000001"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}var FS={x2:function(x){return x*x;},x3:function(x){return x*x*x;},sin:Math.sin,cos:Math.cos,exp:Math.exp,ln:Math.log,inv:function(x){return 1/x;},sqrt:Math.sqrt};var f=FS[String(fn)]||FS.sin;var A=Number(a),B=Number(b),T=Number(tol);if(!isFinite(A)||!isFinite(B))return {ok:false,msg:'积分限须为数值'};if(A===B)return {ok:true,html:'<div class=\\\"big\\\">∫ ≈ 0</div><div class=\\\"row\\\">上下限相等，积分为 0</div>'};if(!(T>0)||T>0.1)return {ok:false,msg:'容差须在 (0, 0.1]'};var sgn=1;if(B<A){var tt=A;A=B;B=tt;sgn=-1;}var cnt=0;function fv(x){cnt++;var v=f(x);if(!isFinite(v))throw new Error('奇点');return v;}function S(x1,x2,f1,fm,f2){return (x2-x1)/6*(f1+4*fm+f2);}function rec(x1,x2,eps,whole,f1,fm,f2,depth){var m=(x1+x2)/2;var lm=(x1+m)/2,rm=(m+x2)/2;var flm=fv(lm),frm=fv(rm);var left=S(x1,m,f1,flm,fm),right=S(m,x2,fm,frm,f2);var err=(left+right-whole)/15;if(depth<=0||Math.abs(err)<=eps)return left+right+err;return rec(x1,m,eps/2,left,f1,flm,fm,depth-1)+rec(m,x2,eps/2,right,fm,frm,f2,depth-1);}var res;try{var m0=(A+B)/2;var fa=fv(A),fm0=fv(m0),fb=fv(B);res=rec(A,B,T,S(A,B,fa,fm0,fb),fa,fm0,fb,20);}catch(e){return {ok:false,msg:'被积函数在区间内有奇点或未定义点（如 ln/1/x 在 0 处），无法积分'};}return {ok:true,html:'<div class=\\\"big\\\">∫ ≈ '+F(sgn*res)+'</div><div class=\\\"row\\\">自适应辛普森，函数求值 '+cnt+' 次，目标容差 '+T+'</div>'};",
+  test:{inputs:{fn:"sin", a:0, b:3.14159265, tol:0.000001}, expect:"∫ ≈ 2"}},
+ {id:"sxgamma", cat:"sx", icon:"Γ", name:"伽马函数 Γ(x)", desc:"伽马函数、lnΓ 与广义阶乘 x!（Lanczos 近似，含负数反射）",
+  formula:"Lanczos 近似（g = 7，9 系数，相对误差约 1e-15）；x < 0.5 用反射公式 Γ(x)Γ(1−x) = π/sin(πx)；0、负整数为极点拒绝；x! = Γ(x+1) 推广至实数",
+  inputs:[
+   {id:"mode", label:"计算", type:"select", def:"gamma", options:[{v:"gamma",t:"Γ(x)"},{v:"ln",t:"ln Γ(x)（大 x 防溢出）"},{v:"fact",t:"x! = Γ(x+1)"}]},
+   {id:"x", label:"x", def:"0.5"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function LGC(z){var c=[0.9999999999998099,676.5203681218851,-1259.1392167224028,771.3234287776531,-176.6150291621406,12.507343278686905,-0.1385710952657201,9.984369578019572e-6,1.5056327351493116e-7];z-=1;var x=c[0];for(var i=1;i<9;i++)x+=c[i]/(z+i);var t=z+7.5;return 0.9189385332046727+(z+0.5)*Math.log(t)-t+Math.log(x);}function GAM(z){if(z<0.5)return Math.PI/(Math.sin(Math.PI*z)*GAM(1-z));return Math.exp(LGC(z));}function LNG(z){if(z<0.5)return Math.log(Math.PI)-Math.log(Math.sin(Math.PI*z))-LNG(1-z);return LGC(z);}var X=Number(x);if(!isFinite(X))return {ok:false,msg:'x 须为数值'};var md=String(mode);if(md==='ln'){if(!(X>0))return {ok:false,msg:'lnΓ 仅对 x > 0（实数口径）'};return {ok:true,html:'<div class=\\\"big\\\">ln Γ('+F(X)+') = '+F(LNG(X))+'</div><div class=\\\"row\\\">对数伽马避免大参数溢出</div>'};}var z=(md==='fact')?X+1:X;if(z===Math.floor(z)&&z<=0)return {ok:false,msg:'Γ 在 0 与负整数处为极点，无定义'};if(z>171.6&&z>0)return {ok:false,msg:'参数过大：Γ(x) 超出双精度范围，请用 lnΓ 模式'};var v=GAM(z);if(!isFinite(v))return {ok:false,msg:'结果溢出，请改用 lnΓ 模式'};return {ok:true,html:'<div class=\\\"big\\\">'+(md==='fact'?F(X)+'! = ':'Γ('+F(X)+') = ')+F(v)+'</div><div class=\\\"row\\\">'+(md==='fact'?'广义阶乘 x! = Γ(x+1)，正整数时即普通阶乘':'Lanczos 近似；Γ(1/2) = √π ≈ 1.7725')+'</div>'};",
+  test:{inputs:{mode:"gamma", x:0.5}, expect:"1.7725"}},
+ {id:"sxbeta", cat:"sx", icon:"β", name:"贝塔函数与不完全贝塔", desc:"贝塔函数 B(a,b) 与正则化不完全贝塔 Iₓ(a,b)（Beta 分布 CDF / 二项尾概率）",
+  formula:"B(a,b) = Γ(a)Γ(b)/Γ(a+b)（经 lnΓ 计算）；Iₓ(a,b) 用连分式展开；恒等式：二项尾概率 P(Bin(n,p) ≥ a) = I_p(a, n−a+1)",
+  inputs:[
+   {id:"mode", label:"计算", type:"select", def:"beta", options:[{v:"beta",t:"B(a,b)"},{v:"cdf",t:"Iₓ(a,b)（Beta CDF）"}]},
+   {id:"a", label:"参数 a", def:"2"},
+   {id:"b", label:"参数 b", def:"3"},
+   {id:"x", label:"x（CDF 用）", def:"0.5", when:"mode=cdf"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function LG(z){var c=[0.9999999999998099,676.5203681218851,-1259.1392167224028,771.3234287776531,-176.6150291621406,12.507343278686905,-0.1385710952657201,9.984369578019572e-6,1.5056327351493116e-7];if(z<0.5)return Math.log(Math.PI)-Math.log(Math.sin(Math.PI*z))-LG(1-z);z-=1;var x=c[0];for(var i=1;i<9;i++)x+=c[i]/(z+i);var t=z+7.5;return 0.9189385332046727+(z+0.5)*Math.log(t)-t+Math.log(x);}function BC(a,b,x){var c=1,d=1-(a+b)*x/(a+1);if(Math.abs(d)<1e-300)d=1e-300;d=1/d;var h=d;for(var m=1;m<=200;m++){var m2=2*m;var aa=m*(b-m)*x/((a-1+m2)*(a+m2));d=1+aa*d;if(Math.abs(d)<1e-300)d=1e-300;c=1+aa/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;h*=d*c;aa=-(a+m)*(a+b+m)*x/((a+m2)*(a+1+m2));d=1+aa*d;if(Math.abs(d)<1e-300)d=1e-300;c=1+aa/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;var del=d*c;h*=del;if(Math.abs(del-1)<3e-14)break;}return h;}function IB(x,a,b){if(x<=0)return 0;if(x>=1)return 1;var bt=Math.exp(LG(a+b)-LG(a)-LG(b)+a*Math.log(x)+b*Math.log(1-x));if(x<(a+1)/(a+b+2))return bt*BC(a,b,x)/a;return 1-bt*BC(b,a,1-x)/b;}var A=Number(a),B=Number(b);if(!(A>0)||!(B>0))return {ok:false,msg:'参数 a、b 须大于 0'};if(String(mode)==='cdf'){var X=Number(x);if(!(X>=0&&X<=1))return {ok:false,msg:'x 须在 [0,1]'};var v=IB(X,A,B);return {ok:true,html:'<div class=\\\"big\\\">I('+F(X)+') = '+F(v)+'</div><div class=\\\"row\\\">Beta('+F(A)+', '+F(B)+') 分布在 x = '+F(X)+' 处的累积概率</div>'};}var bv=Math.exp(LG(A)+LG(B)-LG(A+B));return {ok:true,html:'<div class=\\\"big\\\">B('+F(A)+', '+F(B)+') = '+F(bv)+'</div><div class=\\\"row\\\">B(a,b) = Γ(a)Γ(b)/Γ(a+b)</div>'};",
+  test:{inputs:{mode:"beta", a:2, b:3, x:0.5}, expect:"0.0833"}}
+);
+TOOLS.push(
+ {id:"sxerf", cat:"sx", icon:"∿", name:"误差函数 erf 专项", desc:"误差函数 erf、余误差函数 erfc 与反误差函数 erf⁻¹",
+  formula:"erf(x) = (2/√π)∫₀ˣ e^(−t²) dt，A&S 7.1.26 近似（绝对误差 ≤1.5e-7）；erfc = 1 − erf；反函数用牛顿迭代（上限 60 步，按残差判据取最优）。与 sxnorm（正态 Φ 查值）分工：本工具 erf 家族专项，Φ(x) = ½[1 + erf(x/√2)]",
+  inputs:[
+   {id:"mode", label:"函数", type:"select", def:"erf", options:[{v:"erf",t:"erf(x)"},{v:"erfc",t:"erfc(x)"},{v:"ierf",t:"erf⁻¹(x)（反函数）"}]},
+   {id:"x", label:"x", def:"1"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function ERF(x){var s=x<0?-1:1;var ax=Math.abs(x);var t=1/(1+0.3275911*ax);var y=1-((((1.061405429*t-1.453152027)*t+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-ax*ax);return s*y;}var X=Number(x);if(!isFinite(X))return {ok:false,msg:'x 须为数值'};var md=String(mode);if(md==='ierf'){if(!(X>-1&&X<1))return {ok:false,msg:'erf⁻¹ 定义域为 (−1, 1) 开区间'};var y=X,best=X,br=Math.abs(ERF(X)-X);for(var i=0;i<60;i++){var d=(ERF(y)-X)/(1.1283791670955126*Math.exp(-y*y));y-=d;if(!isFinite(y))break;var r2=Math.abs(ERF(y)-X);if(r2<br){br=r2;best=y;}if(Math.abs(d)<1e-12)break;}if(br>2e-7)return {ok:false,msg:'反函数迭代未收敛'};y=best;return {ok:true,html:'<div class=\\\"big\\\">erf⁻¹('+F(X)+') = '+F(y)+'</div><div class=\\\"row\\\">牛顿迭代求反误差函数</div>'};}if(md==='erfc'){var vc=1-ERF(X);if(vc<0)vc=0;return {ok:true,html:'<div class=\\\"big\\\">erfc('+F(X)+') = '+F(vc)+'</div><div class=\\\"row\\\">erfc(x) = 1 − erf(x)，正态尾概率 = ½·erfc(z/√2)</div>'};}return {ok:true,html:'<div class=\\\"big\\\">erf('+F(X)+') = '+F(ERF(X))+'</div><div class=\\\"row\\\">Φ 换算：Φ(z) = ½[1 + erf(z/√2)]</div>'};",
+  test:{inputs:{mode:"erf", x:1}, expect:"0.8427"}},
+ {id:"sxhypergeom", cat:"sx", icon:"🎱", name:"超几何分布（通用三参数）", desc:"不放回抽样全分布：P(X=k)、累积概率、均值与方差",
+  formula:"P(X=k) = C(M,k)·C(N−M, n−k)/C(N, n)（组合数经 lnΓ 计算防溢出）。与 sxlottery（彩票特例：抽取数 = 中奖池数）分工：本工具抽取数 n 与成功数 M 独立的通用版，N 上限 1000",
+  inputs:[
+   {id:"N", label:"总体个数 N", def:"20"},
+   {id:"M", label:"总体中成功个数 M", def:"7"},
+   {id:"n", label:"抽取个数 n", def:"5"},
+   {id:"k", label:"抽中成功数 k", def:"2"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function LG(z){var c=[0.9999999999998099,676.5203681218851,-1259.1392167224028,771.3234287776531,-176.6150291621406,12.507343278686905,-0.1385710952657201,9.984369578019572e-6,1.5056327351493116e-7];if(z<0.5)return Math.log(Math.PI)-Math.log(Math.sin(Math.PI*z))-LG(1-z);z-=1;var x=c[0];for(var i=1;i<9;i++)x+=c[i]/(z+i);var t=z+7.5;return 0.9189385332046727+(z+0.5)*Math.log(t)-t+Math.log(x);}function LC(a,b){if(b<0||b>a)return -Infinity;return LG(a+1)-LG(b+1)-LG(a-b+1);}var NN=Number(N),MM=Number(M),nn=Number(n),kk=Number(k);var vs=[NN,MM,nn,kk];for(var i=0;i<4;i++)if(!isFinite(vs[i])||vs[i]!==Math.floor(vs[i]))return {ok:false,msg:'N、M、n、k 须为整数'};if(NN<1||NN>1000)return {ok:false,msg:'N 须在 1~1000'};if(MM<0||MM>NN)return {ok:false,msg:'M 须在 0~N'};if(nn<0||nn>NN)return {ok:false,msg:'n 须在 0~N'};if(kk<0)return {ok:false,msg:'k 须 ≥ 0'};var kmin=Math.max(0,nn-(NN-MM)),kmax=Math.min(nn,MM);function pmf(j){return Math.exp(LC(MM,j)+LC(NN-MM,nn-j)-LC(NN,nn));}var pk=(kk<kmin||kk>kmax)?0:pmf(kk);var cdf=0;for(var j=kmin;j<=Math.min(kk,kmax);j++)cdf+=pmf(j);if(kk>=kmax)cdf=1;var mean=NN===0?0:nn*MM/NN;var varr=NN>1?nn*(MM/NN)*(1-MM/NN)*((NN-nn)/(NN-1)):0;return {ok:true,html:'<div class=\\\"big\\\">P(X = '+kk+') = '+F(pk)+'</div><div class=\\\"row\\\">P(X ≤ '+kk+') = '+F(cdf)+'；均值 = '+F(mean)+'，方差 = '+F(varr)+'；取值范围 ['+kmin+', '+kmax+']</div>'};",
+  test:{inputs:{N:20, M:7, n:5, k:2}, expect:"0.3874"}},
+ {id:"sxnegbin", cat:"sx", icon:"🎯", name:"负二项分布", desc:"第 r 次成功前失败次数 K 的分布：P(K=k)、累积概率、均值方差",
+  formula:"P(K=k) = C(k+r−1, k)·p^r·(1−p)^k（组合数经 lnΓ 计算）；均值 r(1−p)/p，方差 r(1−p)/p²。r=1 即几何分布",
+  inputs:[
+   {id:"r", label:"目标成功次数 r", def:"5"},
+   {id:"p", label:"单次成功概率 p", def:"0.5"},
+   {id:"k", label:"失败次数 k", def:"3"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function LG(z){var c=[0.9999999999998099,676.5203681218851,-1259.1392167224028,771.3234287776531,-176.6150291621406,12.507343278686905,-0.1385710952657201,9.984369578019572e-6,1.5056327351493116e-7];if(z<0.5)return Math.log(Math.PI)-Math.log(Math.sin(Math.PI*z))-LG(1-z);z-=1;var x=c[0];for(var i=1;i<9;i++)x+=c[i]/(z+i);var t=z+7.5;return 0.9189385332046727+(z+0.5)*Math.log(t)-t+Math.log(x);}var R=Number(r),P=Number(p),K=Number(k);if(!isFinite(R)||R!==Math.floor(R)||R<1||R>1000)return {ok:false,msg:'r 须为 1~1000 的整数'};if(!(P>0&&P<=1))return {ok:false,msg:'p 须在 (0, 1]'};if(!isFinite(K)||K!==Math.floor(K)||K<0||K>5000)return {ok:false,msg:'k 须为 0~5000 的整数'};function pmf(j){if(P===1)return j===0?1:0;return Math.exp(LG(j+R)-LG(j+1)-LG(R)+R*Math.log(P)+j*Math.log(1-P));}var pk=pmf(K);var cdf=0;for(var j=0;j<=K;j++)cdf+=pmf(j);if(cdf>1)cdf=1;var mean=R*(1-P)/P,varr=R*(1-P)/(P*P);return {ok:true,html:'<div class=\\\"big\\\">P(K = '+K+') = '+F(pk)+'</div><div class=\\\"row\\\">P(K ≤ '+K+') = '+F(cdf)+'；均值（失败次数）= '+F(mean)+'，方差 = '+F(varr)+'</div>'};",
+  test:{inputs:{r:5, p:0.5, k:3}, expect:"0.1367"}},
+ {id:"sxweibull", cat:"sx", icon:"⏳", name:"威布尔分布（可靠性）", desc:"威布尔分布 CDF、可靠度、失效率与均值寿命（形状 k / 尺度 λ）",
+  formula:"F(x) = 1 − e^(−(x/λ)^k)；可靠度 R(x) = e^(−(x/λ)^k)；均值 = λ·Γ(1 + 1/k)；k<1 早期失效、k=1 指数分布、k>1 磨损失效",
+  inputs:[
+   {id:"x", label:"时间/寿命 x", def:"100"},
+   {id:"lam", label:"尺度参数 λ", def:"100"},
+   {id:"kk", label:"形状参数 k", def:"2"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function LG(z){var c=[0.9999999999998099,676.5203681218851,-1259.1392167224028,771.3234287776531,-176.6150291621406,12.507343278686905,-0.1385710952657201,9.984369578019572e-6,1.5056327351493116e-7];if(z<0.5)return Math.log(Math.PI)-Math.log(Math.sin(Math.PI*z))-LG(1-z);z-=1;var x=c[0];for(var i=1;i<9;i++)x+=c[i]/(z+i);var t=z+7.5;return 0.9189385332046727+(z+0.5)*Math.log(t)-t+Math.log(x);}var X=Number(x),L=Number(lam),K=Number(kk);if(!(X>=0))return {ok:false,msg:'x 须 ≥ 0'};if(!(L>0))return {ok:false,msg:'尺度 λ 须大于 0'};if(!(K>0))return {ok:false,msg:'形状 k 须大于 0'};var t=Math.pow(X/L,K);var cdf=t>700?1:1-Math.exp(-t);var rel=t>700?0:Math.exp(-t);var mean=L*Math.exp(LG(1+1/K));var med=L*Math.pow(Math.LN2,1/K);return {ok:true,html:'<div class=\\\"big\\\">F('+F(X)+') = '+F(cdf)+'</div><div class=\\\"row\\\">可靠度 R = '+F(rel)+'；均值寿命 = '+F(mean)+'，中位寿命 = '+F(med)+'</div>'};",
+  test:{inputs:{x:100, lam:100, kk:2}, expect:"0.6321"}},
+ {id:"sxlognorm", cat:"sx", icon:"📊", name:"对数正态分布", desc:"对数正态 CDF、概率密度、中位数与均值（lnX ~ N(μ, σ²)）",
+  formula:"F(x) = Φ((lnx − μ)/σ)，Φ 经误差函数计算；pdf = e^(−(lnx−μ)²/(2σ²))/(xσ√(2π))；中位数 = e^μ，均值 = e^(μ + σ²/2)。x ≤ 0 无定义",
+  inputs:[
+   {id:"x", label:"数值 x", def:"2.7182818"},
+   {id:"mu", label:"μ（ln 尺度均值）", def:"0"},
+   {id:"sigma", label:"σ（ln 尺度标准差）", def:"1"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function ERF(x){var s=x<0?-1:1;var ax=Math.abs(x);var t=1/(1+0.3275911*ax);var y=1-((((1.061405429*t-1.453152027)*t+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-ax*ax);return s*y;}var X=Number(x),MU=Number(mu),SG=Number(sigma);if(!(X>0))return {ok:false,msg:'对数正态仅对 x > 0 有定义'};if(!isFinite(MU))return {ok:false,msg:'μ 须为数值'};if(!(SG>0))return {ok:false,msg:'σ 须大于 0'};var z=(Math.log(X)-MU)/SG;var cdf=0.5*(1+ERF(z/Math.SQRT2));var pdf=Math.exp(-z*z/2)/(X*SG*2.5066282746310002);return {ok:true,html:'<div class=\\\"big\\\">F('+F(X)+') = '+F(cdf)+'</div><div class=\\\"row\\\">pdf = '+F(pdf)+'；中位数 = '+F(Math.exp(MU))+'，均值 = '+F(Math.exp(MU+SG*SG/2))+'</div>'};",
+  test:{inputs:{x:2.7182818, mu:0, sigma:1}, expect:"0.8413"}},
+ {id:"sxmarkov", cat:"sx", icon:"🔁", name:"马尔可夫链 n 步转移", desc:"转移概率矩阵文本 + 初始分布 → n 步后状态分布（矩阵幂迭代）",
+  formula:"πₙ = π₀·Pⁿ（向量-矩阵连乘，步数上限 100）；P 须为随机矩阵：元素 ∈[0,1] 且每行和 = 1（容差 1e-6）。阶数 2~4",
+  inputs:[
+   {id:"mat", label:"转移矩阵 P（每行一行）", type:"text", def:"0.9,0.1\n0.2,0.8"},
+   {id:"init", label:"初始分布 π₀（逗号分隔）", type:"text", def:"1,0"},
+   {id:"steps", label:"步数 n（≤100）", def:"3"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}function PM(s){var rows=String(s).split(/\\n/).map(function(r){return r.trim();}).filter(function(r){return r.length>0;});if(rows.length===1&&rows[0].indexOf(';')>=0)rows=rows[0].split(';');return rows.map(function(r){return r.split(/[,\\s，]+/).filter(function(v){return v.length>0;}).map(Number);});}var P=PM(mat);var n=P.length;if(n<2||n>4)return {ok:false,msg:'阶数须在 2~4'};var i,j,s;for(i=0;i<n;i++){if(P[i].length!==n)return {ok:false,msg:'须为方阵'};s=0;for(j=0;j<n;j++){if(!isFinite(P[i][j])||P[i][j]<0||P[i][j]>1)return {ok:false,msg:'转移概率须在 [0,1]'};s+=P[i][j];}if(Math.abs(s-1)>1e-6)return {ok:false,msg:'每行概率和须为 1（第 '+(i+1)+' 行和 = '+s+')'};}var v=String(init).split(/[,;\\s，；]+/).filter(function(u){return u.length>0;}).map(Number);if(v.length!==n)return {ok:false,msg:'初始分布须为 '+n+' 个数'};s=0;for(i=0;i<n;i++){if(!isFinite(v[i])||v[i]<0||v[i]>1)return {ok:false,msg:'初始分布须在 [0,1]'};s+=v[i];}if(Math.abs(s-1)>1e-6)return {ok:false,msg:'初始分布和须为 1'};var NS=Number(steps);if(!isFinite(NS)||NS!==Math.floor(NS)||NS<0)return {ok:false,msg:'步数须为不小于 0 的整数'};if(NS>100)return {ok:false,msg:'步数上限 100'};for(s=0;s<NS;s++){var nv=new Array(n).fill(0);for(i=0;i<n;i++)for(j=0;j<n;j++)nv[j]+=v[i]*P[i][j];v=nv;}return {ok:true,html:'<div class=\\\"big\\\">π'+NS+' = ['+v.map(F).join(', ')+']</div><div class=\\\"row\\\">'+NS+' 步后的状态概率分布（和 = '+F(v.reduce(function(a2,b2){return a2+b2;},0))+')</div>'};",
+  test:{inputs:{mat:"0.9,0.1\n0.2,0.8", init:"1,0", steps:3}, expect:"0.781"}},
+ {id:"sxqueue", cat:"sx", icon:"🚶", name:"M/M/1 排队论", desc:"单服务台排队：利用率、平均队长/等待与 Little 定律全套指标",
+  formula:"ρ = λ/μ（须 λ<μ 否则不稳定）；L = ρ/(1−ρ)，Lq = ρ²/(1−ρ)，W = 1/(μ−λ)，Wq = ρ/(μ−λ)；P₀ = 1−ρ，P(N≥k) = ρᵏ（Little 定律 L = λW）",
+  inputs:[
+   {id:"lam", label:"到达率 λ（人/单位时间）", def:"2"},
+   {id:"mu", label:"服务率 μ（人/单位时间）", def:"3"},
+   {id:"k", label:"阈值 k（算 P(N≥k)）", def:"5"}
+  ],
+  run:"function F(x){if(!isFinite(x))return '—';if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){while(s.charAt(s.length-1)==='0')s=s.slice(0,-1);if(s.charAt(s.length-1)==='.')s=s.slice(0,-1);}return s;}var L0=Number(lam),M0=Number(mu),K=Number(k);if(!(L0>0))return {ok:false,msg:'到达率 λ 须大于 0'};if(!(M0>0))return {ok:false,msg:'服务率 μ 须大于 0'};if(L0>=M0)return {ok:false,msg:'λ ≥ μ：系统不稳定，队列无限增长'};if(!isFinite(K)||K!==Math.floor(K)||K<0)return {ok:false,msg:'k 须为不小于 0 的整数'};var rho=L0/M0;var L=rho/(1-rho),Lq=rho*rho/(1-rho),W=1/(M0-L0),Wq=rho/(M0-L0);return {ok:true,html:'<div class=\\\"big\\\">L = '+F(L)+'，W = '+F(W)+'</div><div class=\\\"row\\\">ρ = '+F(rho)+'；Lq = '+F(Lq)+'，Wq = '+F(Wq)+'；P₀ = '+F(1-rho)+'，P(N ≥ '+K+') = '+F(Math.pow(rho,K))+'</div>'};",
+  test:{inputs:{lam:2, mu:3, k:5}, expect:"L = 2"}}
+);
+/* ===== R3-DZ3 电子第三轮 25 工具（2026-10-21，数据驱动） =====
+   分工说明：dzsmith/dzsparam/dztransline2 为射频复数分析（区别于 dzvswr 标量互算、dzimpz 串联阻抗）；
+   dzmatch2 为 T/π 型（区别于 dzlmatch 的 L 型 Rs<RL）；dzfilter2 为阶数判定（区别于 dzbutterlc 给定阶元件值）；
+   dzosc2 为环形/相移（区别于 dzlcosc 考毕兹/哈特莱、dzwien、dzrcosc）；dzmod2 为数字调制（区别于 dzammod/dzfmbw 模拟调制）；
+   dzadc2 为抖动/建立（区别于 dzadcenob 的 SNR↔ENOB、dzalias 混叠频率、dzadcspeed 采样率）；
+   dzbuck2 为 Boost/Buck-Boost（区别于 dzbuck/dzboost 占空比、dzbuckrip 的 Buck 电感）；
+   dzdac 为系统参数（区别于 yqdac 器件级代码→电压）；dzsensor2 桥路灵敏度为主（区别于 dzwheat 平衡判断、yqtc 热电偶器件换算）。 */
+TOOLS.push(
+ {id:"dzsmith", cat:"dz", icon:"🎯", name:"史密斯圆图辅助（Γ↔阻抗）", desc:"反射系数与归一化阻抗复数互转，附驻波比",
+  formula:"Γ = (z − 1) ÷ (z + 1)，z = (1 + Γ) ÷ (1 − Γ)（z 为对 Z₀ 归一化阻抗，复数运算）；VSWR = (1 + |Γ|) ÷ (1 − |Γ|)。无源负载要求 Re(z) ≥ 0（|Γ| ≤ 1）；Γ = 1（开路）时阻抗为无穷大，本工具拒绝该点。与 dzvswr 分工：本工具做复数 Γ 与阻抗的双向换算，dzvswr 做标量 VSWR/Γ/回损互算",
+  inputs:[
+   {id:"mode", label:"换算方向", type:"select", def:"z2g", options:[{v:"z2g",t:"归一化阻抗 → 反射系数"},{v:"g2z",t:"反射系数 → 归一化阻抗"}]},
+   {id:"zr", label:"归一化电阻 r", def:"2", when:"mode=z2g"},
+   {id:"zi", label:"归一化电抗 x（感性为正）", def:"1", when:"mode=z2g"},
+   {id:"gm", label:"反射系数模 |Γ|（0~1）", def:"0.5", when:"mode=g2z"},
+   {id:"gp", label:"反射系数相位", unit:"°", def:"60", when:"mode=g2z"}
+  ],
+  run:"var F=function(x){if(Math.abs(x)<1e-9)x=0;var a=Math.abs(x);if(a!==0&&(a>=1e5||a<1e-3))return x.toExponential(3);return x.toFixed(3)};if(mode==='z2g'){var r=Number(zr),x=Number(zi);if(!(r>=0))return {ok:false,msg:'归一化电阻须 ≥ 0（无源负载）'};if(!isFinite(x))return {ok:false,msg:'电抗无效'};var D=(r+1)*(r+1)+x*x;var gr=((r*r+x*x)-1)/D,gi=2*x/D;var m=Math.sqrt(gr*gr+gi*gi);if(m>1+1e-9)return {ok:false,msg:'|Γ| 超过 1，超出无源范围'};var ph=Math.atan2(gi,gr)*180/Math.PI;var vs=m>=1-1e-12?'∞':((1+m)/(1-m)).toFixed(2);return {ok:true,html:'<div class=\"big\">Γ = '+F(gr)+' + j'+F(gi)+'，|Γ| = '+m.toFixed(3)+' ∠'+ph.toFixed(2)+'°</div><div class=\"row\">VSWR = '+vs+'；Γ = 0 为匹配点（圆图中心），|Γ| = 1 在圆图外沿（纯电抗/开短路）</div>'};}var mm=Number(gm),pp=Number(gp);if(!(mm>=0&&mm<=1))return {ok:false,msg:'|Γ| 须在 0~1 之间'};if(!isFinite(pp))return {ok:false,msg:'相位无效'};var th=pp*Math.PI/180;var cr=mm*Math.cos(th),ci=mm*Math.sin(th);var dn=(1-cr)*(1-cr)+ci*ci;if(dn<1e-12)return {ok:false,msg:'Γ = 1 为开路点，阻抗无穷大，无法表示'};var zr2=((1-cr)*(1+cr)-ci*ci)/dn,zi2=(ci*(1-cr)+ci*(1+cr))/dn;var vs2=mm>=1-1e-12?'∞':((1+mm)/(1-mm)).toFixed(2);return {ok:true,html:'<div class=\"big\">z = '+F(zr2)+' + j'+F(zi2)+'</div><div class=\"row\">VSWR = '+vs2+'；电抗为正呈感性（圆图上半圆），为负呈容性（下半圆）</div>'};",
+  test:{inputs:{mode:"z2g",zr:2,zi:1,gm:0.5,gp:60}, expect:"0.447"}},
+ {id:"dzmatch2", cat:"dz", icon:"🔀", name:"T/π 型匹配网络设计", desc:"由中间电阻定 T 型与 π 型匹配的 Q 与元件值（L 型见 dzlmatch）",
+  formula:"π 型（Rv 小于 Rs、RL）：Q₁ = √(Rs÷Rv − 1)，Q₂ = √(RL÷Rv − 1)；XC1 = Rs÷Q₁，XC2 = RL÷Q₂，XL = Rv×(Q₁ + Q₂)。T 型（Rv 大于 Rs、RL）：Q₁ = √(Rv÷Rs − 1)，Q₂ = √(Rv÷RL − 1)；XL1 = Rs×Q₁，XL2 = RL×Q₂，XC = Rv÷(Q₁ + Q₂)。C = 1÷(2πf·XC)，L = XL÷(2πf)。与 dzlmatch 分工：dzlmatch 只做 L 型（Rs<RL），本工具做需中间电阻变换的 T/π 型（可升可降、Q 可控）",
+  inputs:[
+   {id:"topo", label:"网络形式", type:"select", def:"pi", options:[{v:"pi",t:"π 型（并-串-并，Rv 取小）"},{v:"t",t:"T 型（串-并-串，Rv 取大）"}]},
+   {id:"Rs", label:"源阻抗 Rs", unit:"Ω", def:"50"},
+   {id:"RL", label:"负载阻抗 RL", unit:"Ω", def:"200"},
+   {id:"Rv", label:"中间（虚拟）电阻 Rv", unit:"Ω", def:"25", hint:"π 型须小于 Rs、RL；T 型须大于 Rs、RL"},
+   {id:"f", label:"工作频率 f", unit:"MHz", def:"10"}
+  ],
+  run:"var rs=Number(Rs),rl=Number(RL),rv=Number(Rv),ff=Number(f)*1e6;if(!(rs>0&&rl>0&&rv>0))return {ok:false,msg:'阻抗须大于 0'};if(!(ff>0))return {ok:false,msg:'频率须大于 0'};var w=2*Math.PI*ff;var G=function(x){return x>=0.01?x.toFixed(2):x.toExponential(2)};if(topo==='pi'){if(!(rv<Math.min(rs,rl)))return {ok:false,msg:'π 型要求 Rv 小于 Rs 与 RL（当前 '+Math.min(rs,rl)+' Ω），请减小 Rv 或改用 T 型'};var q1=Math.sqrt(rs/rv-1),q2=Math.sqrt(rl/rv-1);var xc1=rs/q1,xc2=rl/q2,xl=rv*(q1+q2);var c1=1/(w*xc1)*1e12,c2=1/(w*xc2)*1e12,l=xl/w*1e6;return {ok:true,html:'<div class=\"big\">C₁ = '+G(c1)+' pF · L = '+G(l)+' μH · C₂ = '+G(c2)+' pF</div><div class=\"row\">Q₁ = '+q1.toFixed(3)+'（源侧），Q₂ = '+q2.toFixed(3)+'（载侧）；XC1 = '+xc1.toFixed(2)+' Ω，XL = '+xl.toFixed(2)+' Ω，XC2 = '+xc2.toFixed(2)+' Ω；结构：源端并 C₁ → 串 L → 负载端并 C₂</div>'};}if(!(rv>Math.max(rs,rl)))return {ok:false,msg:'T 型要求 Rv 大于 Rs 与 RL（当前 '+Math.max(rs,rl)+' Ω），请增大 Rv 或改用 π 型'};var p1=Math.sqrt(rv/rs-1),p2=Math.sqrt(rv/rl-1);var xl1=rs*p1,xl2=rl*p2,xc=rv/(p1+p2);var cc=1/(w*xc)*1e12,l1=xl1/w*1e6,l2=xl2/w*1e6;return {ok:true,html:'<div class=\"big\">L₁ = '+G(l1)+' μH · C = '+G(cc)+' pF · L₂ = '+G(l2)+' μH</div><div class=\"row\">Q₁ = '+p1.toFixed(3)+'（源侧），Q₂ = '+p2.toFixed(3)+'（载侧）；XL1 = '+xl1.toFixed(2)+' Ω，XC = '+xc.toFixed(2)+' Ω，XL2 = '+xl2.toFixed(2)+' Ω；结构：源端串 L₁ → 中点并 C → 串 L₂ 接负载</div>'};",
+  test:{inputs:{topo:"pi",Rs:50,RL:200,Rv:25,f:10}, expect:"318.31"}},
+ {id:"dzsparam", cat:"dz", icon:"🔢", name:"S 参数矩阵换算", desc:"二端口 S 参数换算为 Z / Y / ABCD 参数（复数矩阵）",
+  formula:"以 Z₀ 为参考：Z = Z₀·(I + S)(I − S)⁻¹；Y = (1÷Z₀)·(I − S)(I + S)⁻¹；ABCD 由 S 元素公式：A = [(1+S₁₁)(1−S₂₂) + S₁₂S₂₁]÷(2S₂₁)，B = Z₀[(1+S₁₁)(1+S₂₂) − S₁₂S₂₁]÷(2S₂₁)，C = [(1−S₁₁)(1−S₂₂) − S₁₂S₂₁]÷(2S₂₁Z₀)，D = [(1−S₁₁)(1+S₂₂) + S₁₂S₂₁]÷(2S₂₁)。S₂₁ = 0 时 ABCD 不存在；矩阵奇异时拒绝",
+  inputs:[
+   {id:"mode", label:"目标参数", type:"select", def:"s2z", options:[{v:"s2z",t:"S → Z（Ω）"},{v:"s2y",t:"S → Y（mS）"},{v:"s2abcd",t:"S → ABCD"}]},
+   {id:"z0", label:"参考阻抗 Z₀", unit:"Ω", def:"50"},
+   {id:"s11r", label:"S₁₁ 实部", def:"0"},
+   {id:"s11i", label:"S₁₁ 虚部", def:"0"},
+   {id:"s12r", label:"S₁₂ 实部", def:"0.5"},
+   {id:"s12i", label:"S₁₂ 虚部", def:"0"},
+   {id:"s21r", label:"S₂₁ 实部", def:"0.5"},
+   {id:"s21i", label:"S₂₁ 虚部", def:"0"},
+   {id:"s22r", label:"S₂₂ 实部", def:"0"},
+   {id:"s22i", label:"S₂₂ 虚部", def:"0"}
+  ],
+  run:"var A=function(a,b){return [a[0]+b[0],a[1]+b[1]]},S=function(a,b){return [a[0]-b[0],a[1]-b[1]]},M=function(a,b){return [a[0]*b[0]-a[1]*b[1],a[0]*b[1]+a[1]*b[0]]},Dv=function(a,b){var d=b[0]*b[0]+b[1]*b[1];return [(a[0]*b[0]+a[1]*b[1])/d,(a[1]*b[0]-a[0]*b[1])/d]};var Z0=Number(z0);if(!(Z0>0))return {ok:false,msg:'参考阻抗须大于 0'};var s11=[Number(s11r),Number(s11i)],s12=[Number(s12r),Number(s12i)],s21=[Number(s21r),Number(s21i)],s22=[Number(s22r),Number(s22i)];var all=[s11,s12,s21,s22];for(var q=0;q<4;q++){if(!isFinite(all[q][0])||!isFinite(all[q][1]))return {ok:false,msg:'S 参数无效'}}var F=function(c){return '('+c[0].toFixed(2)+(c[1]>=0?' + j':' − j')+Math.abs(c[1]).toFixed(2)+')'};var inv=function(m){var det=S(M(m[0],m[3]),M(m[1],m[2]));if(Math.abs(det[0])<1e-12&&Math.abs(det[1])<1e-12)return null;return [Dv(m[3],det),Dv([-m[1][0],-m[1][1]],det),Dv([-m[2][0],-m[2][1]],det),Dv(m[0],det)]};var mm=function(a,b){return [A(M(a[0],b[0]),M(a[1],b[2])),A(M(a[0],b[1]),M(a[1],b[3])),A(M(a[2],b[0]),M(a[3],b[2])),A(M(a[2],b[1]),M(a[3],b[3]))]};var I=[[1,0],[0,0],[0,0],[1,0]];var Sm=[s11,s12,s21,s22];if(mode==='s2z'){var im=inv(Sm.map(function(e,i){return S(I[i],e)}));if(!im)return {ok:false,msg:'(I − S) 奇异，无法换算 Z 参数'};var zm=mm(Sm.map(function(e,i){return A(I[i],e)}),im).map(function(e){return [e[0]*Z0,e[1]*Z0]});return {ok:true,html:'<div class=\"big\">Z₁₁ = '+F(zm[0])+' Ω · Z₁₂ = '+F(zm[1])+' Ω</div><div class=\"row\">Z₂₁ = '+F(zm[2])+' Ω · Z₂₂ = '+F(zm[3])+' Ω（参考阻抗 '+Z0+' Ω）</div>'}}if(mode==='s2y'){var iy=inv(Sm.map(function(e,i){return A(I[i],e)}));if(!iy)return {ok:false,msg:'(I + S) 奇异，无法换算 Y 参数'};var ym=mm(Sm.map(function(e,i){return S(I[i],e)}),iy).map(function(e){return [e[0]/Z0*1000,e[1]/Z0*1000]});return {ok:true,html:'<div class=\"big\">Y₁₁ = '+F(ym[0])+' mS · Y₁₂ = '+F(ym[1])+' mS</div><div class=\"row\">Y₂₁ = '+F(ym[2])+' mS · Y₂₂ = '+F(ym[3])+' mS（参考阻抗 '+Z0+' Ω）</div>'}}if(Math.abs(s21[0])<1e-12&&Math.abs(s21[1])<1e-12)return {ok:false,msg:'S₂₁ = 0，ABCD 参数不存在'};var one=[1,0];var a1=Dv(A(M(A(one,s11),S(one,s22)),M(s12,s21)),M([2,0],s21));var b1=M([Z0,0],Dv(S(M(A(one,s11),A(one,s22)),M(s12,s21)),M([2,0],s21)));var c1=Dv(S(M(S(one,s11),S(one,s22)),M(s12,s21)),M([2*Z0,0],s21));var d1=Dv(A(M(S(one,s11),A(one,s22)),M(s12,s21)),M([2,0],s21));return {ok:true,html:'<div class=\"big\">A = '+F(a1)+' · B = '+F(b1)+' Ω</div><div class=\"row\">C = ('+(c1[0]*1000).toFixed(2)+(c1[1]>=0?' + j':' − j')+Math.abs(c1[1]*1000).toFixed(2)+') mS · D = '+F(d1)+'；互易网络应满足 AD − BC = 1</div>'};",
+  test:{inputs:{mode:"s2z",z0:50,s11r:0,s11i:0,s12r:0.5,s12i:0,s21r:0.5,s21i:0,s22r:0,s22i:0}, expect:"83.33"}},
+ {id:"dznoise2", cat:"dz", icon:"📻", name:"级联噪声系数（Friis）", desc:"三级级联总噪声系数与等效噪声温度（Friis 公式）",
+  formula:"Friis：F总 = F₁ + (F₂ − 1)÷G₁ + (F₃ − 1)÷(G₁G₂)（F、G 均为倍数，由 dB 换算 F = 10^(NF÷10)，G = 10^(G_dB÷10)）；总噪声系数 NF = 10lg F总；等效噪声温度 Te = (F总 − 1) × 290 K。与 yqnoise（单电阻热噪声）、dzopnoise（运放电路噪声）分工：本工具做接收链路级联口径",
+  inputs:[
+   {id:"nf1", label:"第 1 级噪声系数 NF₁", unit:"dB", def:"2"},
+   {id:"g1", label:"第 1 级增益 G₁", unit:"dB", def:"10"},
+   {id:"nf2", label:"第 2 级噪声系数 NF₂", unit:"dB", def:"5"},
+   {id:"g2", label:"第 2 级增益 G₂", unit:"dB", def:"10"},
+   {id:"nf3", label:"第 3 级噪声系数 NF₃", unit:"dB", def:"8"}
+  ],
+  run:"var n1=Number(nf1),n2=Number(nf2),n3=Number(nf3),a1=Number(g1),a2=Number(g2);if(!(n1>=0&&n2>=0&&n3>=0&&n1<=100&&n2<=100&&n3<=100))return {ok:false,msg:'噪声系数须在 0~100 dB 之间'};if(!(Math.abs(a1)<=100&&Math.abs(a2)<=100))return {ok:false,msg:'单级增益超出 ±100 dB 工程范围'};var F1=Math.pow(10,n1/10),F2=Math.pow(10,n2/10),F3=Math.pow(10,n3/10),G1=Math.pow(10,a1/10),G2=Math.pow(10,a2/10);var Ft=F1+(F2-1)/G1+(F3-1)/(G1*G2);var NF=10*Math.log10(Ft),Te=(Ft-1)*290;var c1=F1/Ft*100,c2=(F2-1)/G1/Ft*100;return {ok:true,html:'<div class=\"big\">总噪声系数 NF = '+NF.toFixed(2)+' dB（F = '+Ft.toFixed(3)+'）</div><div class=\"row\">等效噪声温度 Te = '+Te.toFixed(1)+' K；第 1 级贡献 '+(c1).toFixed(1)+'%，第 2 级 '+c2.toFixed(1)+'%——总噪声主要由第 1 级决定，前级增益越高后级影响越小</div>'};",
+  test:{inputs:{nf1:2,g1:10,nf2:5,g2:10,nf3:8}, expect:"2.68"}},
+ {id:"dzsnr", cat:"dz", icon:"📶", name:"信噪比与接收灵敏度", desc:"热噪声底、信噪比与所需信噪比口径的灵敏度",
+  formula:"热噪声功率（290 K 口径）N = −174 dBm/Hz + 10lg B(Hz) + NF；信噪比 SNR = Ps − N；灵敏度 Pmin = −174 + 10lg B + NF + SNRreq。−174 dBm/Hz 为 kT（T = 290 K）热噪声谱密度口径",
+  inputs:[
+   {id:"Ps", label:"信号功率 Ps", unit:"dBm", def:"-90"},
+   {id:"B", label:"接收带宽 B", unit:"kHz", def:"200"},
+   {id:"NF", label:"接收机噪声系数 NF", unit:"dB", def:"5"},
+   {id:"Sreq", label:"解调所需信噪比", unit:"dB", def:"10"}
+  ],
+  run:"var ps=Number(Ps),b=Number(B)*1000,nf=Number(NF),sr=Number(Sreq);if(!(b>0))return {ok:false,msg:'带宽须大于 0'};if(!(nf>=0&&nf<=100))return {ok:false,msg:'噪声系数须在 0~100 dB 之间'};if(!isFinite(ps)||!isFinite(sr))return {ok:false,msg:'功率/信噪比无效'};var N=-174+10*Math.log10(b)+nf;var snr=ps-N;var pmin=N+sr;return {ok:true,html:'<div class=\"big\">SNR = '+snr.toFixed(2)+' dB</div><div class=\"row\">噪声底 N = '+N.toFixed(2)+' dBm（−174 + 10lg '+b+' Hz + NF '+nf+' dB）；灵敏度 Pmin = '+pmin.toFixed(2)+' dBm（需 SNR '+sr+' dB 时）</div>'};",
+  test:{inputs:{Ps:-90,B:200,NF:5,Sreq:10}, expect:"25.99"}},
+ {id:"dzpll", cat:"dz", icon:"🔒", name:"锁相环环路参数估算", desc:"二阶 II 型 PLL 的噪声带宽、相位裕度、建立与牵引时间估算",
+  formula:"二阶 II 型 PLL（Gardner 口径估算）：环路噪声带宽 BL = (fn÷2)×(ζ + 1÷(4ζ))；增益交越 x = 2ζ² + √(4ζ⁴ + 1)，相位裕度 PM = atan(2ζ√x)；2% 建立时间 ts ≈ 4÷(ζωn)；阶跃频差 Δf 的牵引时间估算 Tp ≈ (2πΔf)²÷(2ζωn³)，ωn = 2πfn。实际捕获范围还取决于鉴相器与 VCO 增益，本工具只给环路动态估算",
+  inputs:[
+   {id:"fn", label:"自然频率 fn", unit:"Hz", def:"1000"},
+   {id:"zeta", label:"阻尼系数 ζ", def:"0.707"},
+   {id:"df", label:"初始频差阶跃 Δf", unit:"Hz", def:"10000"}
+  ],
+  run:"var f=Number(fn),z=Number(zeta),d=Number(df);if(!(f>0))return {ok:false,msg:'自然频率须大于 0'};if(!(z>0&&z<=10))return {ok:false,msg:'阻尼系数须在 (0, 10] 之间'};if(!(d>=0))return {ok:false,msg:'频差不能为负'};var wn=2*Math.PI*f;var x=2*z*z+Math.sqrt(4*Math.pow(z,4)+1);var pm=Math.atan(2*z*Math.sqrt(x))*180/Math.PI;var bl=(f/2)*(z+1/(4*z));var ts=4/(z*wn)*1000;var tp=d===0?0:Math.pow(2*Math.PI*d,2)/(2*z*Math.pow(wn,3))*1000;return {ok:true,html:'<div class=\"big\">相位裕度 ≈ '+pm.toFixed(2)+'° · 噪声带宽 ≈ '+bl.toFixed(1)+' Hz</div><div class=\"row\">建立时间（2%）≈ '+ts.toFixed(2)+' ms；频差 '+d+' Hz 时牵引时间估算 ≈ '+tp.toFixed(2)+' ms；ζ 取 0.7~1.0 兼顾稳定与锁定速度</div>'};",
+  test:{inputs:{fn:1000,zeta:0.707,df:10000}, expect:"65.52"}},
+ {id:"dzvco", cat:"dz", icon:"🎛️", name:"VCO 调谐范围估算", desc:"LC 谐振频率范围，或变容二极管电压调谐的电容/频率",
+  formula:"谐振频率 f = 1÷(2π√(LC))；电容模式：fmax 对应 Cmin，fmin 对应 Cmax，调谐比 = √(Cmax÷Cmin)。变容模式：C(V) = Cj0 ÷ (1 + V÷Vbi)^m（突变结 m ≈ 0.5，超突变结可达 1~2），再由 C(V) 算频率。与 yqvaractor（器件电容-电压单点）分工：本工具做 VCO 整机调谐范围口径",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"cap", options:[{v:"cap",t:"电容范围 → 频率范围"},{v:"volt",t:"变容二极管电压调谐"}]},
+   {id:"L", label:"谐振电感 L", unit:"nH", def:"10"},
+   {id:"cmin", label:"最小总电容 Cmin", unit:"pF", def:"10", when:"mode=cap"},
+   {id:"cmax", label:"最大总电容 Cmax", unit:"pF", def:"40", when:"mode=cap"},
+   {id:"cj0", label:"变容管零偏电容 Cj0", unit:"pF", def:"20", when:"mode=volt"},
+   {id:"vb", label:"反向调谐电压 V", unit:"V", def:"4", when:"mode=volt"},
+   {id:"vbi", label:"自建电势 Vbi", unit:"V", def:"0.7", when:"mode=volt"},
+   {id:"m", label:"结梯度系数 m", def:"0.5", when:"mode=volt"}
+  ],
+  run:"var l=Number(L)*1e-9;if(!(l>0))return {ok:false,msg:'电感须大于 0'};var G=function(x){return x>=0.01?x.toFixed(2):x.toExponential(2)};var fr=function(cpf){return 1/(2*Math.PI*Math.sqrt(l*cpf*1e-12))/1e6};if(mode==='cap'){var a=Number(cmin),b=Number(cmax);if(!(a>0))return {ok:false,msg:'电容须大于 0'};if(!(b>=a))return {ok:false,msg:'Cmax 须 ≥ Cmin'};var fh=fr(a),fl=fr(b);return {ok:true,html:'<div class=\"big\">fmax = '+G(fh)+' MHz · fmin = '+G(fl)+' MHz</div><div class=\"row\">调谐比 fmax÷fmin = '+(fh/fl).toFixed(3)+'（= √(Cmax÷Cmin) = √'+(b/a).toFixed(2)+'）；总电容含变容管、杂散与负载电容</div>'}}var c0=Number(cj0),v=Number(vb),bi=Number(vbi),mm=Number(m);if(!(c0>0))return {ok:false,msg:'零偏电容须大于 0'};if(!(v>=0))return {ok:false,msg:'反偏电压不能为负'};if(!(bi>0))return {ok:false,msg:'自建电势须大于 0'};if(!(mm>0&&mm<=2))return {ok:false,msg:'梯度系数 m 须在 (0, 2] 之间'};var cv=c0/Math.pow(1+v/bi,mm);var fv=fr(cv),f0=fr(c0);return {ok:true,html:'<div class=\"big\">C('+v+' V) = '+cv.toFixed(2)+' pF · f = '+G(fv)+' MHz</div><div class=\"row\">零偏时 C = '+c0+' pF、f = '+G(f0)+' MHz；反偏越大电容越小、频率越高，调谐灵敏度随电压升高而下降</div>'};",
+  test:{inputs:{mode:"cap",L:10,cmin:10,cmax:40,cj0:20,vb:4,vbi:0.7,m:0.5}, expect:"503.29"}},
+ {id:"dzmixer", cat:"dz", icon:"🔁", name:"混频器产物与镜像频率", desc:"中频、镜像频率与 m×RF ± n×LO 低阶杂散表",
+  formula:"中频 IF = |fRF − fLO|；镜像频率在 LO 另一侧、距 RF 为 2IF：fRF 高于 fLO 时 f镜像 = fRF − 2IF，反之为 fRF + 2IF。杂散表列出 |m·fRF − n·fLO|（m、n ≤ 阶数）中落在 3IF 以内且非基波的低阶产物——这些产物可能落入中频滤波器通带",
+  inputs:[
+   {id:"frf", label:"射频频率 fRF", unit:"MHz", def:"1000"},
+   {id:"flo", label:"本振频率 fLO", unit:"MHz", def:"900"},
+   {id:"nord", label:"杂散阶数上限", type:"select", def:"3", options:[{v:"3",t:"3 阶"},{v:"5",t:"5 阶"}]}
+  ],
+  run:"var r=Number(frf),l=Number(flo),N=Number(nord);if(!(r>0&&l>0))return {ok:false,msg:'频率须大于 0'};if([3,5].indexOf(N)<0)return {ok:false,msg:'阶数无效'};var IF=Math.abs(r-l);if(IF===0)return {ok:false,msg:'RF 与 LO 相同为零中频，无镜像/杂散口径，请错开频率'};var img=r>l?r-2*IF:r+2*IF;var rows=[];for(var mi=1;mi<=N;mi++){for(var ni=1;ni<=N;ni++){if(mi===1&&ni===1)continue;var p=Math.abs(mi*r-ni*l);if(p>0&&p<=3*IF)rows.push(mi+'×RF − '+ni+'×LO = '+p.toFixed(1)+' MHz');}}var h='<div class=\"big\">中频 IF = '+IF.toFixed(2)+' MHz · 镜像频率 = '+img.toFixed(2)+' MHz</div><div class=\"row\">和频产物 fRF + fLO = '+(r+l).toFixed(1)+' MHz（通常由低通/带通滤除）；镜像距有用信号 2IF = '+(2*IF).toFixed(1)+' MHz，靠前端预选滤波器抑制</div>';if(rows.length)h+='<div class=\"row\">⚠️ 落在 3IF 内的低阶杂散：'+rows.join('；')+'</div>';else h+='<div class=\"row\">✅ '+N+' 阶内无杂散落入 3IF 范围</div>';return {ok:true,html:h};",
+  test:{inputs:{frf:1000,flo:900,nord:"3"}, expect:"800.00"}},
+ {id:"dzxtal2", cat:"dz", icon:"💎", name:"晶体负载牵引与频偏", desc:"负载电容变化引起的频偏 ppm 与牵引灵敏度",
+  formula:"负载牵引（晶体等效电路口径）：Δf÷f ≈ (Cm÷2) × [1÷(C₀ + CL实际) − 1÷(C₀ + CL标称)]（Cm 为动态电容，C₀ 为并电容，电容同单位）；牵引灵敏度 ≈ −(Cm÷2) ÷ (C₀ + CL实际)²（ppm/pF）。与 dzxtal 分工：dzxtal 算外接电容合成负载，本工具算负载变化引起的频率偏移",
+  inputs:[
+   {id:"f0", label:"标称频率 f₀", unit:"MHz", def:"10"},
+   {id:"cm", label:"动态电容 Cm", unit:"fF", def:"10"},
+   {id:"c0", label:"并电容 C₀", unit:"pF", def:"5"},
+   {id:"cls", label:"标称负载电容 CL", unit:"pF", def:"18"},
+   {id:"cla", label:"实际负载电容 CL'", unit:"pF", def:"12"}
+  ],
+  run:"var f=Number(f0),cmv=Number(cm)/1000,cc=Number(c0),a=Number(cls),b=Number(cla);if(!(f>0))return {ok:false,msg:'频率须大于 0'};if(!(cmv>0))return {ok:false,msg:'动态电容须大于 0'};if(!(cc>=0))return {ok:false,msg:'并电容不能为负'};if(!(a>0&&b>0))return {ok:false,msg:'负载电容须大于 0'};var ppm=(cmv/2)*(1/(cc+b)-1/(cc+a))*1e6;var df=f*ppm;var sens=-(cmv/2)/((cc+b)*(cc+b))*1e6;return {ok:true,html:'<div class=\"big\">频偏 = '+(ppm>=0?'+':'')+ppm.toFixed(2)+' ppm（'+(df>=0?'+':'')+df.toFixed(1)+' Hz @ '+f+' MHz）</div><div class=\"row\">牵引灵敏度 ≈ '+sens.toFixed(2)+' ppm/pF（在实际 CL 处）；负载电容减小频率升高；Cm、C₀ 取晶体数据手册值，fF 与 pF 已在本工具内统一换算</div>'};",
+  test:{inputs:{f0:10,cm:10,c0:5,cls:18,cla:12}, expect:"76.73"}}
+);
+TOOLS.push(
+ {id:"dzadc2", cat:"dz", icon:"⏱️", name:"ADC 进阶：抖动与建立时间", desc:"孔径抖动限制的 SNR，或采样保持建立到 ½LSB 的时间",
+  formula:"孔径抖动：SNR抖动 = −20lg(2π·fin·tj)，等效 ENOB = (SNR − 1.76)÷6.02。采样保持建立：电容按 τ 指数充电，建立到 ½ LSB（N 位）需 t = τ × ln(2^(N+1))。与 dzadcenob（由实测 SNR/SINAD 换 ENOB）、dzalias（混叠频率）、dzadcspeed（采样率换算）分工：本工具做抖动与建立这两个动态指标的预算",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"jit", options:[{v:"jit",t:"孔径抖动 → SNR 上限"},{v:"acq",t:"采样保持建立时间"}]},
+   {id:"fin", label:"输入信号频率 fin", unit:"MHz", def:"10", when:"mode=jit"},
+   {id:"tj", label:"孔径抖动 tj（rms）", unit:"ps", def:"1", when:"mode=jit"},
+   {id:"tau", label:"采样保持时间常数 τ", unit:"ns", def:"10", when:"mode=acq"},
+   {id:"n", label:"ADC 位数 N", def:"12", when:"mode=acq"}
+  ],
+  run:"if(mode==='jit'){var f=Number(fin)*1e6,t=Number(tj)*1e-12;if(!(f>0))return {ok:false,msg:'输入频率须大于 0'};if(!(t>0))return {ok:false,msg:'抖动须大于 0'};var snr=-20*Math.log10(2*Math.PI*f*t);var en=(snr-1.76)/6.02;return {ok:true,html:'<div class=\"big\">抖动限制 SNR = '+snr.toFixed(2)+' dB · 等效 ENOB = '+en.toFixed(2)+' 位</div><div class=\"row\">输入频率越高、抖动越大，上限越低；时钟抖动与 ADC 孔径抖动按方和根合成后再代入</div>'}}var ta=Number(tau),nn=Number(n);if(!(ta>0))return {ok:false,msg:'时间常数须大于 0'};if(!(Number.isInteger(nn)&&nn>=4&&nn<=24))return {ok:false,msg:'位数须为 4~24 的整数'};var tacq=ta*Math.log(Math.pow(2,nn+1));var fs=1000/tacq;return {ok:true,html:'<div class=\"big\">建立时间 ≈ '+tacq.toFixed(2)+' ns（到 ½ LSB）</div><div class=\"row\">ln(2^'+(nn+1)+') = '+Math.log(Math.pow(2,nn+1)).toFixed(3)+' 个时间常数；仅建立时间对应的采样率上限约 '+fs.toFixed(2)+' MSPS（未计转换时间）</div>'};",
+  test:{inputs:{mode:"jit",fin:10,tj:1,tau:10,n:12}, expect:"84.04"}},
+ {id:"dzdac", cat:"dz", icon:"🎚️", name:"DAC 参数预算", desc:"LSB/INL 误差、单调性判定、建立时间对应更新率与毛刺",
+  formula:"LSB = Vref ÷ 2^N；INL 绝对误差 = INL(LSB) × LSB；单调性判据：DNL > −1 LSB 保证单调，DNL > +1 LSB 出现失码；最大更新率 ≈ 1 ÷ 建立时间（建立到 ±½ LSB 口径）；毛刺冲量以 nV·s 计，输出端低通可平滑。与 yqdac 分工：yqdac 做代码↔电压的器件级换算，本工具做 INL/DNL/建立/毛刺的系统参数口径",
+  inputs:[
+   {id:"n", label:"DAC 位数 N", def:"12"},
+   {id:"vref", label:"参考电压 Vref", unit:"V", def:"5"},
+   {id:"inl", label:"积分非线性 INL", unit:"LSB", def:"2"},
+   {id:"dnl", label:"微分非线性 DNL", unit:"LSB", def:"0.5"},
+   {id:"ts", label:"建立时间 ts", unit:"ns", def:"100"},
+   {id:"gl", label:"毛刺冲量", unit:"nV·s", def:"10"}
+  ],
+  run:"var nn=Number(n),v=Number(vref),il=Number(inl),dn=Number(dnl),t=Number(ts),g=Number(gl);if(!(Number.isInteger(nn)&&nn>=4&&nn<=24))return {ok:false,msg:'位数须为 4~24 的整数'};if(!(v>0))return {ok:false,msg:'参考电压须大于 0'};if(!(il>=0))return {ok:false,msg:'INL 不能为负（填绝对值）'};if(!(dn>=-10&&dn<=10))return {ok:false,msg:'DNL 超出 ±10 LSB 工程范围'};if(!(t>0))return {ok:false,msg:'建立时间须大于 0'};if(!(g>=0))return {ok:false,msg:'毛刺冲量不能为负'};var lsb=v/Math.pow(2,nn);var verdict=dn<=-1?'❌ DNL ≤ −1 LSB：不保证单调，可能失码':dn>1?'⚠️ DNL > +1 LSB：出现失码（台阶大于 2 LSB）':'✅ 单调（−1 < DNL ≤ +1 LSB）';return {ok:true,html:'<div class=\"big\">LSB = '+(lsb*1000).toFixed(3)+' mV · INL 误差 = ±'+(il*lsb*1000).toFixed(3)+' mV</div><div class=\"row\">单调性：'+verdict+'；最大更新率 ≈ '+(1000/t).toFixed(2)+' MHz；毛刺冲量 '+g+' nV·s（主进位 0111→1000 处最大，可用采样保持去毛刺）</div>'};",
+  test:{inputs:{n:12,vref:5,inl:2,dnl:0.5,ts:100,gl:10}, expect:"1.221"}},
+ {id:"dzsigma", cat:"dz", icon:"∑", name:"Delta-Sigma 调制估算", desc:"过采样率与阶数决定的理论最大 SNR 与 ENOB",
+  formula:"理想 ΔΣ（量化噪声整形口径）：SNRmax = 6.02B + 1.76 + (2L + 1)×10lg(OSR) − 10lg(π^(2L) ÷ (2L + 1))，B 为量化器位数，L 为调制器阶数；OSR 每翻倍 SNR 提升 (2L + 1) × 3.01 dB。实际值受运放增益、热噪声与抖动限制，通常低于此上限",
+  inputs:[
+   {id:"ord", label:"调制器阶数 L", type:"select", def:"1", options:[{v:"1",t:"一阶"},{v:"2",t:"二阶"},{v:"3",t:"三阶"}]},
+   {id:"osr", label:"过采样率 OSR", def:"256"},
+   {id:"bits", label:"量化器位数 B", def:"1"}
+  ],
+  run:"var L=Number(ord),o=Number(osr),b=Number(bits);if([1,2,3].indexOf(L)<0)return {ok:false,msg:'阶数无效'};if(!(o>=2&&o<=65536))return {ok:false,msg:'OSR 须在 2~65536 之间（更高请分级实现）'};if(!(Number.isInteger(b)&&b>=1&&b<=8))return {ok:false,msg:'量化器位数须为 1~8 的整数'};var snr=6.02*b+1.76+(2*L+1)*10*Math.log10(o)-10*Math.log10(Math.pow(Math.PI,2*L)/(2*L+1));var en=(snr-1.76)/6.02;return {ok:true,html:'<div class=\"big\">理论最大 SNR ≈ '+snr.toFixed(2)+' dB · ENOB ≈ '+en.toFixed(2)+' 位</div><div class=\"row\">OSR 每翻倍提升 '+((2*L+1)*3.01).toFixed(2)+' dB（'+L+' 阶）；此为量化噪声整形的理想上限，电路噪声会进一步压低</div>'};",
+  test:{inputs:{ord:"1",osr:256,bits:1}, expect:"74.86"}},
+ {id:"dzemi", cat:"dz", icon:"🛡️", name:"EMC 估算（场界/天线因子/屏蔽）", desc:"近远场界限、天线因子与场强、金属屏蔽效能估算",
+  formula:"场界：反应近场界 r = λ÷(2π)，辐射远场（Fraunhofer）r = 2D²÷λ（λ = c÷f，c 取 3×10⁸）。天线因子 AF = 20lg f(MHz) − G(dBi) − 29.79（50 Ω 口径），场强 E(dBμV/m) = 接收功率(dBm) + 107 + AF。屏蔽（Schelkunoff 平面波口径）：吸收损耗 A = 131.4 × t(m) × √(f(Hz)·μr·σr)，反射损耗 R ≈ 168 − 10lg(μr·f(Hz)÷σr)，SE ≈ A + R（A > 10 dB 时多重反射修正可忽略）；材料 σr/μr 为相对铜/自由空间的节选常用值",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"bnd", options:[{v:"bnd",t:"近场/远场界限"},{v:"af",t:"天线因子与场强"},{v:"se",t:"屏蔽效能"}]},
+   {id:"f", label:"频率 f", unit:"MHz", def:"300"},
+   {id:"D", label:"天线最大尺寸 D", unit:"m", def:"0.3", when:"mode=bnd"},
+   {id:"G", label:"天线增益 G", unit:"dBi", def:"10", when:"mode=af"},
+   {id:"Pr", label:"接收功率", unit:"dBm", def:"-80", when:"mode=af"},
+   {id:"mat", label:"屏蔽材料", type:"select", def:"cu", when:"mode=se", options:[{v:"cu",t:"铜（σr 1，μr 1）"},{v:"al",t:"铝（σr 0.61，μr 1）"},{v:"fe",t:"钢（σr 0.17，μr 200）"}]},
+   {id:"t", label:"屏蔽层厚度 t", unit:"mm", def:"0.5", when:"mode=se"}
+  ],
+  run:"var ff=Number(f);if(!(ff>0))return {ok:false,msg:'频率须大于 0'};var GF=function(x){return Math.abs(x)>=0.01?x.toFixed(3):x.toExponential(2)};if(mode==='bnd'){var dd=Number(D);if(!(dd>0))return {ok:false,msg:'天线尺寸须大于 0'};var lam=3e8/(ff*1e6);var r1=lam/(2*Math.PI),r2=2*dd*dd/lam;return {ok:true,html:'<div class=\"big\">λ = '+GF(lam)+' m · 反应近场界 ≈ '+GF(r1)+' m</div><div class=\"row\">远场起始（Fraunhofer）≈ '+GF(r2)+' m（2D²÷λ，D = '+dd+' m）；两界之间为辐射近场，增益/方向图测量应在远场界之外</div>'}}if(mode==='af'){var gg=Number(G),pr=Number(Pr);if(!isFinite(gg)||!isFinite(pr))return {ok:false,msg:'增益/功率无效'};var af=20*Math.log10(ff)-gg-29.79;var e=pr+107+af;return {ok:true,html:'<div class=\"big\">AF = '+af.toFixed(2)+' dB/m · 场强 E = '+e.toFixed(2)+' dBμV/m</div><div class=\"row\">E = 接收功率 '+pr+' dBm + 107（dBm→dBμV，50 Ω）+ AF；AF 随频率升高而增大、随天线增益增大而减小</div>'}}var MT={cu:[1,1],al:[0.61,1],fe:[0.17,200]};var mt=MT[mat];if(!mt)return {ok:false,msg:'材料无效'};var tt=Number(t);if(!(tt>0))return {ok:false,msg:'厚度须大于 0'};var fh=ff*1e6;var As=131.4*(tt/1000)*Math.sqrt(fh*mt[1]*mt[0]);var R=168-10*Math.log10(mt[1]*fh/mt[0]);var se=As+R;return {ok:true,html:'<div class=\"big\">屏蔽效能 SE ≈ '+se.toFixed(1)+' dB（吸收 '+As.toFixed(1)+' + 反射 '+R.toFixed(1)+'）</div><div class=\"row\">频率 '+ff+' MHz、厚 '+tt+' mm；实际 SE 常被缝隙、开孔与搭接主导，远低于平板理论值——公式给材料上限口径</div>'};",
+  test:{inputs:{mode:"bnd",f:300,D:0.3,G:10,Pr:-80,mat:"cu",t:0.5}, expect:"0.159"}},
+ {id:"dzpcb2", cat:"dz", icon:"🔬", name:"PCB 进阶：差分阻抗与过孔电感", desc:"边缘耦合差分阻抗估算，或过孔电感与高频阻抗",
+  formula:"差分（微带边缘耦合近似，IPC 口径）：Zdiff ≈ 2 × Z₀ × (1 − 0.48 × e^(−0.96 × S÷H))，Z₀ 为单端阻抗，S 为对内间距，H 为介质厚。过孔电感近似：L ≈ 2×10⁻⁷ × h × (ln(4h÷d) + 1)（h、d 同单位，SI），感抗 XL = 2πfL。与 dzustrip（单端微带）、dzvia（过孔电阻/载流）、dzpcb（走线载流）分工：本工具做差分耦合与过孔寄生口径",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"diff", options:[{v:"diff",t:"差分阻抗"},{v:"via",t:"过孔电感"}]},
+   {id:"z0", label:"单端特性阻抗 Z₀", unit:"Ω", def:"50", when:"mode=diff"},
+   {id:"s", label:"差分对间距 S", unit:"mm", def:"0.2", when:"mode=diff"},
+   {id:"h", label:"介质厚度 H", unit:"mm", def:"0.2", when:"mode=diff"},
+   {id:"len", label:"过孔长度（板厚）h", unit:"mm", def:"1.6", when:"mode=via"},
+   {id:"d", label:"过孔成品孔径 d", unit:"mm", def:"0.3", when:"mode=via"},
+   {id:"fv", label:"信号频率 f", unit:"MHz", def:"1000", when:"mode=via"}
+  ],
+  run:"if(mode==='diff'){var z=Number(z0),ss=Number(s),hh=Number(h);if(!(z>0))return {ok:false,msg:'单端阻抗须大于 0'};if(!(ss>0&&hh>0))return {ok:false,msg:'间距与介质厚须大于 0'};var zd=2*z*(1-0.48*Math.exp(-0.96*ss/hh));return {ok:true,html:'<div class=\"big\">差分阻抗 Zdiff ≈ '+zd.toFixed(2)+' Ω</div><div class=\"row\">耦合系数 0.48×e^(−0.96×'+(ss/hh).toFixed(2)+')；间距越小耦合越强、Zdiff 越低于 2Z₀；100 Ω 差分对常用单端 55~60 Ω 设计</div>'}}var L2=Number(len),dd=Number(d),fv2=Number(fv);if(!(L2>0&&dd>0))return {ok:false,msg:'孔长与孔径须大于 0'};if(!(fv2>0))return {ok:false,msg:'频率须大于 0'};var Lv=2e-7*(L2/1000)*(Math.log(4*L2/dd)+1);var xl=2*Math.PI*fv2*1e6*Lv;return {ok:true,html:'<div class=\"big\">过孔电感 ≈ '+(Lv*1e9).toFixed(2)+' nH · '+(fv2/1000)+' GHz 时感抗 ≈ '+xl.toFixed(2)+' Ω</div><div class=\"row\">去耦过孔电感会抬高 PDN 阻抗：缩短过孔（盲孔/背钻）、成对回流过孔、就近放置电容可减小回路电感</div>'};",
+  test:{inputs:{mode:"diff",z0:50,s:0.2,h:0.2,len:1.6,d:0.3,fv:1000}, expect:"81.62"}},
+ {id:"dzthermal2", cat:"dz", icon:"🌡️", name:"热设计进阶：多层热阻链", desc:"结-壳-界面-散热器热阻链的结温与散热器热阻预算",
+  formula:"热阻串联链：Tj = Ta + P × (RθJC + RθCS + RθSA)；壳温 Tc = Tj − P × RθJC；满足 Tjmax 所需散热器热阻 RθSA ≤ (Tjmax − Ta)÷P − RθJC − RθCS。与 dztherm（单热阻结温）、dzheatsink（只反算散热器）分工：本工具做完整链的正算 + 预算合并判定",
+  inputs:[
+   {id:"P", label:"器件功耗 P", unit:"W", def:"10"},
+   {id:"Ta", label:"环境温度 Ta", unit:"℃", def:"25"},
+   {id:"Tjmax", label:"允许最高结温 Tjmax", unit:"℃", def:"125"},
+   {id:"Rjc", label:"结-壳热阻 RθJC", unit:"℃/W", def:"1"},
+   {id:"Rcs", label:"壳-散热器界面热阻 RθCS", unit:"℃/W", def:"0.5"},
+   {id:"Rsa", label:"散热器热阻 RθSA", unit:"℃/W", def:"2"}
+  ],
+  run:"var p=Number(P),ta=Number(Ta),tm=Number(Tjmax),a=Number(Rjc),b=Number(Rcs),c=Number(Rsa);if(!(p>0))return {ok:false,msg:'功耗须大于 0'};if(!(a>=0&&b>=0&&c>=0))return {ok:false,msg:'热阻不能为负'};if(!(tm>ta))return {ok:false,msg:'Tjmax 须高于环境温度'};var req=(tm-ta)/p-a-b;if(req<0)return {ok:false,msg:'即使散热器热阻为 0 也超温（界面与结壳热阻已耗尽温升预算），需降功耗或换低 RθJC 封装'};var tj=ta+p*(a+b+c);var tc=tj-p*a;var ok=tj<=tm;return {ok:true,html:'<div class=\"big\">结温 Tj = '+tj.toFixed(2)+' ℃ '+(ok?'✅ 未超限':'❌ 超过 Tjmax')+'</div><div class=\"row\">壳温 Tc = '+tc.toFixed(2)+' ℃；散热器热阻预算 RθSA ≤ '+req.toFixed(2)+' ℃/W，所选 '+c+' ℃/W '+(c<=req?'满足':'不满足')+'；结温裕量 '+(tm-tj).toFixed(1)+' ℃</div>'};",
+  test:{inputs:{P:10,Ta:25,Tjmax:125,Rjc:1,Rcs:0.5,Rsa:2}, expect:"60.00"}},
+ {id:"dzbattery2", cat:"dz", icon:"🔋", name:"电池进阶：Peukert 与内阻", desc:"Peukert 倍率容量与两点法内阻/开路电压测算",
+  formula:"Peukert（以 20 h 率容量 C 为基准）：有效容量 Ceff = C × (C ÷ (20×I))^(k−1)，续航 t = Ceff ÷ I，铅酸 k ≈ 1.1~1.3，k = 1 时无倍率损失。两点法内阻：r = (V₁ − V₂) ÷ (I₂ − I₁)，开路电压 Voc = V₁ + I₁×r。与 dzbatt（简单续航）、dzsoc（电压查 SOC）、dzbatpack（串并联）分工：本工具做倍率效应与内阻口径",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"pk", options:[{v:"pk",t:"Peukert 倍率容量"},{v:"ir",t:"两点法测内阻"}]},
+   {id:"C", label:"标称容量 C（20h 率）", unit:"Ah", def:"100", when:"mode=pk"},
+   {id:"I", label:"放电电流 I", unit:"A", def:"20", when:"mode=pk"},
+   {id:"k", label:"Peukert 指数 k", def:"1.2", when:"mode=pk"},
+   {id:"v1", label:"轻载端电压 V₁", unit:"V", def:"12.6", when:"mode=ir"},
+   {id:"i1", label:"轻载电流 I₁", unit:"A", def:"1", when:"mode=ir"},
+   {id:"v2", label:"重载端电压 V₂", unit:"V", def:"12.0", when:"mode=ir"},
+   {id:"i2", label:"重载电流 I₂", unit:"A", def:"11", when:"mode=ir"}
+  ],
+  run:"if(mode==='pk'){var cc=Number(C),ii=Number(I),kk=Number(k);if(!(cc>0))return {ok:false,msg:'容量须大于 0'};if(!(ii>0))return {ok:false,msg:'放电电流须大于 0'};if(!(kk>=1&&kk<=2))return {ok:false,msg:'Peukert 指数须在 1~2 之间（铅酸约 1.1~1.3，锂电约 1.02~1.1）'};var ce=cc*Math.pow(cc/(20*ii),kk-1);var t=ce/ii;return {ok:true,html:'<div class=\"big\">有效容量 ≈ '+ce.toFixed(2)+' Ah · 续航 ≈ '+t.toFixed(2)+' h</div><div class=\"row\">放电倍率 '+(ii/cc).toFixed(2)+'C；k = 1 时有效容量 = 标称 '+cc+' Ah，大电流下铅酸可用容量明显缩水</div>'}}var V1=Number(v1),I1=Number(i1),V2=Number(v2),I2=Number(i2);if(!(I2>I1))return {ok:false,msg:'重载电流 I₂ 须大于轻载电流 I₁'};if(!(V1>V2))return {ok:false,msg:'重载端电压应低于轻载（V₂ < V₁），请检查测点顺序'};var r=(V1-V2)/(I2-I1);var voc=V1+I1*r;return {ok:true,html:'<div class=\"big\">内阻 r ≈ '+(r*1000).toFixed(2)+' mΩ · 开路电压 ≈ '+voc.toFixed(2)+' V</div><div class=\"row\">短路电流估算 Voc÷r ≈ '+(voc/r).toFixed(0)+' A（仅量级参考）；内阻随老化与低温增大，两点应在同一 SOC 下快速测取</div>'};",
+  test:{inputs:{mode:"pk",C:100,I:20,k:1.2,v1:12.6,i1:1,v2:12,i2:11}, expect:"75.79"}},
+ {id:"dzbuck2", cat:"dz", icon:"⚙️", name:"升压/升降压电感设计", desc:"Boost 与反相 Buck-Boost 的占空比、电感与峰值电流整合",
+  formula:"Boost：D = 1 − Vin÷Vo，电感平均电流 IL = Iout÷(1 − D)，L = Vin×D ÷ (f×ΔIL)。反相 Buck-Boost（Vo 填负值）：D = |Vo|÷(Vin + |Vo|)，IL = Iout÷(1 − D)，L = Vin×D ÷ (f×ΔIL)。ΔIL = IL × 纹波比，峰值电流 Ipk = IL + ΔIL÷2。与 dzbuck/dzboost（只算占空比）、dzbuckrip（Buck 电感）分工：本工具整合 Boost 与 Buck-Boost 的电感设计",
+  inputs:[
+   {id:"mode", label:"拓扑", type:"select", def:"boost", options:[{v:"boost",t:"Boost 升压"},{v:"bb",t:"Buck-Boost 反相"}]},
+   {id:"Vin", label:"输入电压 Vin", unit:"V", def:"12"},
+   {id:"Vo", label:"输出电压 Vo（反相填负值）", unit:"V", def:"24"},
+   {id:"Iout", label:"输出电流 Iout", unit:"A", def:"2"},
+   {id:"f", label:"开关频率 f", unit:"kHz", def:"100"},
+   {id:"rip", label:"电感纹波比", unit:"%", def:"30"}
+  ],
+  run:"var vi=Number(Vin),vo=Number(Vo),io=Number(Iout),ff=Number(f)*1000,rp=Number(rip)/100;if(!(vi>0))return {ok:false,msg:'输入电压须大于 0'};if(!(io>0))return {ok:false,msg:'输出电流须大于 0'};if(!(ff>0))return {ok:false,msg:'频率须大于 0'};if(!(rp>0&&rp<=1))return {ok:false,msg:'纹波比须在 (0, 100%] 之间'};var D,IL;if(mode==='boost'){if(!(vo>vi))return {ok:false,msg:'Boost 要求 Vo 大于 Vin（升压），否则改用 Buck 或 Buck-Boost'};D=1-vi/vo;IL=io/(1-D);}else{var av=Math.abs(vo);if(!(av>0))return {ok:false,msg:'输出电压不能为 0'};D=av/(vi+av);IL=io/(1-D);}var dl=IL*rp;var L=vi*D/(ff*dl);var ipk=IL+dl/2;return {ok:true,html:'<div class=\"big\">占空比 D = '+(D*100).toFixed(1)+'% · 电感 L ≥ '+(L*1e6).toFixed(2)+' μH</div><div class=\"row\">电感平均电流 '+IL.toFixed(2)+' A，纹波 ΔIL = '+dl.toFixed(2)+' A，峰值电流 '+ipk.toFixed(2)+' A（选感时饱和电流须大于此值）；开关管电流与电感电流同量级</div>'};",
+  test:{inputs:{mode:"boost",Vin:12,Vo:24,Iout:2,f:100,rip:30}, expect:"50.00"}},
+ {id:"dzopamp2", cat:"dz", icon:"📐", name:"运放进阶：全功率带宽与失调预算", desc:"压摆率决定的全功率带宽，或失调/偏置/漂移的误差预算",
+  formula:"全功率带宽：fmax = SR ÷ (2π × Vpk)；给定频率与幅度所需压摆率 SRreq = 2π × f × Vpk。失调预算（输入等效）：总失调 = Vos + Ib × Req + 漂移 × ΔT，输出误差 = 总失调 × 闭环增益。与 dzslew（只校核所需 SR）、dzopamp（增益）、dzgbw（增益带宽）分工：本工具做大幅度带宽与直流误差预算",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"fpbw", options:[{v:"fpbw",t:"全功率带宽"},{v:"offset",t:"失调误差预算"}]},
+   {id:"sr", label:"压摆率 SR", unit:"V/μs", def:"0.5", when:"mode=fpbw"},
+   {id:"vpk", label:"输出峰值幅度 Vpk", unit:"V", def:"10", when:"mode=fpbw"},
+   {id:"frq", label:"信号频率 f（校核所需 SR）", unit:"kHz", def:"20", when:"mode=fpbw"},
+   {id:"vos", label:"输入失调电压 Vos", unit:"mV", def:"2", when:"mode=offset"},
+   {id:"ib", label:"输入偏置电流 Ib", unit:"nA", def:"80", when:"mode=offset"},
+   {id:"req", label:"输入等效电阻 Req", unit:"kΩ", def:"10", when:"mode=offset"},
+   {id:"drift", label:"失调温漂", unit:"μV/℃", def:"15", when:"mode=offset"},
+   {id:"dt", label:"温升 ΔT", unit:"℃", def:"40", when:"mode=offset"},
+   {id:"av", label:"闭环增益 Av", def:"100", when:"mode=offset"}
+  ],
+  run:"if(mode==='fpbw'){var s=Number(sr),v=Number(vpk),fq=Number(frq)*1000;if(!(s>0))return {ok:false,msg:'压摆率须大于 0'};if(!(v>0))return {ok:false,msg:'峰值幅度须大于 0'};if(!(fq>=0))return {ok:false,msg:'频率不能为负'};var fm=s*1e6/(2*Math.PI*v);var sreq=2*Math.PI*fq*v/1e6;return {ok:true,html:'<div class=\"big\">全功率带宽 ≈ '+(fm/1000).toFixed(2)+' kHz</div><div class=\"row\">'+(fq/1000)+' kHz、±'+v+' V 输出需要 SR ≥ '+sreq.toFixed(3)+' V/μs，当前 '+s+' V/μs '+(s>=sreq?'✅ 满足':'❌ 不足，大信号将压摆失真（三角化）')+'；小信号带宽由增益带宽积决定，与此不同</div>'}}var vo=Number(vos),ibv=Number(ib),rq=Number(req),dr=Number(drift),dtt=Number(dt),avv=Number(av);if(!(vo>=0&&ibv>=0&&rq>=0&&dr>=0&&dtt>=0))return {ok:false,msg:'失调/偏置/电阻/漂移/温升不能为负'};if(!(avv>0))return {ok:false,msg:'闭环增益须大于 0'};var eib=ibv*1e-9*rq*1000*1000/1000;var edr=dr*dtt/1000;var tot=vo+ibv*rq/1000+edr;return {ok:true,html:'<div class=\"big\">输入等效总失调 ≈ '+tot.toFixed(2)+' mV · 输出误差 ≈ '+(tot*avv).toFixed(2)+' mV</div><div class=\"row\">分量：Vos '+vo+' mV + Ib×Req '+(ibv*rq/1000).toFixed(2)+' mV + 温漂 '+edr.toFixed(2)+' mV（线性叠加为最坏情况口径；随机口径按方和根更小）</div>'};",
+  test:{inputs:{mode:"fpbw",sr:0.5,vpk:10,frq:20,vos:2,ib:80,req:10,drift:15,dt:40,av:100}, expect:"7.96"}}
+);
+TOOLS.push(
+ {id:"dzfilter2", cat:"dz", icon:"📉", name:"滤波器进阶：巴特沃斯阶数判定", desc:"由通带/阻带指标判定巴特沃斯所需阶数与实际截止",
+  formula:"阶数判定：n = ⌈ lg[(10^(As÷10) − 1) ÷ (10^(Ap÷10) − 1)] ÷ (2 × lg(fs÷fp)) ⌉（低通；高通以 fp÷fs 代入）；按 Ap 反算截止 fc：低通 fc = fp ÷ (10^(Ap÷10) − 1)^(1÷2n)，高通 fc = fp × (10^(Ap÷10) − 1)^(1÷2n)；阻带实际衰减 As' = 10lg(1 + (fs÷fc)^2n)（低通）。与 dzbutterlc（给定二/三阶的元件值）、dzlcfilter、dzsallen 分工：本工具先定阶数，再回元件工具取值",
+  inputs:[
+   {id:"type", label:"滤波类型", type:"select", def:"lp", options:[{v:"lp",t:"低通"},{v:"hp",t:"高通"}]},
+   {id:"fp", label:"通带边缘 fp", unit:"Hz", def:"1000"},
+   {id:"fs", label:"阻带边缘 fs", unit:"Hz", def:"10000"},
+   {id:"ap", label:"通带最大衰减 Ap", unit:"dB", def:"3"},
+   {id:"as", label:"阻带最小衰减 As", unit:"dB", def:"40"}
+  ],
+  run:"var p=Number(fp),s=Number(fs),apv=Number(ap),asv=Number(as);if(!(p>0&&s>0))return {ok:false,msg:'频率须大于 0'};if(!(apv>0&&apv<=200))return {ok:false,msg:'通带衰减须在 (0, 200] dB 之间'};if(!(asv>apv&&asv<=400))return {ok:false,msg:'阻带衰减须大于通带衰减且 ≤ 400 dB'};var ratio=type==='lp'?s/p:p/s;if(!(ratio>1))return {ok:false,msg:type==='lp'?'低通要求 fs 大于 fp':'高通要求 fs 小于 fp'};var n=Math.ceil(Math.log10((Math.pow(10,asv/10)-1)/(Math.pow(10,apv/10)-1))/(2*Math.log10(ratio)));if(!(n>=1&&n<=1000))return {ok:false,msg:'指标过于苛刻，阶数超出可实现范围，请放宽过渡带或衰减'};var g=Math.pow(10,apv/10)-1;var fc=type==='lp'?p/Math.pow(g,1/(2*n)):p*Math.pow(g,1/(2*n));var rr=type==='lp'?s/fc:fc/s;var lg=2*n*Math.log10(rr);var asact=lg>15?10*lg:10*Math.log10(1+Math.pow(rr,2*n));return {ok:true,html:'<div class=\"big\">所需阶数 n = '+n+' · 截止频率 fc ≈ '+fc.toFixed(2)+' Hz</div><div class=\"row\">按此 fc，阻带边缘实际衰减 ≈ '+asact.toFixed(2)+' dB（要求 '+asv+' dB，取整升阶后有裕量）；切比雪夫同指标阶数更低但通带起伏，椭圆更低但相位更差</div>'};",
+  test:{inputs:{type:"lp",fp:1000,fs:10000,ap:3,as:40}, expect:"59.98"}},
+ {id:"dzosc2", cat:"dz", icon:"💍", name:"振荡器进阶：环形与 RC 相移", desc:"奇数级环形振荡频率，或三节 RC 相移振荡频率与增益条件",
+  formula:"环形振荡器：f = 1 ÷ (2 × N × tpd)（N 为奇数级反相器，tpd 为单级延迟）。三节 RC 相移：f = 1 ÷ (2π × R × C × √6)，反馈网络产生 180° 相移处衰减 1÷29，故放大增益须 ≥ 29。与 dzlcosc（考毕兹/哈特莱 LC）、dzwien（文氏桥）、dzrcosc（门电路 RC）分工：本工具补环形与相移两种拓扑",
+  inputs:[
+   {id:"mode", label:"振荡拓扑", type:"select", def:"ring", options:[{v:"ring",t:"环形振荡器"},{v:"ps",t:"三节 RC 相移"}]},
+   {id:"nstg", label:"反相器级数 N", def:"5", when:"mode=ring"},
+   {id:"tpd", label:"单级延迟 tpd", unit:"ps", def:"100", when:"mode=ring"},
+   {id:"r", label:"相移电阻 R", unit:"kΩ", def:"10", when:"mode=ps"},
+   {id:"c", label:"相移电容 C", unit:"nF", def:"10", when:"mode=ps"}
+  ],
+  run:"if(mode==='ring'){var n=Number(nstg),t=Number(tpd);if(!(Number.isInteger(n)&&n>=3&&n%2===1))return {ok:false,msg:'级数须为 ≥ 3 的奇数（偶数级构成锁存器不振荡）'};if(!(t>0))return {ok:false,msg:'单级延迟须大于 0'};var per=2*n*t;var fs=per<=1000?(1000/per).toFixed(2)+' GHz':per<=1e6?(1e6/per).toFixed(2)+' MHz':(1e9/per).toFixed(2)+' kHz';return {ok:true,html:'<div class=\"big\">振荡频率 ≈ '+fs+'（周期 '+per.toFixed(0)+' ps）</div><div class=\"row\">周期 = 2 × '+n+' 级 × '+t+' ps；环形振荡频率由工艺/电压/温度主导，常作片上时钟与 PVT 监测</div>'}}var rr=Number(r)*1000,cc=Number(c)*1e-9;if(!(rr>0&&cc>0))return {ok:false,msg:'电阻与电容须大于 0'};var fp=1/(2*Math.PI*rr*cc*Math.sqrt(6));return {ok:true,html:'<div class=\"big\">振荡频率 ≈ '+fp.toFixed(2)+' Hz</div><div class=\"row\">起振条件：放大器电压增益 ≥ 29（反馈网络在 f₀ 处衰减 1/29、相移 180°）；实际用运放时增益取 30~35 并加限幅/稳幅</div>'};",
+  test:{inputs:{mode:"ring",nstg:5,tpd:100,r:10,c:10}, expect:"1.00"}},
+ {id:"dztransline2", cat:"dz", icon:"〰️", name:"传输线进阶：复数负载与输入阻抗", desc:"复数负载的 Γ 全量互转与距负载 l 处的输入阻抗变换",
+  formula:"Γ = (ZL − Z₀) ÷ (ZL + Z₀)（复数）；VSWR = (1 + |Γ|) ÷ (1 − |Γ|)；回损 RL = −20lg|Γ|；失配损耗 ML = −10lg(1 − |Γ|²)；输入阻抗 Zin = Z₀ × (ZL + jZ₀·tanβl) ÷ (Z₀ + jZL·tanβl)，βl = 2π × (l÷λ)。与 dzvswr 分工：dzvswr 只输标量 Γ/VSWR，本工具输复数负载与线长，做完整变换",
+  inputs:[
+   {id:"z0", label:"特性阻抗 Z₀", unit:"Ω", def:"50"},
+   {id:"zlr", label:"负载电阻 RL", unit:"Ω", def:"100"},
+   {id:"zli", label:"负载电抗 XL（感性为正）", unit:"Ω", def:"0"},
+   {id:"len", label:"距负载距离 l", unit:"λ", def:"0.125"}
+  ],
+  run:"var Z0=Number(z0),a=Number(zlr),b=Number(zli),L=Number(len);if(!(Z0>0))return {ok:false,msg:'特性阻抗须大于 0'};if(!(a>=0))return {ok:false,msg:'负载电阻不能为负（无源负载）'};if(!isFinite(b))return {ok:false,msg:'负载电抗无效'};if(!(L>=0&&L<=1000))return {ok:false,msg:'线长须在 0~1000 λ 之间'};var dr=a+Z0,di=b;var dd=dr*dr+di*di;var gr=((a-Z0)*dr+b*di)/dd,gi=(b*dr-(a-Z0)*di)/dd;var m=Math.sqrt(gr*gr+gi*gi);if(m>1+1e-9)return {ok:false,msg:'|Γ| 超过 1，超出无源范围'};var vs=m>=1-1e-12?'∞':((1+m)/(1-m)).toFixed(2);var rl=m>0?(-20*Math.log10(m)).toFixed(2):'∞';var ml=m>=1-1e-12?'∞':(-10*Math.log10(1-m*m)).toFixed(2);var t=Math.tan(2*Math.PI*L);var nr=a,nin=b+Z0*t;var er=Z0,ei=a*t;var ed=er*er+ei*ei;if(ed<1e-9)return {ok:false,msg:'该线长下输入阻抗奇异（分母为零），请微调线长'};var zr=Z0*(nr*er+nin*ei)/ed,zi=Z0*(nin*er-nr*ei)/ed;var ph=Math.atan2(gi,gr)*180/Math.PI;return {ok:true,html:'<div class=\"big\">Γ = '+gr.toFixed(3)+(gi>=0?' + j':' − j')+Math.abs(gi).toFixed(3)+' · VSWR = '+vs+'</div><div class=\"row\">|Γ| = '+m.toFixed(3)+' ∠'+ph.toFixed(1)+'°，回损 '+rl+' dB，失配损耗 '+ml+' dB，反射功率 '+(m*m*100).toFixed(1)+'%</div><div class=\"row\">距负载 '+L+'λ 处输入阻抗 Zin = '+zr.toFixed(2)+(zi>=0?' + j':' − j')+Math.abs(zi).toFixed(2)+' Ω；l = λ/4 时 Zin = Z₀²÷ZL（四分之一波长变换）</div>'};",
+  test:{inputs:{z0:50,zlr:100,zli:0,len:0.125}, expect:"40.00"}},
+ {id:"dzantenna2", cat:"dz", icon:"📡", name:"天线进阶：Friis 传输与有效面积", desc:"Friis 传输链路，或增益对应的有效面积与波束宽度估算",
+  formula:"Friis：FSPL = 32.44 + 20lg f(MHz) + 20lg d(km)，Pr = Pt + Gt + Gr − FSPL。有效面积 Ae = λ² × G ÷ (4π)（G 为倍数）；抛物面/口径波束宽度近似 θ ≈ 70 × λ ÷ D（度）。与 dzantenna（振子长度）、dzpatch（贴片尺寸）、dzlinkbudget（链路预算判定）分工：本工具做 Friis 传输与口径参数口径",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"friis", options:[{v:"friis",t:"Friis 传输"},{v:"ap",t:"有效面积与波束宽度"}]},
+   {id:"pt", label:"发射功率 Pt", unit:"dBm", def:"20", when:"mode=friis"},
+   {id:"gt", label:"发射增益 Gt", unit:"dBi", def:"6", when:"mode=friis"},
+   {id:"gr", label:"接收增益 Gr", unit:"dBi", def:"6", when:"mode=friis"},
+   {id:"d", label:"距离 d", unit:"km", def:"1", when:"mode=friis"},
+   {id:"sens", label:"接收灵敏度", unit:"dBm", def:"-90", when:"mode=friis"},
+   {id:"f", label:"频率 f", unit:"MHz", def:"2400"},
+   {id:"gd", label:"天线增益 G", unit:"dBi", def:"10", when:"mode=ap"},
+   {id:"D", label:"口径直径 D", unit:"m", def:"0.3", when:"mode=ap"}
+  ],
+  run:"var ff=Number(f);if(!(ff>0))return {ok:false,msg:'频率须大于 0'};if(mode==='friis'){var p=Number(pt),a=Number(gt),b=Number(gr),dd=Number(d),ss=Number(sens);if(!(dd>0))return {ok:false,msg:'距离须大于 0'};if(!isFinite(p+a+b+ss))return {ok:false,msg:'功率/增益无效'};var fspl=32.44+20*Math.log10(ff)+20*Math.log10(dd);var pr=p+a+b-fspl;return {ok:true,html:'<div class=\"big\">接收功率 Pr = '+pr.toFixed(2)+' dBm</div><div class=\"row\">自由空间损耗 FSPL = '+fspl.toFixed(2)+' dB；相对灵敏度 '+ss+' dBm 的裕量 = '+(pr-ss).toFixed(2)+' dB（未计馈线、极化与多径损耗）</div>'}}var g=Number(gd),dm=Number(D);if(!(dm>0))return {ok:false,msg:'口径须大于 0'};if(!isFinite(g))return {ok:false,msg:'增益无效'};var lam=3e8/(ff*1e6);var G=Math.pow(10,g/10);var ae=lam*lam*G/(4*Math.PI);var th=70*lam/dm;return {ok:true,html:'<div class=\"big\">有效面积 Ae ≈ '+(ae*1e4).toFixed(2)+' cm² · 波束宽度 ≈ '+th.toFixed(2)+'°</div><div class=\"row\">λ = '+lam.toFixed(3)+' m，增益倍数 '+G.toFixed(1)+'；波束宽度为均匀口径近似（70λ÷D），实际取决于口径照射分布</div>'};",
+  test:{inputs:{mode:"friis",pt:20,gt:6,gr:6,d:1,sens:-90,f:2400,gd:10,D:0.3}, expect:"-68.04"}},
+ {id:"dzmod2", cat:"dz", icon:"🔣", name:"数字调制参数", desc:"符号率、占用带宽、频谱效率与 Eb/N0↔SNR 换算",
+  formula:"每符号比特 k：BPSK 1、QPSK 2、16QAM 4、64QAM 6、256QAM 8；符号率 Rs = Rb ÷ k；升余弦占用带宽 B = Rs × (1 + α)；频谱效率 = Rb ÷ B；带宽内信噪比 SNR = Eb/N0 + 10lg(Rb÷B)（dB）。与 dzammod（AM）、dzfmbw（FM Carson）分工：本工具做数字调制口径",
+  inputs:[
+   {id:"scheme", label:"调制方式", type:"select", def:"qpsk", options:[{v:"bpsk",t:"BPSK（k=1）"},{v:"qpsk",t:"QPSK（k=2）"},{v:"16qam",t:"16QAM（k=4）"},{v:"64qam",t:"64QAM（k=6）"},{v:"256qam",t:"256QAM（k=8）"}]},
+   {id:"rb", label:"比特率 Rb", unit:"Mbps", def:"10"},
+   {id:"alpha", label:"升余弦滚降系数 α", def:"0.35"},
+   {id:"ebn0", label:"比特信噪比 Eb/N0", unit:"dB", def:"10"}
+  ],
+  run:"var K={bpsk:1,qpsk:2,'16qam':4,'64qam':6,'256qam':8};var k=K[scheme];if(!k)return {ok:false,msg:'调制方式无效'};var r=Number(rb),al=Number(alpha),e=Number(ebn0);if(!(r>0))return {ok:false,msg:'比特率须大于 0'};if(!(al>=0&&al<=1))return {ok:false,msg:'滚降系数须在 0~1 之间'};if(!(e>=-20&&e<=100))return {ok:false,msg:'Eb/N0 超出 −20~100 dB 工程范围'};var rs=r/k;var B=rs*(1+al);var eff=r/B;var snr=e+10*Math.log10(r/B);return {ok:true,html:'<div class=\"big\">符号率 Rs = '+rs.toFixed(2)+' MBd · 占用带宽 B = '+B.toFixed(2)+' MHz</div><div class=\"row\">频谱效率 '+eff.toFixed(2)+' bit/s/Hz；带宽内 SNR = '+snr.toFixed(2)+' dB；阶数越高效率越高，但所需 Eb/N0 与线性度也越高</div>'};",
+  test:{inputs:{scheme:"qpsk",rb:10,alpha:0.35,ebn0:10}, expect:"6.75"}},
+ {id:"dzdig2", cat:"dz", icon:"⏰", name:"数字时序裕量预算", desc:"建立/保持时间裕量与最高时钟频率预算",
+  formula:"建立裕量 = Tclk − (tco,max + tlogic,max + tsetup + 时钟偏斜 + 抖动)；最高频率 fmax = 1 ÷ (tco + tlogic + tsetup + 偏斜 + 抖动)。保持裕量 = (tco,min + tlogic,min) − (thold + 偏斜)。裕量为负即时序违例；偏斜按最坏方向计入两侧（保守口径）",
+  inputs:[
+   {id:"T", label:"时钟周期 Tclk", unit:"ns", def:"10"},
+   {id:"tco", label:"源寄存器 tco,max", unit:"ns", def:"2"},
+   {id:"tlg", label:"组合逻辑延迟 max", unit:"ns", def:"5"},
+   {id:"tsu", label:"目的寄存器建立时间", unit:"ns", def:"1"},
+   {id:"tcomin", label:"源寄存器 tco,min", unit:"ns", def:"1"},
+   {id:"tlgmin", label:"组合逻辑延迟 min", unit:"ns", def:"2"},
+   {id:"thd", label:"目的寄存器保持时间", unit:"ns", def:"0.5"},
+   {id:"skew", label:"时钟偏斜", unit:"ns", def:"0.5"},
+   {id:"jit", label:"时钟抖动", unit:"ns", def:"0.5"}
+  ],
+  run:"var vs=[Number(T),Number(tco),Number(tlg),Number(tsu),Number(tcomin),Number(tlgmin),Number(thd),Number(skew),Number(jit)];for(var i=0;i<vs.length;i++){if(!(vs[i]>=0))return {ok:false,msg:'时间参数不能为负'}}if(!(vs[0]>0))return {ok:false,msg:'时钟周期须大于 0'};var used=vs[1]+vs[2]+vs[3]+vs[7]+vs[8];if(!(used>0))return {ok:false,msg:'建立路径延迟不能为 0'};var slack=vs[0]-used;var fmax=1000/used;var hslack=(vs[4]+vs[5])-(vs[6]+vs[7]);return {ok:true,html:'<div class=\"big\">建立裕量 = '+slack.toFixed(2)+' ns '+(slack>=0?'✅':'❌ 违例')+' · fmax ≈ '+fmax.toFixed(2)+' MHz</div><div class=\"row\">保持裕量 = '+hslack.toFixed(2)+' ns '+(hslack>=0?'✅':'❌ 违例（需加延迟或修偏斜）')+'；建立路径总延迟 '+used.toFixed(2)+' ns（tco + 逻辑 + 建立 + 偏斜 + 抖动）</div>'};",
+  test:{inputs:{T:10,tco:2,tlg:5,tsu:1,tcomin:1,tlgmin:2,thd:0.5,skew:0.5,jit:0.5}, expect:"111.11"}},
+ {id:"dzsensor2", cat:"dz", icon:"🌉", name:"传感器进阶：电桥灵敏度与热电偶", desc:"应变电桥输出灵敏度，或热电偶 Seebeck 线性换算",
+  formula:"电桥（x = 应变系数 GF × 应变 ε）：四分之一桥精确 Vout = Vin × x ÷ (4 + 2x)；半桥（双臂推挽）Vout = Vin × x ÷ 2；全桥 Vout = Vin × x；灵敏度以 mV/V 表示。热电偶（平均 Seebeck 系数节选近似：K 型 41、J 型 51、T 型 41、E 型 68 μV/℃，室温附近口径）：V = S × ΔT。与 dzwheat（平衡判断）、yqbridge（整流桥）、yqtc（热电偶器件级查表/多项式）分工：本工具做桥路灵敏度与热电偶线性近似的电路分析口径，宽温精确值用 yqtc",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"br", options:[{v:"br",t:"应变电桥灵敏度"},{v:"tc",t:"热电偶 Seebeck 换算"}]},
+   {id:"btype", label:"桥型", type:"select", def:"q", when:"mode=br", options:[{v:"q",t:"四分之一桥（单臂）"},{v:"h",t:"半桥（双臂推挽）"},{v:"f",t:"全桥（四臂）"}]},
+   {id:"vin", label:"桥激励电压 Vin", unit:"V", def:"5", when:"mode=br"},
+   {id:"gf", label:"应变系数 GF", def:"2", when:"mode=br"},
+   {id:"eps", label:"应变 ε", unit:"με", def:"1000", when:"mode=br"},
+   {id:"ttype", label:"热电偶类型", type:"select", def:"K", when:"mode=tc", options:[{v:"K",t:"K 型（41 μV/℃）"},{v:"J",t:"J 型（51 μV/℃）"},{v:"T",t:"T 型（41 μV/℃）"},{v:"E",t:"E 型（68 μV/℃）"}]},
+   {id:"dir", label:"换算方向", type:"select", def:"t2v", when:"mode=tc", options:[{v:"t2v",t:"温差 → 热电势"},{v:"v2t",t:"热电势 → 温差"}]},
+   {id:"dtemp", label:"温差 ΔT（热端 − 参考端）", unit:"℃", def:"500", when:"mode=tc"},
+   {id:"vmv", label:"热电势 V", unit:"mV", def:"20.5", when:"mode=tc"}
+  ],
+  run:"if(mode==='br'){var v=Number(vin),g=Number(gf),e=Number(eps);if(!(v>0))return {ok:false,msg:'激励电压须大于 0'};if(!(g>0))return {ok:false,msg:'应变系数须大于 0'};if(!isFinite(e))return {ok:false,msg:'应变无效'};var x=g*e*1e-6;var out;if(btype==='q')out=v*x/(4+2*x);else if(btype==='h')out=v*x/2;else if(btype==='f')out=v*x;else return {ok:false,msg:'桥型无效'};return {ok:true,html:'<div class=\"big\">桥输出 ≈ '+(out*1000).toFixed(3)+' mV · 灵敏度 ≈ '+(out/v*1000).toFixed(3)+' mV/V</div><div class=\"row\">ΔR÷R = GF × ε = '+x.toFixed(5)+'；全桥灵敏度为四分之一桥约 4 倍，且推挽接法自带温度补偿</div>'}}var ST={K:41,J:51,T:41,E:68};var S=ST[ttype];if(!S)return {ok:false,msg:'热电偶类型无效'};if(dir==='t2v'){var dt=Number(dtemp);if(!(dt>=-200&&dt<=1600))return {ok:false,msg:'温差超出 −200~1600 ℃ 节选口径范围'};var mv=S*dt/1000;return {ok:true,html:'<div class=\"big\">热电势 ≈ '+mv.toFixed(2)+' mV</div><div class=\"row\">'+ttype+' 型平均 Seebeck 系数 '+S+' μV/℃（线性近似）；实际热电势须加参考端补偿，宽温精确换算用 ITS-90 多项式（见 yqtc）</div>'}}var vv=Number(vmv);if(!(vv>=-10&&vv<=100))return {ok:false,msg:'热电势超出 −10~100 mV 节选口径范围'};var td=vv*1000/S;return {ok:true,html:'<div class=\"big\">温差 ≈ '+td.toFixed(1)+' ℃</div><div class=\"row\">热端温度 = 参考端温度 + 温差；'+ttype+' 型 '+S+' μV/℃ 线性近似，误差随温差增大而增大</div>'};",
+  test:{inputs:{mode:"br",btype:"q",vin:5,gf:2,eps:1000,ttype:"K",dir:"t2v",dtemp:500,vmv:20.5}, expect:"2.498"}}
 );
 
 
