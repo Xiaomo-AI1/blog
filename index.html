@@ -15085,6 +15085,3278 @@ TOOLS.push(
 {"id": "kfbitwise2", "cat": "kf", "icon": "🧬", "name": "位级分析与掩码演示", "desc": "单值 popcount、置位位置与位反转（8/16/32/64 位宽）", "formula": "与 kfbit（双操作数 AND/OR/XOR/移位）分工：本工具做单位宽分析：二进制位串（4 位分组）、popcount（置位个数）、最高/最低置位位号、按位宽反转；负数按二补码落入位宽解释。掩码速记：/24 前缀掩码 = 高 24 位全 1", "inputs": [{"id": "val", "label": "整数（十进制或 0x 十六进制，可负）", "type": "text", "def": "12"}, {"id": "width", "label": "位宽", "type": "select", "def": "8", "options": [{"v": "8", "t": "8 位"}, {"v": "16", "t": "16 位"}, {"v": "32", "t": "32 位"}, {"v": "64", "t": "64 位"}]}], "run": "var s=String(val).trim();var w=Number(width);\nif([8,16,32,64].indexOf(w)<0)return {ok:false,msg:'位宽须为 8/16/32/64'};\nvar v;\nif(/^0[xX][0-9a-fA-F]+$/.test(s)){try{v=BigInt(s);}catch(err){return {ok:false,msg:'十六进制解析失败'};}}\nelse if(/^-?\\d+$/.test(s)){try{v=BigInt(s);}catch(err){return {ok:false,msg:'整数解析失败'};}}\nelse return {ok:false,msg:'请输入十进制或 0x 十六进制整数'};\nvar mod=1n<<BigInt(w);var minNeg=-(1n<<BigInt(w-1));var maxU=mod-1n;var maxS=(1n<<BigInt(w-1))-1n;\nif(v>maxU||v<minNeg)return {ok:false,msg:'超出 '+w+' 位范围（无符号 0~'+maxU.toString()+'，有符号 '+minNeg.toString()+'~'+maxS.toString()+'）'};\nvar u=v<0n?v+mod:v;\nvar bits=u.toString(2).padStart(w,'0');\nvar grouped='';for(var i=0;i<bits.length;i++){if(i>0&&i%4===0)grouped+=' ';grouped+=bits[i];}\nvar pop=0;for(var j=0;j<bits.length;j++)if(bits[j]==='1')pop++;\nvar hi=bits.indexOf('1');var highest=hi<0?'无（值为 0）':String(w-1-hi);\nvar lo=bits.lastIndexOf('1');var lowest=lo<0?'无（值为 0）':String(w-1-lo);\nvar revBits=bits.split('').reverse().join('');var rev=BigInt('0b'+revBits);\nvar signed=u>= (1n<<BigInt(w-1))?u-mod:u;\nreturn {ok:true,html:'<div class=\"big\">popcount '+pop+' · 最高置位 '+(hi<0?'—':(w-1-hi))+'</div><div class=\"row\">二进制（'+w+' 位）：'+grouped+'</div><div class=\"row\">无符号 '+u.toString()+'（0x'+u.toString(16).toUpperCase()+'），有符号 '+signed.toString()+'；最低置位位号 '+lowest+'</div><div class=\"row\">按 '+w+' 位反转 = '+rev.toString()+'（位串 '+revBits+'）</div>'};", "test": {"inputs": {"val": "12", "width": "8"}, "expect": "48"}},
 {"id": "kfdotenv2", "cat": "kf", "icon": "🧹", "name": "dotenv校验与差异对比", "desc": "lint 检查 .env 的重复键/空值/命名，或对比两份 .env 的差异", "formula": "与 kfdotenv（与 JSON 互转）分工：本工具只做校验与对比。lint 规则：缺 = 为错误；键名须合法标识符、推荐 UPPER_SNAKE 风格；重复键、空值、未加引号含空格的值给警告。diff 口径：export 前缀可省、成对引号去壳后按键比对（新增/删除/变更）", "inputs": [{"id": "mode", "label": "模式", "type": "select", "def": "lint", "options": [{"v": "lint", "t": "校验 lint"}, {"v": "diff", "t": "差异对比"}]}, {"id": "t", "label": ".env 文本", "type": "textarea", "def": "FOO=1\nFOO=2\nbar=3\nEMPTY=\nNOEQ", "when": "mode=lint"}, {"id": "a", "label": "旧版 .env", "type": "textarea", "def": "HOST=a.com\nPORT=80\nOLD=1", "when": "mode=diff"}, {"id": "b", "label": "新版 .env", "type": "textarea", "def": "HOST=a.com\nPORT=8080\nNEW=2", "when": "mode=diff"}], "run": "function e(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}\nfunction parseEnv(src){\n var map={},order=[];var lines=String(src).split(/\\r?\\n/);\n for(var i=0;i<lines.length;i++){var ln=lines[i].trim();if(!ln||ln[0]==='#')continue;if(ln.indexOf('export ')===0)ln=ln.slice(7).trim();var eq=ln.indexOf('=');if(eq<=0)continue;var k=ln.slice(0,eq).trim();var v=ln.slice(eq+1).trim();if(v.length>=2&&((v[0]==='\"'&&v[v.length-1]==='\"')||(v[0]===\"'\"&&v[v.length-1]===\"'\")))v=v.slice(1,-1);if(!Object.prototype.hasOwnProperty.call(map,k))order.push(k);map[k]=v;}\n return {map:map,order:order};\n}\nfunction cut(x){x=String(x);return x.length>40?x.slice(0,40)+'…':x;}\nif(String(mode)==='diff'){\n var sa=String(a),sb=String(b);if(sa.length>100000||sb.length>100000)return {ok:false,msg:'输入过长（上限 100000 字符）'};\n var A=parseEnv(sa),B=parseEnv(sb);\n var added=B.order.filter(function(k){return !Object.prototype.hasOwnProperty.call(A.map,k);});\n var removed=A.order.filter(function(k){return !Object.prototype.hasOwnProperty.call(B.map,k);});\n var changed=B.order.filter(function(k){return Object.prototype.hasOwnProperty.call(A.map,k)&&A.map[k]!==B.map[k];});\n var rows='';\n added.forEach(function(k){rows+='<div class=\"row\">＋ 新增 '+e(k)+' = '+e(cut(B.map[k]))+'</div>';});\n removed.forEach(function(k){rows+='<div class=\"row\">－ 删除 '+e(k)+'</div>';});\n changed.forEach(function(k){rows+='<div class=\"row\">～ 变更 '+e(k)+'：'+e(cut(A.map[k]))+' → '+e(cut(B.map[k]))+'</div>';});\n if(!rows)rows='<div class=\"row\">两份配置无差异（按解析口径）</div>';\n return {ok:true,html:'<div class=\"big\">新增 '+added.length+' · 删除 '+removed.length+' · 变更 '+changed.length+'</div>'+rows};\n}\nvar s=String(t);if(s.length>100000)return {ok:false,msg:'输入过长（上限 100000 字符）'};\nvar lines=s.split(/\\r?\\n/);if(lines.length>5000)return {ok:false,msg:'行数过多（上限 5000 行）'};\nvar seen={},errs=0,warns=0,rowsArr=[];\nfor(var i2=0;i2<lines.length;i2++){\n var ln=lines[i2].trim();if(!ln||ln[0]==='#')continue;\n var body=ln.indexOf('export ')===0?ln.slice(7).trim():ln;\n var eq=body.indexOf('=');\n if(eq<0){errs++;rowsArr.push('<div class=\"row\">第 '+(i2+1)+' 行：❌ 缺少 =（'+e(cut(body))+'）</div>');continue;}\n var key=body.slice(0,eq).trim();var val2=body.slice(eq+1).trim();\n if(!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)){errs++;rowsArr.push('<div class=\"row\">第 '+(i2+1)+' 行：❌ 键名不合法（'+e(cut(key))+'）</div>');continue;}\n if(Object.prototype.hasOwnProperty.call(seen,key)){warns++;rowsArr.push('<div class=\"row\">第 '+(i2+1)+' 行：⚠️ 重复键 '+e(key)+'（首次在第 '+seen[key]+' 行，后值覆盖前值）</div>');}\n else seen[key]=i2+1;\n if(!/^[A-Z_][A-Z0-9_]*$/.test(key)){warns++;rowsArr.push('<div class=\"row\">第 '+(i2+1)+' 行：⚠️ 键 '+e(key)+' 不是 UPPER_SNAKE 风格</div>');}\n if(val2===''){warns++;rowsArr.push('<div class=\"row\">第 '+(i2+1)+' 行：⚠️ 键 '+e(key)+' 值为空</div>');}\n else if(/\\s/.test(val2)&&val2[0]!=='\"'&&val2[0]!==\"'\"){warns++;rowsArr.push('<div class=\"row\">第 '+(i2+1)+' 行：⚠️ 键 '+e(key)+' 的值含空格未加引号</div>');}\n}\nvar rowsOut=rowsArr.slice(0,200).join('')+(rowsArr.length>200?'<div class=\"row\">其余问题略（共 '+rowsArr.length+' 条）</div>':'');\nif(!rowsOut)rowsOut='<div class=\"row\">未发现问题</div>';\nreturn {ok:true,html:'<div class=\"big\">错误 '+errs+' · 警告 '+warns+'</div>'+rowsOut};", "test": {"inputs": {"mode": "lint", "t": "FOO=1\nFOO=2\nbar=3\nEMPTY=\nNOEQ", "a": "HOST=a.com\nPORT=80\nOLD=1", "b": "HOST=a.com\nPORT=8080\nNEW=2"}, "expect": "重复键 FOO"}}
 );
+/* ===== R3 金融 jr 第三轮 25 个（+1000 第三轮，2026-10-21） ===== */
+TOOLS.push(
+{
+ "id": "jrwithdraw",
+ "cat": "jr",
+ "icon": "🛡️",
+ "name": "退休提领护栏策略模拟",
+ "desc": "按 Guyton-Klinger 护栏思路逐年模拟：提领率越界就削减/加提，看组合能撑多久（jrretire/jrretire2 只算缺口与积累，不做提领规则模拟）",
+ "formula": "确定性逐年模拟（恒定年收益率，非概率蒙特卡洛）：首年提领 W₁ = 本金×初始提领率；其后每年 W 先按通胀上调，再算当前提领率 W÷当年余额——高于初始率×(1+护栏带) 则削减 adj%，低于初始率×(1−护栏带) 则加提 adj%（Guyton-Klinger 护栏规则的简化口径）；提领后余额按年收益率增长。余额不足当年提领即视为该年耗尽。年数上限 50 年",
+ "inputs": [
+  {
+   "id": "P",
+   "label": "退休本金",
+   "def": "1000000",
+   "unit": "元"
+  },
+  {
+   "id": "yrs",
+   "label": "模拟年数",
+   "def": "30",
+   "unit": "年"
+  },
+  {
+   "id": "ret",
+   "label": "年收益率",
+   "def": "5",
+   "unit": "%"
+  },
+  {
+   "id": "infl",
+   "label": "通胀率",
+   "def": "2.5",
+   "unit": "%"
+  },
+  {
+   "id": "wr",
+   "label": "初始提领率",
+   "def": "4",
+   "unit": "%"
+  },
+  {
+   "id": "band",
+   "label": "护栏带宽 ±",
+   "def": "20",
+   "unit": "%"
+  },
+  {
+   "id": "adj",
+   "label": "越界调整幅度",
+   "def": "10",
+   "unit": "%"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var Pv=Number(P),Nn=Number(yrs),rt=Number(ret)/100,g=Number(infl)/100,w0=Number(wr)/100,bd=Number(band)/100,aj=Number(adj)/100;if(!(Pv>0))return {ok:false,msg:'退休本金须大于 0'};if(!(Nn>=1&&Nn<=50)||Math.floor(Nn)!==Nn)return {ok:false,msg:'模拟年数须为 1~50 的整数（循环上限）'};if(!(rt>-0.99&&rt<=1))return {ok:false,msg:'年收益率须在 -99%~100% 之间'};if(!(g>-0.99&&g<=1))return {ok:false,msg:'通胀率须在 -99%~100% 之间'};if(!(w0>0&&w0<=1))return {ok:false,msg:'初始提领率须在 0~100% 之间'};if(!(bd>=0&&bd<=1))return {ok:false,msg:'护栏带宽须在 0~100% 之间'};if(!(aj>=0&&aj<=1))return {ok:false,msg:'调整幅度须在 0~100% 之间'};var B=Pv,W=Pv*w0,tot=0,cuts=0,raises=0,exh=0,lastW=0;for(var y=1;y<=Nn;y++){if(y>1){W=W*(1+g);var rate=B>0?W/B:Infinity;if(rate>w0*(1+bd)){W*=1-aj;cuts++;}else if(rate<w0*(1-bd)){W*=1+aj;raises++;}}var act=Math.min(W,B);lastW=act;tot+=act;B=(B-act)*(1+rt);if(B<=0.005){exh=y;B=0;break;}}if(!isFinite(tot))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\\\"big\\\">'+(exh?'组合在第 '+exh+' 年耗尽':'期末余额 '+M(B)+' 元')+'</div><div class=\\\"row\\\">累计提领 '+M(tot)+' 元；末年提领 '+M(lastW)+' 元；护栏触发：削减 '+cuts+' 次、加提 '+raises+' 次</div><div class=\\\"row\\\">恒定收益的确定性简化模拟，未计税费与收益波动；真实提领结果对收益顺序高度敏感，结果仅供规划参考</div>'};",
+ "test": {
+  "inputs": {
+   "P": 1000000,
+   "yrs": 30,
+   "ret": 5,
+   "infl": 2.5,
+   "wr": 4,
+   "band": 20,
+   "adj": 10
+  },
+  "expect": "1090420.67"
+ }
+},
+{
+ "id": "jrswr",
+ "cat": "jr",
+ "icon": "🎯",
+ "name": "安全提领率反推",
+ "desc": "给定退休年限与收益/通胀，反推首年最多能提领本金的百分之几才刚好花完（jrwithdraw 是给定提领率正向模拟护栏，本工具是反解提领率）",
+ "formula": "提领额每年按通胀 g 增长、组合收益 r 恒定（确定性口径，非历史回测/概率口径）：首年提领 W₁ 使提领现值 = 本金，即 W₁ = P×(r−g)÷[1−((1+g)/(1+r))ⁿ]（r≠g）；r=g 时 W₁ = P×(1+r)÷n；安全提领率 = W₁÷P。另附等额（不随通胀增长）提领率 r÷[1−(1+r)^−n]（r=0 时为 1/n）对照。年限上限 60 年",
+ "inputs": [
+  {
+   "id": "P",
+   "label": "退休本金",
+   "def": "1000000",
+   "unit": "元"
+  },
+  {
+   "id": "yrs",
+   "label": "提领年限",
+   "def": "30",
+   "unit": "年"
+  },
+  {
+   "id": "ret",
+   "label": "年收益率",
+   "def": "5",
+   "unit": "%"
+  },
+  {
+   "id": "infl",
+   "label": "通胀率（提领增长率）",
+   "def": "2.5",
+   "unit": "%"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var Pv=Number(P),Nn=Number(yrs),r=Number(ret)/100,g=Number(infl)/100;if(!(Pv>0))return {ok:false,msg:'退休本金须大于 0'};if(!(Nn>=1&&Nn<=60)||Math.floor(Nn)!==Nn)return {ok:false,msg:'提领年限须为 1~60 的整数'};if(!(r>-0.99&&r<=1))return {ok:false,msg:'年收益率须在 -99%~100% 之间'};if(!(g>-0.99&&g<=1))return {ok:false,msg:'通胀率须在 -99%~100% 之间'};var w;if(Math.abs(r-g)<1e-12){w=(1+r)/Nn;}else{w=(r-g)/(1-Math.pow((1+g)/(1+r),Nn));}var wf=r===0?1/Nn:r/(1-Math.pow(1+r,-Nn));if(!isFinite(w)||!isFinite(wf)||w<=0)return {ok:false,msg:'该收益/通胀组合下无正的安全提领率（收益长期低于通胀且年限过长）'};return {ok:true,html:'<div class=\\\"big\\\">安全提领率 '+(w*100).toFixed(2)+'%</div><div class=\\\"row\\\">首年最多提领 '+M(Pv*w)+' 元（之后每年按通胀 '+infl+'% 递增，第 '+Nn+' 年末刚好花完）</div><div class=\\\"row\\\">对照：提领额不增长时提领率为 '+(wf*100).toFixed(2)+'%（首年 '+M(Pv*wf)+' 元）。本工具是恒定收益的确定性反解，经典 4% 法则来自历史回测，两者口径不同不可直接等同</div>'};",
+ "test": {
+  "inputs": {
+   "P": 1000000,
+   "yrs": 30,
+   "ret": 5,
+   "infl": 2.5
+  },
+  "expect": "4.86"
+ }
+},
+{
+ "id": "jrsequence",
+ "cat": "jr",
+ "icon": "🔀",
+ "name": "收益序列风险演示",
+ "desc": "同样的平均收益、不同的先后顺序，退休提领结果差多少——演示 Sequence Risk（jrswr/jrwithdraw 都用恒定收益，看不到顺序效应）",
+ "formula": "两段收益演示：共 n 年（前一半/后一半），情景 A 先高后低（r₁ 段在前）、情景 B 先低后高，两段算术平均相同；每年末先按当年收益增长再提领固定金额 W，余额不足提领即耗尽置 0。无提领时两种顺序终值相同，差异完全来自提领与顺序的交互。年数上限 40 年",
+ "inputs": [
+  {
+   "id": "P",
+   "label": "初始本金",
+   "def": "1000000",
+   "unit": "元"
+  },
+  {
+   "id": "wd",
+   "label": "每年提领",
+   "def": "40000",
+   "unit": "元"
+  },
+  {
+   "id": "r1",
+   "label": "第一段年收益",
+   "def": "10",
+   "unit": "%"
+  },
+  {
+   "id": "r2",
+   "label": "第二段年收益",
+   "def": "-2",
+   "unit": "%"
+  },
+  {
+   "id": "yrs",
+   "label": "总年数",
+   "def": "20",
+   "unit": "年"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var Pv=Number(P),W=Number(wd),a=Number(r1)/100,b=Number(r2)/100,Nn=Number(yrs);if(!(Pv>0))return {ok:false,msg:'初始本金须大于 0'};if(!(W>=0))return {ok:false,msg:'每年提领不能为负'};if(!(a>-1&&a<=10)||!(b>-1&&b<=10))return {ok:false,msg:'年收益须在 -100%~1000% 之间'};if(!(Nn>=2&&Nn<=40)||Math.floor(Nn)!==Nn)return {ok:false,msg:'总年数须为 2~40 的整数（循环上限）'};function sim(first,second){var B=Pv,h=Math.floor(Nn/2),ex=0;for(var i=0;i<Nn;i++){var r=i<h?first:second;B=B*(1+r)-W;if(B<0){B=0;ex=i+1;break;}}return {B:B,ex:ex};}var A=sim(a,b),Bv=sim(b,a);if(!isFinite(A.B)||!isFinite(Bv.B))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\\\"big\\\">两种顺序终值差 '+M(Math.abs(A.B-Bv.B))+' 元</div><div class=\\\"row\\\">情景 A（先 '+r1+'% 后 '+r2+'%）期末 '+M(A.B)+' 元'+(A.ex?'，第 '+A.ex+' 年耗尽':'')+'；情景 B（先 '+r2+'% 后 '+r1+'%）期末 '+M(Bv.B)+' 元'+(Bv.ex?'，第 '+Bv.ex+' 年耗尽':'')+'</div><div class=\\\"row\\\">两段算术平均收益相同（'+((Number(r1)+Number(r2))/2).toFixed(2)+'%），终值却不同：退休初期遇熊市、边跌边提领会永久性侵蚀本金，这就是序列风险；积累期（只入不出）则顺序基本无影响</div>'};",
+ "test": {
+  "inputs": {
+   "P": 1000000,
+   "wd": 40000,
+   "r1": 10,
+   "r2": -2,
+   "yrs": 20
+  },
+  "expect": "1232540.60"
+ }
+},
+{
+ "id": "jrmortgage3",
+ "cat": "jr",
+ "icon": "🏠",
+ "name": "组合贷拆分测算",
+ "desc": "公积金贷款 + 商业贷款组合贷：两笔分别计息再合并（jrloan 只算单笔贷款，jrmortcmp 只比同一笔的两种还法）",
+ "formula": "组合贷两笔同期限、同还法分别计算后相加：等额本息月供 = P×i÷(1−(1+i)^−n)，i = 年利率÷12；等额本金首月 = P÷n + P×i，总利息 = i×P×(n+1)÷2；加权平均利率 =（公积金额×其利率 + 商贷额×其利率）÷总额。零利率分支月供 = 本金÷期数。公积金利率与商贷利率均为示例默认值（2024 年起首套公积金 5 年以上 2.85%、商贷随 LPR 浮动），请按合同利率修改；期限上限 30 年",
+ "inputs": [
+  {
+   "id": "gjj",
+   "label": "公积金贷款额",
+   "def": "600000",
+   "unit": "元"
+  },
+  {
+   "id": "gjjr",
+   "label": "公积金年利率",
+   "def": "3.1",
+   "unit": "%"
+  },
+  {
+   "id": "com",
+   "label": "商业贷款额",
+   "def": "400000",
+   "unit": "元"
+  },
+  {
+   "id": "comr",
+   "label": "商贷年利率",
+   "def": "4",
+   "unit": "%"
+  },
+  {
+   "id": "yrs",
+   "label": "贷款年限",
+   "def": "30",
+   "unit": "年"
+  },
+  {
+   "id": "method",
+   "label": "还款方式",
+   "type": "select",
+   "def": "bx",
+   "options": [
+    {
+     "v": "bx",
+     "t": "等额本息"
+    },
+    {
+     "v": "bj",
+     "t": "等额本金"
+    }
+   ]
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var G=Number(gjj),gr=Number(gjjr),C=Number(com),cr=Number(comr),Y=Number(yrs);if(!(G>=0)||!(C>=0)||!(G+C>0))return {ok:false,msg:'两笔贷款额不能为负且总额须大于 0'};if(!(gr>=0&&gr<=100)||!(cr>=0&&cr<=100))return {ok:false,msg:'年利率须在 0~100% 之间'};if(!(Y>=1&&Y<=30)||Math.floor(Y)!==Y)return {ok:false,msg:'贷款年限须为 1~30 的整数'};var n=Y*12;function bx(P,r){var i=r/1200;var p=i===0?P/n:P*i/(1-Math.pow(1+i,-n));return {p:p,it:p*n-P};}function bj(P,r){var i=r/1200;return {p:P/n+P*i,it:i*P*(n+1)/2};}var f=String(method)==='bj'?bj:bx;var a=f(G,gr),b=f(C,cr);var wtd=(G*gr+C*cr)/(G+C);if(!isFinite(a.p+b.p))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\\\"big\\\">'+(String(method)==='bj'?'首月合计还款 ':'合计月供 ')+M(a.p+b.p)+' 元</div><div class=\\\"row\\\">公积金部分 '+M(a.p)+' 元/月（总利息 '+M(a.it)+' 元）；商贷部分 '+M(b.p)+' 元/月（总利息 '+M(b.it)+' 元）</div><div class=\\\"row\\\">合计总利息 '+M(a.it+b.it)+' 元，加权平均利率 '+wtd.toFixed(2)+'%'+(String(method)==='bj'?'；等额本金月供逐月递减，此处为首月':'')+'</div>'};",
+ "test": {
+  "inputs": {
+   "gjj": 600000,
+   "gjjr": 3.1,
+   "com": 400000,
+   "comr": 4,
+   "yrs": 30,
+   "method": "bx"
+  },
+  "expect": "4471.76"
+ }
+},
+{
+ "id": "jrrefinance",
+ "cat": "jr",
+ "icon": "🔄",
+ "name": "转贷换贷节省测算",
+ "desc": "把剩余房贷转到低利率贷款：省下的利息扣掉违约金和费用后到底剩多少、几个月回本（jrloan 算新贷款本身，jrprepay 算提前还清，均不算转贷净账）",
+ "formula": "旧贷与新贷都按等额本息、剩余期数不变比较：原剩余利息 − 新贷利息 = 毛节省；成本 = 剩余本金×违约金率 + 过桥/评估等费用；净节省 = 毛节省 − 成本；回本月数 = 成本 ÷（旧月供 − 新月供）向上取整（月供不降则永不回本）。新贷月供下降部分含本金偿还节奏差异，此为现金流口径近似，实际以银行审批与新合同为准",
+ "inputs": [
+  {
+   "id": "bal",
+   "label": "剩余本金",
+   "def": "800000",
+   "unit": "元"
+  },
+  {
+   "id": "oldr",
+   "label": "原贷款年利率",
+   "def": "4.9",
+   "unit": "%"
+  },
+  {
+   "id": "newr",
+   "label": "新贷款年利率",
+   "def": "3.6",
+   "unit": "%"
+  },
+  {
+   "id": "months",
+   "label": "剩余期数",
+   "def": "240",
+   "unit": "月"
+  },
+  {
+   "id": "pen",
+   "label": "提前结清违约金率",
+   "def": "1",
+   "unit": "%"
+  },
+  {
+   "id": "fee",
+   "label": "转贷其他费用",
+   "def": "2000",
+   "unit": "元"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var B=Number(bal),ro=Number(oldr),rn=Number(newr),Nn=Number(months),pn=Number(pen),F=Number(fee);if(!(B>0))return {ok:false,msg:'剩余本金须大于 0'};if(!(ro>=0&&ro<=100)||!(rn>=0&&rn<=100))return {ok:false,msg:'年利率须在 0~100% 之间'};if(!(Nn>=1&&Nn<=360)||Math.floor(Nn)!==Nn)return {ok:false,msg:'剩余期数须为 1~360 的整数'};if(!(pn>=0&&pn<=100))return {ok:false,msg:'违约金率须在 0~100% 之间'};if(!(F>=0))return {ok:false,msg:'费用不能为负'};function ann(P,r){var i=r/1200;var p=i===0?P/Nn:P*i/(1-Math.pow(1+i,-Nn));return {p:p,it:p*Nn-P};}var o=ann(B,ro),nw=ann(B,rn);var gross=o.it-nw.it;var cost=B*pn/100+F;var net=gross-cost;var diff=o.p-nw.p;var be=diff>0?Math.ceil(cost/diff):0;if(!isFinite(net))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\\\"big\\\">转贷净节省 '+M(net)+' 元</div><div class=\\\"row\\\">旧月供 '+M(o.p)+' 元 → 新月供 '+M(nw.p)+' 元（月降 '+M(diff)+' 元）；毛节省利息 '+M(gross)+' 元 − 违约金与费用 '+M(cost)+' 元</div><div class=\\\"row\\\">'+(net<=0?'净额为负：这笔转贷不划算':(diff>0?'约 '+be+' 个月回本（成本÷月供降幅）':'月供未下降，无回本期'))+'；经营贷等短期贷款置换长期房贷另有续贷与合规风险，不在本测算内</div>'};",
+ "test": {
+  "inputs": {
+   "bal": 800000,
+   "oldr": 4.9,
+   "newr": 3.6,
+   "months": 240,
+   "pen": 1,
+   "fee": 2000
+  },
+  "expect": "123118.56"
+ }
+},
+{
+ "id": "jrprepay2",
+ "cat": "jr",
+ "icon": "⚖️",
+ "name": "提前还款净收益与盈亏平衡",
+ "desc": "在 jrpmt2 的双方案省息之外，再扣违约金和资金机会成本，算提前还款到底赚不赚、资金收益率超过多少就不该还（jrpmt2 未计违约金与机会成本）",
+ "formula": "按「减少月供、期限不变」口径算省息（双方案对比见 jrpmt2）：省息 = 原剩余利息 − 提前还 P 元后新月供的剩余利息；违约金 = P×违约金率；机会成本 = P×[(1+机会收益率)^(剩余年数) − 1]（这笔钱拿去稳健投资本可赚的钱）；净收益 = 省息 − 违约金 − 机会成本；盈亏平衡机会收益率 = [(1+(省息−违约金)÷P)^(1/年数) − 1]——你的资金长期收益高于它，提前还款在纯财务上不划算。零利率分支省息为 0",
+ "inputs": [
+  {
+   "id": "bal",
+   "label": "剩余本金",
+   "def": "600000",
+   "unit": "元"
+  },
+  {
+   "id": "rate",
+   "label": "贷款年利率",
+   "def": "4.2",
+   "unit": "%"
+  },
+  {
+   "id": "months",
+   "label": "剩余期数",
+   "def": "240",
+   "unit": "月"
+  },
+  {
+   "id": "pre",
+   "label": "拟提前还款额",
+   "def": "200000",
+   "unit": "元"
+  },
+  {
+   "id": "pen",
+   "label": "违约金率（按提前还金额）",
+   "def": "1",
+   "unit": "%"
+  },
+  {
+   "id": "opp",
+   "label": "资金机会收益率",
+   "def": "1.5",
+   "unit": "%"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var B=Number(bal),rt=Number(rate),Nn=Number(months),P=Number(pre),pn=Number(pen),op=Number(opp);if(!(B>0))return {ok:false,msg:'剩余本金须大于 0'};if(!(rt>=0&&rt<=100))return {ok:false,msg:'年利率须在 0~100% 之间'};if(!(Nn>=1&&Nn<=600)||Math.floor(Nn)!==Nn)return {ok:false,msg:'剩余期数须为 1~600 的整数'};if(!(P>0&&P<B))return {ok:false,msg:'提前还款额须大于 0 且小于剩余本金（全部还清请用 jrprepay）'};if(!(pn>=0&&pn<=100))return {ok:false,msg:'违约金率须在 0~100% 之间'};if(!(op>=0&&op<=1000))return {ok:false,msg:'机会收益率须在 0~1000% 之间'};function annInt(P2,r){var i=r/1200;var p=i===0?P2/Nn:P2*i/(1-Math.pow(1+i,-Nn));return p*Nn-P2;}var saved=annInt(B,rt)-annInt(B-P,rt);var penA=P*pn/100;var Y=Nn/12;var oppC=P*(Math.pow(1+op/100,Y)-1);var net=saved-penA-oppC;if(!isFinite(net))return {ok:false,msg:'参数组合超出计算范围（机会成本溢出）'};var be=saved>penA?((Math.pow(1+(saved-penA)/P,1/Y)-1)*100).toFixed(2)+'%':'无（省息连违约金都覆盖不了）';return {ok:true,html:'<div class=\\\"big\\\">提前还款净收益 '+M(net)+' 元</div><div class=\\\"row\\\">省息 '+M(saved)+' 元 − 违约金 '+M(penA)+' 元 − 机会成本 '+M(oppC)+' 元（按 '+opp+'% 机会收益、'+Y+' 年计）</div><div class=\\\"row\\\">盈亏平衡机会收益率 '+be+'：资金长期收益高于它就不急着还。未计流动性价值与心理收益，决策请结合应急储备</div>'};",
+ "test": {
+  "inputs": {
+   "bal": 600000,
+   "rate": 4.2,
+   "months": 240,
+   "pre": 200000,
+   "pen": 1,
+   "opp": 1.5
+  },
+  "expect": "24582.95"
+ }
+},
+{
+ "id": "jrmedical",
+ "cat": "jr",
+ "icon": "🏥",
+ "name": "医保分段报销测算",
+ "desc": "政策范围内费用按起付线、分段比例、报销封顶逐段算报销额与自付（jr 既有工具无医保报销，jrsocial 只算缴费不算报销）",
+ "formula": "示例分段口径：可报基数 = 政策范围内费用 − 起付线（≤0 则报 0）；第一段（基数的前一段上限）按比例 r₁ 报销，超出部分按 r₂ 报销；报销总额再受报销封顶线封顶（封顶填 0 表示不封顶）；自付 = 政策范围内费用 − 报销额（政策外费用需另行全额自付，不在此内）。默认值仿职工住院常见量级（起付线 1300 元、分段 85%/90%），各地各年、门诊/住院、职工/居民口径差异很大，务必按参保地医保局现行政策改参数后使用",
+ "inputs": [
+  {
+   "id": "scope",
+   "label": "政策范围内费用",
+   "def": "50000",
+   "unit": "元"
+  },
+  {
+   "id": "ded",
+   "label": "起付线",
+   "def": "1300",
+   "unit": "元"
+  },
+  {
+   "id": "t1",
+   "label": "第一段上限（起付线以上金额）",
+   "def": "30000",
+   "unit": "元"
+  },
+  {
+   "id": "r1",
+   "label": "第一段报销比例",
+   "def": "85",
+   "unit": "%"
+  },
+  {
+   "id": "r2",
+   "label": "第二段报销比例",
+   "def": "90",
+   "unit": "%"
+  },
+  {
+   "id": "cap",
+   "label": "报销封顶线",
+   "def": "400000",
+   "unit": "元"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var S=Number(scope),D=Number(ded),T=Number(t1),a=Number(r1),b=Number(r2),C=Number(cap);if(!(S>0))return {ok:false,msg:'政策范围内费用须大于 0'};if(!(D>=0))return {ok:false,msg:'起付线不能为负'};if(!(T>=0))return {ok:false,msg:'第一段上限不能为负'};if(!(a>=0&&a<=100)||!(b>=0&&b<=100))return {ok:false,msg:'报销比例须在 0~100% 之间'};if(!(C>=0))return {ok:false,msg:'封顶线不能为负'};var base=Math.max(S-D,0);var seg=Math.min(base,T)*a/100+Math.max(base-T,0)*b/100;var re=C>0?Math.min(seg,C):seg;return {ok:true,html:'<div class=\\\"big\\\">预计报销 '+M(re)+' 元</div><div class=\\\"row\\\">自付 '+M(S-re)+' 元，实际报销比例 '+(re/S*100).toFixed(2)+'%（起付线 '+M(D)+' 元'+(re>=C&&C>0?'，已触报销封顶':'')+'）</div><div class=\\\"row\\\">分段比例与起付/封顶均为示例口径：各地医保目录、起付线、封顶线与比例按参保地现行政策执行，特例（门诊慢特病、大病保险二次报销）不在此内</div>'};",
+ "test": {
+  "inputs": {
+   "scope": 50000,
+   "ded": 1300,
+   "t1": 30000,
+   "r1": 85,
+   "r2": 90,
+   "cap": 400000
+  },
+  "expect": "42330.00"
+ }
+},
+{
+ "id": "jrsocial2",
+ "cat": "jr",
+ "icon": "🧾",
+ "name": "社保基数与灵活就业缴费",
+ "desc": "按社平工资上下限 clamp 缴费基数，算单位职工分项合计与灵活就业两险月缴（jrsocial 只用工资×固定比例，不处理基数上下限与灵活就业）",
+ "formula": "缴费基数 = 本人月工资 clamp 到 [社平×60%, 社平×300%]（各地上下限口径，2024 年多地延续此区间）。单位职工个人：养老 8% + 医疗 2% + 失业 0.5%；单位：养老 16% + 医疗（默认 8%，各地约 6%~10%）+ 失业 0.5% + 工伤 0.4%（行业差别费率约 0.2%~1.9%）。灵活就业：养老 20%（其中 8% 入个人账户）、医疗按填入费率（各地约 4%~10% 或定额），基数可在 60%~300% 档位自选。比例为全国通行示例值，以参保地人社局现行公布为准",
+ "inputs": [
+  {
+   "id": "mode",
+   "label": "参保身份",
+   "type": "select",
+   "def": "emp",
+   "options": [
+    {
+     "v": "emp",
+     "t": "单位职工"
+    },
+    {
+     "v": "flex",
+     "t": "灵活就业"
+    }
+   ]
+  },
+  {
+   "id": "avg",
+   "label": "当地社平月工资",
+   "def": "8000",
+   "unit": "元"
+  },
+  {
+   "id": "wage",
+   "label": "本人月工资",
+   "def": "10000",
+   "unit": "元",
+   "when": "mode=emp"
+  },
+  {
+   "id": "k",
+   "label": "灵活就业基数档位",
+   "type": "select",
+   "def": "60",
+   "options": [
+    {
+     "v": "60",
+     "t": "60%"
+    },
+    {
+     "v": "80",
+     "t": "80%"
+    },
+    {
+     "v": "100",
+     "t": "100%"
+    },
+    {
+     "v": "150",
+     "t": "150%"
+    },
+    {
+     "v": "200",
+     "t": "200%"
+    },
+    {
+     "v": "300",
+     "t": "300%"
+    }
+   ],
+   "when": "mode=flex"
+  },
+  {
+   "id": "medE",
+   "label": "单位医保费率",
+   "def": "8",
+   "unit": "%",
+   "when": "mode=emp"
+  },
+  {
+   "id": "medF",
+   "label": "灵活就业医保费率",
+   "def": "8",
+   "unit": "%",
+   "when": "mode=flex"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var avg=Number(avg);if(!(avg>0))return {ok:false,msg:'社平工资须大于 0'};if(String(mode)==='flex'){var kf=Number(k);var bf=avg*kf/100;var mef=Number(medF);if(!(mef>=0&&mef<=30))return {ok:false,msg:'医保费率须在 0~30% 之间'};var pen=bf*0.20,med=bf*mef/100;return {ok:true,html:'<div class=\\\"big\\\">灵活就业月缴合计 '+M(pen+med)+' 元</div><div class=\\\"row\\\">缴费基数 '+M(bf)+' 元（社平 '+M(avg)+' 元 × '+k+'%）；养老 '+M(pen)+' 元（20%，其中 8% 入个人账户）+ 医疗 '+M(med)+' 元</div><div class=\\\"row\\\">年缴合计 '+M((pen+med)*12)+' 元。灵活就业医保费率与基数档位各地差异大（部分城市为定额或含生育合并），以参保地现行公布为准</div>'};}var W=Number(wage),mE=Number(medE);if(!(W>0))return {ok:false,msg:'本人月工资须大于 0'};if(!(mE>=0&&mE<=30))return {ok:false,msg:'单位医保费率须在 0~30% 之间'};var base=Math.min(Math.max(W,avg*0.6),avg*3);var pers=base*0.105;var empl=base*(0.16+mE/100+0.005+0.004);return {ok:true,html:'<div class=\\\"big\\\">个人月缴 '+M(pers)+' 元</div><div class=\\\"row\\\">缴费基数 '+M(base)+' 元（工资 '+M(W)+' 元 clamp 到社平 60%~300% = '+M(avg*0.6)+'~'+M(avg*3)+' 元）；个人 = 养老 8% + 医疗 2% + 失业 0.5%</div><div class=\\\"row\\\">单位月缴 '+M(empl)+' 元，五险合计 '+M(pers+empl)+' 元（年 '+M((pers+empl)*12)+' 元）。工伤费率按行业浮动、医保单位费率各地不同，以参保地现行公布为准</div>'};",
+ "test": {
+  "inputs": {
+   "mode": "emp",
+   "avg": 8000,
+   "wage": 10000,
+   "k": "60",
+   "medE": 8,
+   "medF": 8
+  },
+  "expect": "1050.00"
+ }
+},
+{
+ "id": "jrprovident2",
+ "cat": "jr",
+ "icon": "🏦",
+ "name": "公积金积累与可贷额度联动",
+ "desc": "按月缴存滚存结息，算 N 年后账户余额并联动估算可贷额度（jrhousingfund 只按当前余额/收入静态估额度，不做积累投影）",
+ "formula": "月缴存 = 月工资 × 缴存比例 × 2（个人 + 单位等额）；余额按月复利近似结息（公积金结息利率自 2016 年起统一为一年期定存基准利率 1.5%，按年结息，此处月复利为近似）；期末余额 = 期初余额×(1+i)^m + 月缴存×[(1+i)^m − 1]÷i（i=0 时为线性累加）；预计可贷额度 = min（期末余额 × 倍数， 额度上限）——倍数（常见 10~25）与上限各地公积金中心规定不同，以当地现行政策为准。缴存年限上限 40 年",
+ "inputs": [
+  {
+   "id": "wage",
+   "label": "月工资",
+   "def": "10000",
+   "unit": "元"
+  },
+  {
+   "id": "rate",
+   "label": "缴存比例（个人与单位同）",
+   "type": "select",
+   "def": "12",
+   "options": [
+    {
+     "v": "5",
+     "t": "5%"
+    },
+    {
+     "v": "7",
+     "t": "7%"
+    },
+    {
+     "v": "10",
+     "t": "10%"
+    },
+    {
+     "v": "12",
+     "t": "12%"
+    }
+   ]
+  },
+  {
+   "id": "yrs",
+   "label": "缴存年数",
+   "def": "10",
+   "unit": "年"
+  },
+  {
+   "id": "bal0",
+   "label": "现有账户余额",
+   "def": "20000",
+   "unit": "元"
+  },
+  {
+   "id": "intr",
+   "label": "结息利率",
+   "def": "1.5",
+   "unit": "%"
+  },
+  {
+   "id": "mult",
+   "label": "额度倍数",
+   "def": "20",
+   "unit": "倍"
+  },
+  {
+   "id": "cap",
+   "label": "额度上限",
+   "def": "1200000",
+   "unit": "元"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var W=Number(wage),rt=Number(rate),Y=Number(yrs),B0=Number(bal0),ir=Number(intr),mu=Number(mult),C=Number(cap);if(!(W>0))return {ok:false,msg:'月工资须大于 0'};if(!(Y>=1&&Y<=40)||Math.floor(Y)!==Y)return {ok:false,msg:'缴存年数须为 1~40 的整数（循环/幂次上限）'};if(!(B0>=0))return {ok:false,msg:'现有余额不能为负'};if(!(ir>=0&&ir<=100))return {ok:false,msg:'结息利率须在 0~100% 之间'};if(!(mu>0&&mu<=1000))return {ok:false,msg:'额度倍数须在 0~1000 之间'};if(!(C>=0))return {ok:false,msg:'额度上限不能为负'};var c=W*rt/100*2,m=Y*12,im=ir/100/12;var fv=im===0?B0+c*m:B0*Math.pow(1+im,m)+c*(Math.pow(1+im,m)-1)/im;var quota=Math.min(fv*mu,C);if(!isFinite(fv))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\\\"big\\\">期末账户余额 '+M(fv)+' 元</div><div class=\\\"row\\\">月缴存合计 '+M(c)+' 元（个人 '+M(c/2)+' + 单位 '+M(c/2)+'），'+Y+' 年累计缴存 '+M(c*m)+' 元，结息约 '+M(fv-B0-c*m)+' 元</div><div class=\\\"row\\\">按余额 × '+mult+' 倍预计可贷 '+M(quota)+' 元'+(fv*mu>C?'（已触额度上限 '+M(C)+' 元）':'')+'；提取（购房/租房/退休等）与贷款额度规则以当地公积金中心现行政策为准</div>'};",
+ "test": {
+  "inputs": {
+   "wage": 10000,
+   "rate": "12",
+   "yrs": 10,
+   "bal0": 20000,
+   "intr": 1.5,
+   "mult": 20,
+   "cap": 1200000
+  },
+  "expect": "333747.31"
+ }
+},
+{
+ "id": "jrtax3",
+ "cat": "jr",
+ "icon": "🧮",
+ "name": "个税专项附加扣除逐项版",
+ "desc": "子女教育、婴幼儿照护、继续教育、住房、赡养老人、大病医疗逐项填，汇总扣除后算全年个税（shitax/jrtax 只给一个扣除合计输入框）",
+ "formula": "应纳税所得额 = 年工资收入 − 60000（基本减除）− 专项扣除（社保公积金个人合计）− 专项附加扣除逐项和：子女教育 2000 元/月/孩、3 岁以下婴幼儿照护 2000 元/月/孩（2023 年 8 月起标准，原为 1000）、赡养老人独生子女 3000 元/月（2023 年起，原 2000）、非独生分摊每月 ≤1500 元、房贷利息 1000 元/月（最长 240 个月）或住房租金 1500/1100/800 元/月（直辖市省会等/市辖区人口>100万/≤100万）、继续教育学历 400 元/月（最长 48 个月）或职业资格证书当年 3600 元、大病医疗自付超 15000 元部分（上限 80000 元）。税率按综合所得年度表 3%~45% 七级超额累进。口径截至 2026 年现行政策，夫妻分摊比例等细节请按实际申报",
+ "inputs": [
+  {
+   "id": "income",
+   "label": "全年工资收入",
+   "def": "300000",
+   "unit": "元"
+  },
+  {
+   "id": "social",
+   "label": "专项扣除（社保公积金个人年合计）",
+   "def": "36000",
+   "unit": "元"
+  },
+  {
+   "id": "child",
+   "label": "子女教育子女数",
+   "def": "1",
+   "unit": "人"
+  },
+  {
+   "id": "baby",
+   "label": "3岁以下婴幼儿数",
+   "def": "0",
+   "unit": "人"
+  },
+  {
+   "id": "edu",
+   "label": "继续教育",
+   "type": "select",
+   "def": "0",
+   "options": [
+    {
+     "v": "0",
+     "t": "无"
+    },
+    {
+     "v": "4800",
+     "t": "学历教育 400/月"
+    },
+    {
+     "v": "3600",
+     "t": "职业资格证书 3600/年"
+    }
+   ]
+  },
+  {
+   "id": "house",
+   "label": "住房（房贷与租金二选一）",
+   "type": "select",
+   "def": "12000",
+   "options": [
+    {
+     "v": "0",
+     "t": "无"
+    },
+    {
+     "v": "12000",
+     "t": "房贷利息 1000/月"
+    },
+    {
+     "v": "18000",
+     "t": "租金 1500/月"
+    },
+    {
+     "v": "13200",
+     "t": "租金 1100/月"
+    },
+    {
+     "v": "9600",
+     "t": "租金 800/月"
+    }
+   ]
+  },
+  {
+   "id": "elder",
+   "label": "赡养老人",
+   "type": "select",
+   "def": "sole",
+   "options": [
+    {
+     "v": "sole",
+     "t": "独生子女 3000/月"
+    },
+    {
+     "v": "share",
+     "t": "非独生分摊"
+    },
+    {
+     "v": "none",
+     "t": "无/老人未满60岁"
+    }
+   ]
+  },
+  {
+   "id": "elderAmt",
+   "label": "非独生本人分摊",
+   "def": "1500",
+   "unit": "元/月",
+   "when": "elder=share"
+  },
+  {
+   "id": "ill",
+   "label": "大病医疗自付金额（医保后）",
+   "def": "0",
+   "unit": "元"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var I=Number(income),SO=Number(social),CH=Number(child),BA=Number(baby),ED=Number(edu),HO=Number(house),IL=Number(ill);if(!(I>=0))return {ok:false,msg:'年收入不能为负'};if(!(SO>=0))return {ok:false,msg:'专项扣除不能为负'};if(!(CH>=0&&CH<=10)||Math.floor(CH)!==CH)return {ok:false,msg:'子女数须为 0~10 的整数'};if(!(BA>=0&&BA<=10)||Math.floor(BA)!==BA)return {ok:false,msg:'婴幼儿数须为 0~10 的整数'};if(!(IL>=0))return {ok:false,msg:'大病自付不能为负'};var el=0;if(String(elder)==='sole')el=36000;else if(String(elder)==='share'){var ea=Number(elderAmt);if(!(ea>=0&&ea<=1500))return {ok:false,msg:'非独生分摊每月须在 0~1500 元之间（法定上限）'};el=ea*12;}var illD=Math.min(Math.max(IL-15000,0),80000);var deds=CH*24000+BA*24000+ED+HO+el+illD;var tx=I-60000-SO-deds;var tax=0;if(tx>0){if(tx<=36000)tax=tx*0.03;else if(tx<=144000)tax=tx*0.10-2520;else if(tx<=300000)tax=tx*0.20-16920;else if(tx<=420000)tax=tx*0.25-31920;else if(tx<=660000)tax=tx*0.30-52920;else if(tx<=960000)tax=tx*0.35-85920;else tax=tx*0.45-181920;}return {ok:true,html:'<div class=\\\"big\\\">全年个税 '+M(tax)+' 元</div><div class=\\\"row\\\">专项附加扣除合计 '+M(deds)+' 元（子女 '+M(CH*24000)+' + 婴幼儿 '+M(BA*24000)+' + 继续教育 '+M(ED)+' + 住房 '+M(HO)+' + 赡养 '+M(el)+' + 大病 '+M(illD)+'）；应纳税所得额 '+M(Math.max(tx,0))+' 元</div><div class=\\\"row\\\">税后收入 '+M(I-tax)+' 元，平均税率 '+(I>0?(tax/I*100).toFixed(2):'0.00')+'%。扣除标准为 2023 年 8 月提高后的现行口径；租金档次按城市规模划分，房贷与租金同年不可同时享</div>'};",
+ "test": {
+  "inputs": {
+   "income": 300000,
+   "social": 36000,
+   "child": 1,
+   "baby": 0,
+   "edu": "0",
+   "house": "12000",
+   "elder": "sole",
+   "elderAmt": 1500,
+   "ill": 0
+  },
+  "expect": "10680.00"
+ }
+},
+{
+ "id": "jrbonus2",
+ "cat": "jr",
+ "icon": "🎁",
+ "name": "工资奖金最优拆分",
+ "desc": "全年总薪酬包已定，扫遍奖金占比找总税额最低的拆法与临界点（jrtax2 只比给定奖金的两种计税法，shbonus 只算单独计税）",
+ "formula": "设奖金 B（0~总包，步长 100 元扫描，上限总包 200 万元），其余为工资：工资税按综合所得年度表（应税 = 工资 − 60000 − 扣除合计）；奖金单独计税按月度换算表（B÷12 定档，税 = B×率 − 速扣，政策延续至 2027 年底）；总税 = 两者之和，取最小者。奖金单独计税存在临界盲区（如 B 略过 36000/144000 等档位时税额跳升），扫描自动避开。未计社保公积金随工资基数的变化（假设总包口径已固定）",
+ "inputs": [
+  {
+   "id": "total",
+   "label": "全年总薪酬包（税前）",
+   "def": "400000",
+   "unit": "元"
+  },
+  {
+   "id": "ded",
+   "label": "年扣除合计（社保公积金+专项附加）",
+   "def": "60000",
+   "unit": "元"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var T=Number(total),D=Number(ded);if(!(T>0&&T<=2000000))return {ok:false,msg:'总薪酬包须在 0~200 万元之间（扫描上限）'};if(!(D>=0))return {ok:false,msg:'扣除合计不能为负'};function aTax(t){if(t<=0)return 0;if(t<=36000)return t*0.03;if(t<=144000)return t*0.10-2520;if(t<=300000)return t*0.20-16920;if(t<=420000)return t*0.25-31920;if(t<=660000)return t*0.30-52920;if(t<=960000)return t*0.35-85920;return t*0.45-181920;}function bTax(B){if(B<=0)return 0;var m=B/12,r,d;if(m<=3000){r=0.03;d=0;}else if(m<=12000){r=0.10;d=210;}else if(m<=25000){r=0.20;d=1410;}else if(m<=35000){r=0.25;d=2660;}else if(m<=55000){r=0.30;d=4410;}else if(m<=80000){r=0.35;d=7160;}else{r=0.45;d=15160;}return B*r-d;}var bestTax=Infinity,bestB=0;for(var B=0;B<T;B+=100){var tt=aTax(T-B-60000-D)+bTax(B);if(tt<bestTax-1e-9){bestTax=tt;bestB=B;}}var tT=aTax(T-60000-D)+bTax(T);if(tT<bestTax-1e-9){bestTax=tT;bestB=T;}var allSal=aTax(T-60000-D);return {ok:true,html:'<div class=\\\"big\\\">最优年终奖 '+M(bestB)+' 元</div><div class=\\\"row\\\">对应工资 '+M(T-bestB)+' 元，总税额 '+M(bestTax)+' 元；全部发工资税额 '+M(allSal)+' 元，最优拆分省税 '+M(allSal-bestTax)+' 元</div><div class=\\\"row\\\">奖金单独计税政策现行延续至 2027-12-31；临界点附近奖金多发 1 元可能多缴上千元税（盲区），发放前请以最优值为锚小幅试探。未计社保基数联动</div>'};",
+ "test": {
+  "inputs": {
+   "total": 400000,
+   "ded": 60000
+  },
+  "expect": "136000.00"
+ }
+},
+{
+ "id": "jrsalary2",
+ "cat": "jr",
+ "icon": "🔍",
+ "name": "年度到手反推税前年薪",
+ "desc": "按年度累计口径由目标年到手反解税前年薪（二分迭代）（jrgrossup 是月度换算表近似，本工具用年度综合所得表 + 专项附加，口径不同）",
+ "formula": "到手(G) = G − G×社保公积金个人比例 − 年度个税[max（G×(1−比例) − 60000 − 专项附加， 0）]（年度综合所得税率表 3%~45%）；到手关于 G 单调递增，二分迭代 200 次反解。社保公积金按税前工资固定比例近似（实际有基数上下限），结果为年度规划口径",
+ "inputs": [
+  {
+   "id": "net",
+   "label": "目标年到手",
+   "def": "200000",
+   "unit": "元"
+  },
+  {
+   "id": "socr",
+   "label": "社保公积金个人比例合计",
+   "def": "10.5",
+   "unit": "%"
+  },
+  {
+   "id": "ded",
+   "label": "专项附加扣除（年）",
+   "def": "30000",
+   "unit": "元"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var NT=Number(net),SR=Number(socr)/100,DD=Number(ded);if(!(NT>0&&NT<=1e12))return {ok:false,msg:'目标年到手须大于 0'};if(!(SR>=0&&SR<=0.6))return {ok:false,msg:'社保公积金个人比例须在 0~60% 之间'};if(!(DD>=0))return {ok:false,msg:'专项附加不能为负'};function aTax(t){if(t<=0)return 0;if(t<=36000)return t*0.03;if(t<=144000)return t*0.10-2520;if(t<=300000)return t*0.20-16920;if(t<=420000)return t*0.25-31920;if(t<=660000)return t*0.30-52920;if(t<=960000)return t*0.35-85920;return t*0.45-181920;}function take(G){var soc=G*SR;return G-soc-aTax(G-soc-60000-DD);}var lo=0,hi=Math.max(NT*2+100000,1000),guard=0;while(take(hi)<NT&&hi<1e12&&guard<200){hi*=2;guard++;}for(var i=0;i<200;i++){var mid=(lo+hi)/2;if(take(mid)<NT)lo=mid;else hi=mid;}var G=(lo+hi)/2;var soc=G*SR;var tax=aTax(G-soc-60000-DD);return {ok:true,html:'<div class=\\\"big\\\">所需税前年薪 '+M(G)+' 元</div><div class=\\\"row\\\">其中社保公积金个人 '+M(soc)+' 元、全年个税 '+M(tax)+' 元，到手 '+M(G-soc-tax)+' 元；折合月均税前 '+M(G/12)+' 元</div><div class=\\\"row\\\">年度口径反推（累计预扣的年度等价），与 jrgrossup 的月度近似结果会有差异；社保按固定比例近似，未计基数封顶</div>'};",
+ "test": {
+  "inputs": {
+   "net": 200000,
+   "socr": 10.5,
+   "ded": 30000
+  },
+  "expect": "233991.31"
+ }
+},
+{
+ "id": "jrstock3",
+ "cat": "jr",
+ "icon": "🔁",
+ "name": "股票做T降成本测算",
+ "desc": "底仓先卖后买（或先买后卖）做 T：价差扣佣金、印花税、过户费后净赚多少、每股摊薄成本多少（jrstockfee 只算单边交易费用，jravg 算补仓均价，均不算做T净账）",
+ "formula": "做 T 一轮（卖出价 Ps、买回价 Pb、数量 Q）：毛价差 =（Ps − Pb）×Q；费用 = 卖出佣金 max（Ps×Q×佣金率， 5 元）+ 买入佣金 max（Pb×Q×佣金率， 5 元）+ 印花税 Ps×Q×0.05%（卖出单边，2023-08-28 起减半征收）+ 过户费（Ps+Pb）×Q×0.001%（双边）；净收益 = 毛价差 − 费用；每股降成本 = 净收益 ÷ Q；盈亏平衡价差 = 费用 ÷ Q。先买后卖顺序费用相同。佣金率默认万 2.5，以券商实际费率为准",
+ "inputs": [
+  {
+   "id": "qty",
+   "label": "做T数量",
+   "def": "1000",
+   "unit": "股"
+  },
+  {
+   "id": "sell",
+   "label": "卖出价",
+   "def": "12.5",
+   "unit": "元"
+  },
+  {
+   "id": "buy",
+   "label": "买回价",
+   "def": "12",
+   "unit": "元"
+  },
+  {
+   "id": "comm",
+   "label": "佣金率",
+   "def": "0.025",
+   "unit": "%"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var Q=Number(qty),PS=Number(sell),PB=Number(buy),CM=Number(comm);if(!(Q>0))return {ok:false,msg:'数量须大于 0'};if(!(PS>0)||!(PB>0))return {ok:false,msg:'价格须大于 0'};if(!(CM>=0&&CM<=10))return {ok:false,msg:'佣金率须在 0~10% 之间'};var sa=PS*Q,ba=PB*Q;var cs=Math.max(sa*CM/100,5),cb=Math.max(ba*CM/100,5),stamp=sa*0.0005,tr=(sa+ba)*0.00001;var gross=(PS-PB)*Q;var costs=cs+cb+stamp+tr;var net=gross-costs;return {ok:true,html:'<div class=\\\"big\\\">做T净收益 '+M(net)+' 元</div><div class=\\\"row\\\">毛价差 '+M(gross)+' 元 − 费用 '+M(costs)+' 元（佣金 '+M(cs+cb)+' + 印花税 '+M(stamp)+' + 过户费 '+M(tr)+'）</div><div class=\\\"row\\\">每股摊薄成本 '+ (net/Q).toFixed(4) +' 元；价差至少 '+(costs/Q).toFixed(4)+' 元/股才不亏。做 T 失败（卖飞或买回更高）会反向抬高成本，本测算不含冲击成本与 T+1 规则限制（A 股当日买入不可当日卖出，做 T 依赖底仓）</div>'};",
+ "test": {
+  "inputs": {
+   "qty": 1000,
+   "sell": 12.5,
+   "buy": 12,
+   "comm": 0.025
+  },
+  "expect": "483.5"
+ }
+},
+{
+ "id": "jreft",
+ "cat": "jr",
+ "icon": "📊",
+ "name": "ETF与联接基金费用拖累",
+ "desc": "同样的毛收益，场内 ETF 与场外联接基金因综合费率不同，终值差多少（jrfee 只算单次申购费，jrfund 只算定投终值不比费用）",
+ "formula": "近似口径：净年化因子 =（1+毛收益）×(1 − 综合年费率）（费率按资产逐年扣取的近似）；一次性投入终值 = P×因子^年数；定投为每月末投入、月因子 = 年因子^(1/12) 逐月滚存（上限 600 个月）。ETF 综合费率示例 0.6%（管理 0.5 + 托管 0.1），联接/场外示例 1.2%（含销售服务与申赎摊销），实际以基金合同费率为准；未计 ETF 买卖佣金与折溢价",
+ "inputs": [
+  {
+   "id": "mode",
+   "label": "投入方式",
+   "type": "select",
+   "def": "lump",
+   "options": [
+    {
+     "v": "lump",
+     "t": "一次性投入"
+    },
+    {
+     "v": "dca",
+     "t": "每月定投"
+    }
+   ]
+  },
+  {
+   "id": "amt",
+   "label": "一次性金额",
+   "def": "100000",
+   "unit": "元",
+   "when": "mode=lump"
+  },
+  {
+   "id": "monthly",
+   "label": "每月定投",
+   "def": "2000",
+   "unit": "元",
+   "when": "mode=dca"
+  },
+  {
+   "id": "ret",
+   "label": "毛年化收益",
+   "def": "7",
+   "unit": "%"
+  },
+  {
+   "id": "yrs",
+   "label": "年限",
+   "def": "10",
+   "unit": "年"
+  },
+  {
+   "id": "feeA",
+   "label": "ETF综合年费率",
+   "def": "0.6",
+   "unit": "%"
+  },
+  {
+   "id": "feeB",
+   "label": "联接基金综合年费率",
+   "def": "1.2",
+   "unit": "%"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var rt=Number(ret)/100,Y=Number(yrs),fA=Number(feeA),fB=Number(feeB);if(!(Y>=1&&Y<=50)||Math.floor(Y)!==Y)return {ok:false,msg:'年限须为 1~50 的整数'};if(!(rt>-1&&rt<=10))return {ok:false,msg:'毛收益须在 -100%~1000% 之间'};if(!(fA>=0&&fA<=99)||!(fB>=0&&fB<=99))return {ok:false,msg:'费率须在 0~99% 之间'};function fac(f){return (1+rt)*(1-f/100);}var fvA,fvB,paid;if(String(mode)==='dca'){var MO=Number(monthly);if(!(MO>0))return {ok:false,msg:'每月定投须大于 0'};var n=Y*12;function dca(f){var mf=Math.pow(fac(f),1/12),s=0;for(var k=0;k<n;k++){s+=MO*Math.pow(mf,n-1-k);}return s;}fvA=dca(fA);fvB=dca(fB);paid=MO*n;}else{var P0=Number(amt);if(!(P0>0))return {ok:false,msg:'一次性金额须大于 0'};fvA=P0*Math.pow(fac(fA),Y);fvB=P0*Math.pow(fac(fB),Y);paid=P0;}if(!isFinite(fvA)||!isFinite(fvB))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\\\"big\\\">ETF 终值 '+M(fvA)+' 元</div><div class=\\\"row\\\">联接基金终值 '+M(fvB)+' 元；费用拖累差 '+M(fvA-fvB)+' 元（总投入 '+M(paid)+' 元，'+Y+' 年）</div><div class=\\\"row\\\">费率差仅 '+(Math.abs(fB-fA)).toFixed(2)+' 个百分点，复利下差距随年限放大；场外联接的便利与自动定投、场内 ETF 的低费率与盘中折溢价风险需一并权衡</div>'};",
+ "test": {
+  "inputs": {
+   "mode": "lump",
+   "amt": 100000,
+   "monthly": 2000,
+   "ret": 7,
+   "yrs": 10,
+   "feeA": 0.6,
+   "feeB": 1.2
+  },
+  "expect": "185225.86"
+ }
+},
+{
+ "id": "jrgrid",
+ "cat": "jr",
+ "icon": "🔲",
+ "name": "网格交易参数测算",
+ "desc": "给价格区间与格数，算等差/等比网格的间距、需备资金与每格净利（jr 既有工具无网格交易）",
+ "formula": "等差网格：间距 =（上限 − 下限）÷格数，价位等差排列；等比网格：相邻价位比 =（上限÷下限）^(1/格数)。需备资金 = 现价下方格数 × 每格买入金额（跌到底全部买满的近似，未计逐格价位差异）；每格净利示例取现价下方最近一格：股数 = 每格金额 ÷ 该格价，毛利 = 间距 × 股数，费用 = 买卖佣金（各 max（金额×费率， 5 元））+ 股票卖出印花税 0.05%（ETF 无印花税）。格数上限 100",
+ "inputs": [
+  {
+   "id": "mode",
+   "label": "网格类型",
+   "type": "select",
+   "def": "arith",
+   "options": [
+    {
+     "v": "arith",
+     "t": "等差网格"
+    },
+    {
+     "v": "geo",
+     "t": "等比网格"
+    }
+   ]
+  },
+  {
+   "id": "asset",
+   "label": "品种",
+   "type": "select",
+   "def": "stock",
+   "options": [
+    {
+     "v": "stock",
+     "t": "股票（有印花税）"
+    },
+    {
+     "v": "etf",
+     "t": "ETF（无印花税）"
+    }
+   ]
+  },
+  {
+   "id": "low",
+   "label": "区间下限",
+   "def": "8",
+   "unit": "元"
+  },
+  {
+   "id": "high",
+   "label": "区间上限",
+   "def": "12",
+   "unit": "元"
+  },
+  {
+   "id": "n",
+   "label": "格数",
+   "def": "10",
+   "unit": "格"
+  },
+  {
+   "id": "per",
+   "label": "每格买入金额",
+   "def": "5000",
+   "unit": "元"
+  },
+  {
+   "id": "price",
+   "label": "当前价",
+   "def": "10",
+   "unit": "元"
+  },
+  {
+   "id": "fee",
+   "label": "佣金率",
+   "def": "0.025",
+   "unit": "%"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var LO=Number(low),HI=Number(high),Nn=Number(n),PER=Number(per),PR=Number(price),FE=Number(fee);if(!(LO>0))return {ok:false,msg:'区间下限须大于 0'};if(!(HI>LO))return {ok:false,msg:'区间上限须大于下限'};if(!(Nn>=2&&Nn<=100)||Math.floor(Nn)!==Nn)return {ok:false,msg:'格数须为 2~100 的整数（循环上限）'};if(!(PER>0))return {ok:false,msg:'每格金额须大于 0'};if(!(PR>=LO&&PR<=HI))return {ok:false,msg:'当前价须在区间内'};if(!(FE>=0&&FE<=10))return {ok:false,msg:'佣金率须在 0~10% 之间'};var levels=[];var step;if(String(mode)==='geo'){var ratio=Math.pow(HI/LO,1/Nn);for(var i=0;i<=Nn;i++)levels.push(LO*Math.pow(ratio,i));step=(ratio-1)*100;}else{step=(HI-LO)/Nn;for(var j=0;j<=Nn;j++)levels.push(LO+step*j);}var below=[];for(var k=0;k<levels.length;k++){if(levels[k]<PR-1e-9)below.push(levels[k]);}if(!below.length)return {ok:false,msg:'当前价已在最底层附近，下方无网格可布'};var p=below[below.length-1];var idx=levels.indexOf(p);var sellp=levels[idx+1];var shares=PER/p;var gross=(sellp-p)*shares;var sellAmt=shares*sellp;var fees=Math.max(PER*FE/100,5)+Math.max(sellAmt*FE/100,5)+(String(asset)==='stock'?sellAmt*0.0005:0);return {ok:true,html:'<div class=\\\"big\\\">'+(String(mode)==='geo'?'每格涨幅约 '+step.toFixed(2)+'%':'每格间距 '+M(step)+' 元')+'</div><div class=\\\"row\\\">共 '+(Nn+1)+' 个价位、现价下方 '+below.length+' 格，需备资金约 '+M(below.length*PER)+' 元</div><div class=\\\"row\\\">示例：在 '+M(p)+' 元买入一格（'+M(shares)+' 股/份），涨一格至 '+M(sellp)+' 元卖出，每格净利约 '+M(gross-fees)+' 元（已扣费用 '+M(fees)+' 元）。网格在单边趋势中会买满或卖飞，区间与格数需配合波动率设定</div>'};",
+ "test": {
+  "inputs": {
+   "mode": "arith",
+   "asset": "stock",
+   "low": 8,
+   "high": 12,
+   "n": 10,
+   "per": 5000,
+   "price": 10,
+   "fee": 0.025
+  },
+  "expect": "195.73"
+ }
+},
+{
+ "id": "jrfund3",
+ "cat": "jr",
+ "icon": "🧾",
+ "name": "基金持有期总成本",
+ "desc": "申购费（价外法）+ 分段赎回费 + 持有期管理费拖累，一笔算清持有总成本与实际到手（jrfee 只算申购一环，jrdraw/jrcalmar 是风险指标不算费用）",
+ "formula": "申购价外法：净申购 = 金额 ÷（1+申购费率）；持有期总收益按输入 ret% 作用于净申购金额得赎回前市值；赎回费率按持有天数分段——权益类示例：<7 天 1.5%（监管要求且全额计入基金财产）、7 天~1 年 0.5%、1~2 年 0.25%、≥2 年 0；债券类示例：<7 天 1.5%、7~30 天 0.1%、≥30 天 0；管理类费用拖累 ≈ 净申购 × 综合年费率 × 天数÷365（近似）。实际到手 = 赎回前市值 − 赎回费 − 管理拖累。费率均为示例，以基金合同与销售机构折扣为准",
+ "inputs": [
+  {
+   "id": "amt",
+   "label": "申购金额",
+   "def": "50000",
+   "unit": "元"
+  },
+  {
+   "id": "sub",
+   "label": "申购费率",
+   "def": "0.15",
+   "unit": "%"
+  },
+  {
+   "id": "ret",
+   "label": "持有期总收益",
+   "def": "10",
+   "unit": "%"
+  },
+  {
+   "id": "days",
+   "label": "持有天数",
+   "def": "200",
+   "unit": "天"
+  },
+  {
+   "id": "typ",
+   "label": "基金类型（赎回费分段）",
+   "type": "select",
+   "def": "eq",
+   "options": [
+    {
+     "v": "eq",
+     "t": "权益类示例分段"
+    },
+    {
+     "v": "bd",
+     "t": "债券类示例分段"
+    }
+   ]
+  },
+  {
+   "id": "mgmt",
+   "label": "管理托管销售综合年费率",
+   "def": "1.2",
+   "unit": "%"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var A=Number(amt),SB=Number(sub),RT=Number(ret),DY=Number(days),MG=Number(mgmt);if(!(A>0))return {ok:false,msg:'申购金额须大于 0'};if(!(SB>=0&&SB<=10))return {ok:false,msg:'申购费率须在 0~10% 之间'};if(!(RT>-100&&RT<=100000))return {ok:false,msg:'持有期收益须大于 -100%'};if(!(DY>=1&&DY<=3650)||Math.floor(DY)!==DY)return {ok:false,msg:'持有天数须为 1~3650 的整数'};if(!(MG>=0&&MG<=10))return {ok:false,msg:'综合年费率须在 0~10% 之间'};var net=A/(1+SB/100);var subFee=A-net;var gross=net*(1+RT/100);var rr;if(String(typ)==='eq'){rr=DY<7?1.5:DY<365?0.5:DY<730?0.25:0;}else{rr=DY<7?1.5:DY<30?0.1:0;}var redFee=gross*rr/100;var mg=net*MG/100*DY/365;var out=gross-redFee-mg;return {ok:true,html:'<div class=\\\"big\\\">实际到手 '+M(out)+' 元</div><div class=\\\"row\\\">净申购 '+M(net)+' 元（申购费 '+M(subFee)+' 元），赎回前市值 '+M(gross)+' 元；赎回费率 '+rr+'%（持有 '+DY+' 天）计 '+M(redFee)+' 元，管理类拖累约 '+M(mg)+' 元</div><div class=\\\"row\\\">总成本 '+M(subFee+redFee+mg)+' 元，净收益 '+M(out-A)+' 元。持有不足 7 天赎回费 1.5% 为监管统一要求；其余分段为常见示例，以基金合同为准</div>'};",
+ "test": {
+  "inputs": {
+   "amt": 50000,
+   "sub": 0.15,
+   "ret": 10,
+   "days": 200,
+   "typ": "eq",
+   "mgmt": 1.2
+  },
+  "expect": "54314.76"
+ }
+},
+{
+ "id": "jrdividend2",
+ "cat": "jr",
+ "icon": "🌿",
+ "name": "红利再投资 DRIP 复利",
+ "desc": "股息到账后立即买回 vs 拿走现金，逐年滚存比终值（jrdiv 只算股息率，jrdivpay 只算支付率，均不做再投资模拟）",
+ "formula": "逐年模拟（上限 50 年）：每年股息 = 年初市值 × 股息率，扣股息税后全额再投资；市值另按年涨幅 appr 增长。不再投资对照：股价涨幅相同，股息扣税后以现金持有（不再生息）。股息税按差别化政策实际税负：持股 >1 年 0%（暂免）、1 个月~1 年 10%、≤1 个月 20%（名义税率 20%，按持股期限减按比例计入应纳税所得额）。股息率以年初市值计为近似",
+ "inputs": [
+  {
+   "id": "P",
+   "label": "初始投入",
+   "def": "100000",
+   "unit": "元"
+  },
+  {
+   "id": "yld",
+   "label": "股息率",
+   "def": "3.5",
+   "unit": "%"
+  },
+  {
+   "id": "appr",
+   "label": "年股价涨幅",
+   "def": "5",
+   "unit": "%"
+  },
+  {
+   "id": "taxr",
+   "label": "持股期限（股息税负）",
+   "type": "select",
+   "def": "0",
+   "options": [
+    {
+     "v": "0",
+     "t": ">1年 免税"
+    },
+    {
+     "v": "10",
+     "t": "1个月~1年 10%"
+    },
+    {
+     "v": "20",
+     "t": "≤1个月 20%"
+    }
+   ]
+  },
+  {
+   "id": "yrs",
+   "label": "年限",
+   "def": "10",
+   "unit": "年"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var P0=Number(P),Y=Number(yld),AP=Number(appr),TX=Number(taxr),Nn=Number(yrs);if(!(P0>0))return {ok:false,msg:'初始投入须大于 0'};if(!(Y>=0&&Y<=100))return {ok:false,msg:'股息率须在 0~100% 之间'};if(!(AP>-100&&AP<=1000))return {ok:false,msg:'年涨幅须在 -100%~1000% 之间'};if(!(Nn>=1&&Nn<=50)||Math.floor(Nn)!==Nn)return {ok:false,msg:'年限须为 1~50 的整数（循环上限）'};var V=P0,Vp=P0,cash=0,divTot=0;for(var t=0;t<Nn;t++){var d=V*Y/100;divTot+=d;V=V*(1+AP/100)+d*(1-TX/100);var dc=Vp*Y/100*(1-TX/100);cash+=dc;Vp=Vp*(1+AP/100);}if(!isFinite(V))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\\\"big\\\">再投资终值 '+M(V)+' 元</div><div class=\\\"row\\\">不再投资：市值 '+M(Vp)+' 元 + 累计现金股息 '+M(cash)+' 元 = '+M(Vp+cash)+' 元；再投资复利优势 '+M(V-(Vp+cash))+' 元</div><div class=\\\"row\\\">'+Nn+' 年累计股息（再投资口径）'+M(divTot)+' 元。股息率与涨幅均为假设恒定值；实际分红不连续且股价除息会回落，本模拟为机制演示</div>'};",
+ "test": {
+  "inputs": {
+   "P": 100000,
+   "yld": 3.5,
+   "appr": 5,
+   "taxr": "0",
+   "yrs": 10
+  },
+  "expect": "226098.34"
+ }
+},
+{
+ "id": "jrbond3",
+ "cat": "jr",
+ "icon": "🎠",
+ "name": "债券骑乘与持有期收益",
+ "desc": "买长债持有两年后卖出：票息 + 骑乘价差 + 再投资，算持有期总收益与年化（jrbond 算到期收益，jrbondp 算全价，jrbonddy 算当期收益，均不算中途卖出的持有期收益）",
+ "formula": "按年付息、面值 100：买入价 = 按买入 YTM 折现全部剩余现金流；持有 H 年后剩余期限缩短，按卖出 YTM 折现得卖出价（卖出 YTM 低于买入时另有骑乘/曲线下行收益）；持有期票息按再投资利率滚存到卖出时点。总收益 =（卖出价 + 票息终值）÷买入价 − 1，年化 =（1+总收益）^(1/H) − 1。期限上限 30 年、持有须短于期限",
+ "inputs": [
+  {
+   "id": "coupon",
+   "label": "票面利率",
+   "def": "4",
+   "unit": "%"
+  },
+  {
+   "id": "ybuy",
+   "label": "买入到期收益率",
+   "def": "4.5",
+   "unit": "%"
+  },
+  {
+   "id": "mat",
+   "label": "买入时剩余期限",
+   "def": "5",
+   "unit": "年"
+  },
+  {
+   "id": "hold",
+   "label": "持有年数",
+   "def": "2",
+   "unit": "年"
+  },
+  {
+   "id": "ysell",
+   "label": "卖出时到期收益率",
+   "def": "3.5",
+   "unit": "%"
+  },
+  {
+   "id": "reinv",
+   "label": "票息再投资利率",
+   "def": "3",
+   "unit": "%"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var C=Number(coupon),YB=Number(ybuy),MT=Number(mat),HD=Number(hold),YS=Number(ysell),RI=Number(reinv);if(!(C>=0&&C<=30))return {ok:false,msg:'票面利率须在 0~30% 之间'};if(!(YB>-99&&YB<=100)||!(YS>-99&&YS<=100))return {ok:false,msg:'收益率须在 -99%~100% 之间'};if(!(MT>=2&&MT<=30)||Math.floor(MT)!==MT)return {ok:false,msg:'剩余期限须为 2~30 的整数'};if(!(HD>=1&&HD<MT)||Math.floor(HD)!==HD)return {ok:false,msg:'持有年数须为小于剩余期限的正整数'};if(!(RI>-99&&RI<=100))return {ok:false,msg:'再投资利率须在 -99%~100% 之间'};function price(y,n){var s=0;for(var t=1;t<=n;t++){s+=C/Math.pow(1+y/100,t);}return s+100/Math.pow(1+y/100,n);}var pb=price(YB,MT),ps=price(YS,MT-HD);var cf=0;for(var u=1;u<=HD;u++){cf+=C*Math.pow(1+RI/100,HD-u);}var tot=(ps+cf)/pb-1;var ann=Math.pow(1+tot,1/HD)-1;if(!isFinite(tot))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\\\"big\\\">持有期年化收益 '+(ann*100).toFixed(2)+'%</div><div class=\\\"row\\\">买入价 '+M(pb)+' 元 → '+HD+' 年后卖出价 '+M(ps)+' 元（剩余 '+(MT-HD)+' 年，卖出 YTM '+ysell+'%）；票息及再投资合计 '+M(cf)+' 元；持有总收益 '+(tot*100).toFixed(2)+'%</div><div class=\\\"row\\\">骑乘收益来自期限缩短后按更低收益率定价（收益率曲线不变陡峭时）；若卖出 YTM 上行，价差亏损可吞掉票息。面值 100、年付息口径</div>'};",
+ "test": {
+  "inputs": {
+   "coupon": 4,
+   "ybuy": 4.5,
+   "mat": 5,
+   "hold": 2,
+   "ysell": 3.5,
+   "reinv": 3
+  },
+  "expect": "5.82"
+ }
+},
+{
+ "id": "jrfutures2",
+ "cat": "jr",
+ "icon": "⚠️",
+ "name": "期货强平价与逐日盯市",
+ "desc": "由账户资金反解强平价，算现价下的盯市盈亏、可用资金与追保额（jrfuture 只算开仓保证金与平仓盈亏，不含强平价与盯市追保）",
+ "formula": "逐日盯市口径：权益 = 账户资金 +（现价 − 开仓价）×乘数×手数（做空反向）；维持保证金 = 现价 × 乘数 × 手数 × 保证金率（此处取与开仓同率，实际期货公司常加收且临近交割上调）；权益 < 维持保证金需追保至维持线。强平价为权益恰等于维持保证金的价位：多头 P =（开仓价 − 资金÷（乘数×手数））÷（1 − 保证金率）（≤0 表示资金足够厚不会强平），空头 P =（开仓价 + 资金÷（乘数×手数））÷（1 + 保证金率）。未计手续费与涨跌停封板无法平仓情形",
+ "inputs": [
+  {
+   "id": "dir",
+   "label": "方向",
+   "type": "select",
+   "def": "long",
+   "options": [
+    {
+     "v": "long",
+     "t": "做多"
+    },
+    {
+     "v": "short",
+     "t": "做空"
+    }
+   ]
+  },
+  {
+   "id": "open",
+   "label": "开仓价",
+   "def": "5000",
+   "unit": "元"
+  },
+  {
+   "id": "mult",
+   "label": "合约乘数",
+   "def": "10",
+   "unit": "/手"
+  },
+  {
+   "id": "lots",
+   "label": "持仓手数",
+   "def": "2",
+   "unit": "手"
+  },
+  {
+   "id": "margin",
+   "label": "保证金率",
+   "def": "10",
+   "unit": "%"
+  },
+  {
+   "id": "funds",
+   "label": "账户总资金",
+   "def": "30000",
+   "unit": "元"
+  },
+  {
+   "id": "p1",
+   "label": "当前结算价",
+   "def": "4800",
+   "unit": "元"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var OP=Number(open),MU=Number(mult),LO=Number(lots),MA=Number(margin)/100,FD=Number(funds),P1=Number(p1);if(!(OP>0))return {ok:false,msg:'开仓价须大于 0'};if(!(MU>0))return {ok:false,msg:'合约乘数须大于 0'};if(!(LO>=1&&LO<=100)||Math.floor(LO)!==LO)return {ok:false,msg:'手数须为 1~100 的整数'};if(!(MA>0&&MA<1))return {ok:false,msg:'保证金率须在 0~100% 之间'};if(!(FD>0))return {ok:false,msg:'账户资金须大于 0'};if(!(P1>=0))return {ok:false,msg:'当前价不能为负'};var K=MU*LO;var im=OP*K*MA;var sgn=String(dir)==='long'?1:-1;var pnl=(P1-OP)*K*sgn;var eq=FD+pnl;var req=P1*K*MA;var call=Math.max(req-eq,0);var liq;if(String(dir)==='long'){liq=(OP-FD/K)/(1-MA);}else{liq=(OP+FD/K)/(1+MA);}var liqTxt=liq<=0?'资金充足，理论强平价 ≤ 0（多头跌至 0 也不强平）':'强平价约 '+M(liq)+' 元';return {ok:true,html:'<div class=\\\"big\\\">'+liqTxt+'</div><div class=\\\"row\\\">开仓保证金 '+M(im)+' 元；现价 '+M(P1)+' 元盯市盈亏 '+M(pnl)+' 元，权益 '+M(eq)+' 元，维持保证金 '+M(req)+' 元</div><div class=\\\"row\\\">'+(call>0?'需追加保证金至少 '+M(call)+' 元至维持线（实际常要求补至开仓线以上）':'可用资金 '+M(eq-req)+' 元，无需追保')+'。保证金率以交易所/期货公司实际收取为准，封板行情下强平价仅具理论意义</div>'};",
+ "test": {
+  "inputs": {
+   "dir": "long",
+   "open": 5000,
+   "mult": 10,
+   "lots": 2,
+   "margin": 10,
+   "funds": 30000,
+   "p1": 4800
+  },
+  "expect": "3888.89"
+ }
+},
+{
+ "id": "jroption3",
+ "cat": "jr",
+ "icon": "♟️",
+ "name": "期权策略到期损益",
+ "desc": "备兑开仓 / 保护性看跌 / 跨式（宽跨式）三种经典策略：给到期股价算每股损益、盈亏平衡与最大盈亏（jrbs 只给定价，jrgreeks/jropt2 给敏感度，均不算策略组合损益）",
+ "formula": "到期损益（每股，权利金已按输入计）：备兑 =（ST − S₀）+ 权利金 − max（ST − K, 0），封顶收益 = K − S₀ + 权利金，平衡点 S₀ − 权利金；保护性看跌 =（ST − S₀）− 权利金 + max（K − ST, 0），最大亏损 = S₀ − K + 权利金，平衡点 S₀ + 权利金；跨式/宽跨式（买入看涨 K₁ + 买入看跌 K₂，K₂<K₁ 时为宽跨式）= max（ST − K₁, 0）+ max（K₂ − ST, 0）− 双权利金，平衡点 K₁ + 双权利金 与 K₂ − 双权利金，最大亏损 = 双权利金。未计手续费与行权指派细节；个股期权每张通常 100 股",
+ "inputs": [
+  {
+   "id": "strat",
+   "label": "策略",
+   "type": "select",
+   "def": "covered",
+   "options": [
+    {
+     "v": "covered",
+     "t": "备兑开仓（持股+卖看涨）"
+    },
+    {
+     "v": "protect",
+     "t": "保护性看跌（持股+买看跌）"
+    },
+    {
+     "v": "straddle",
+     "t": "跨式/宽跨式（买看涨+买看跌）"
+    }
+   ]
+  },
+  {
+   "id": "S0",
+   "label": "股票买入价 S0",
+   "def": "50",
+   "unit": "元"
+  },
+  {
+   "id": "K",
+   "label": "行权价 K（看涨）",
+   "def": "52",
+   "unit": "元"
+  },
+  {
+   "id": "prem",
+   "label": "看涨权利金",
+   "def": "2.5",
+   "unit": "元"
+  },
+  {
+   "id": "K2",
+   "label": "看跌行权价 K2",
+   "def": "48",
+   "unit": "元",
+   "when": "strat=straddle"
+  },
+  {
+   "id": "prem2",
+   "label": "看跌权利金",
+   "def": "2.2",
+   "unit": "元",
+   "when": "strat=straddle"
+  },
+  {
+   "id": "ST",
+   "label": "到期股价 ST",
+   "def": "55",
+   "unit": "元"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var s0=Number(S0),k=Number(K),pr=Number(prem),st=Number(ST);if(!(s0>0))return {ok:false,msg:'股票买入价须大于 0'};if(!(k>0))return {ok:false,msg:'行权价须大于 0'};if(!(pr>=0))return {ok:false,msg:'权利金不能为负'};if(!(st>=0))return {ok:false,msg:'到期股价不能为负'};var pnl,extra;if(String(strat)==='covered'){pnl=(st-s0)+pr-Math.max(st-k,0);extra='封顶最大收益 '+M((k-s0)+pr)+' 元（股价 ≥ '+M(k)+' 时）；最大亏损 '+M(s0-pr)+' 元（股价跌至 0）；盈亏平衡 '+M(s0-pr)+' 元';}else if(String(strat)==='protect'){pnl=(st-s0)-pr+Math.max(k-st,0);extra='最大亏损 '+M(s0-k+pr)+' 元（股价 ≤ '+M(k)+' 时锁定）；上行收益不封顶；盈亏平衡 '+M(s0+pr)+' 元';}else{var k2=Number(K2),p2=Number(prem2);if(!(k2>0))return {ok:false,msg:'看跌行权价须大于 0'};if(!(p2>=0))return {ok:false,msg:'看跌权利金不能为负'};pnl=Math.max(st-k,0)+Math.max(k2-st,0)-pr-p2;extra='最大亏损 '+M(pr+p2)+' 元（到期价位于 '+M(Math.min(k,k2))+'~'+M(Math.max(k,k2))+' 之间）；盈亏平衡 '+M(k+pr+p2)+' 元 与 '+M(k2-pr-p2)+' 元'+(k2!==k?'；K₂≠K 为宽跨式（Strangle）':'');}return {ok:true,html:'<div class=\\\"big\\\">到期损益 '+M(pnl)+' 元/股</div><div class=\\\"row\\\">到期股价 '+M(st)+' 元时'+(pnl>=0?'盈利':'亏损')+' '+M(Math.abs(pnl))+' 元/股（每张合约 ×100 股 = '+M(pnl*100)+' 元）</div><div class=\\\"row\\\">'+extra+'</div>'};",
+ "test": {
+  "inputs": {
+   "strat": "covered",
+   "S0": 50,
+   "K": 52,
+   "prem": 2.5,
+   "K2": 48,
+   "prem2": 2.2,
+   "ST": 55
+  },
+  "expect": "4.50"
+ }
+},
+{
+ "id": "jrforex3",
+ "cat": "jr",
+ "icon": "💱",
+ "name": "外汇息差交易 Carry 测算",
+ "desc": "借低息货币买高息货币吃息差：息差收益、汇率损益、盈亏平衡跌幅与杠杆下本金回报（jrforward/jrforex2 只算远期定价，不算 carry 损益账）",
+ "formula": "简化口径（ACT/360）：名义本金 N = 自有资金 × 杠杆；息差收益 = N ×（高息率 − 融资率）× 天数÷360；汇率损益 = N × 高息货币涨跌幅%（升值 +、贬值 −）；总损益 = 两者之和；盈亏平衡汇率跌幅 = −息差收益 ÷ N（高息货币跌超此幅即亏）。未计点差、展期隔夜利息的实际点值与保证金追缴；杠杆同比例放大汇率亏损，可亏超本金，风险提示重于收益演示",
+ "inputs": [
+  {
+   "id": "cap",
+   "label": "自有资金",
+   "def": "100000",
+   "unit": "元"
+  },
+  {
+   "id": "lev",
+   "label": "杠杆",
+   "type": "select",
+   "def": "3",
+   "options": [
+    {
+     "v": "1",
+     "t": "1 倍（无杠杆）"
+    },
+    {
+     "v": "2",
+     "t": "2 倍"
+    },
+    {
+     "v": "3",
+     "t": "3 倍"
+    },
+    {
+     "v": "5",
+     "t": "5 倍"
+    },
+    {
+     "v": "10",
+     "t": "10 倍"
+    }
+   ]
+  },
+  {
+   "id": "rh",
+   "label": "高息货币利率",
+   "def": "5.25",
+   "unit": "%"
+  },
+  {
+   "id": "rl",
+   "label": "融资货币利率",
+   "def": "0.5",
+   "unit": "%"
+  },
+  {
+   "id": "days",
+   "label": "持有天数",
+   "def": "180",
+   "unit": "天"
+  },
+  {
+   "id": "fx",
+   "label": "高息货币涨跌幅",
+   "def": "-2",
+   "unit": "%"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var CP=Number(cap),LV=Number(lev),RH=Number(rh),RL=Number(rl),DY=Number(days),FX=Number(fx);if(!(CP>0))return {ok:false,msg:'自有资金须大于 0'};if(!(RH>=-50&&RH<=100)||!(RL>=-50&&RL<=100))return {ok:false,msg:'利率须在 -50%~100% 之间'};if(!(DY>=1&&DY<=3650)||Math.floor(DY)!==DY)return {ok:false,msg:'持有天数须为 1~3650 的整数'};if(!(FX>-100&&FX<=10000))return {ok:false,msg:'汇率涨跌幅须在 -100%~10000% 之间'};var N=CP*LV;var it=N*(RH-RL)/100*DY/360;var fxp=N*FX/100;var tot=it+fxp;return {ok:true,html:'<div class=\\\"big\\\">总损益 '+M(tot)+' 元</div><div class=\\\"row\\\">名义本金 '+M(N)+' 元（杠杆 '+lev+' 倍）；息差收益 '+M(it)+' 元，汇率损益 '+M(fxp)+' 元；本金回报率 '+(tot/CP*100).toFixed(2)+'%</div><div class=\\\"row\\\">盈亏平衡：高息货币最多可跌 '+(it/N*100).toFixed(2)+'%（息差垫）；历史上 carry 交易在风险事件中常因高息货币急贬数日亏掉数年息差（上行电梯、下行跳楼），本测算为静态演示</div>'};",
+ "test": {
+  "inputs": {
+   "cap": 100000,
+   "lev": "3",
+   "rh": 5.25,
+   "rl": 0.5,
+   "days": 180,
+   "fx": -2
+  },
+  "expect": "1125.00"
+ }
+},
+{
+ "id": "jrgold2",
+ "cat": "jr",
+ "icon": "🥇",
+ "name": "积存金定投测算",
+ "desc": "银行黄金积存按月买克数：金价按月漂移模拟累计克数、克均成本与回购价差后的卖出盈亏（jrgold 只算一次性买卖盈亏，jrmetal 是贵金属材料换算）",
+ "formula": "逐月模拟（上限 600 个月）：第 k 月金价 = 起始价 ×（1+月漂移）^k，每月到账克数 = 月金额 ×（1 − 积存手续费率）÷ 当月价；期末按最后购入月金价卖出，回购价 = 金价 − 回购价差（元/克，银行回购价通常低于实时价数元）；卖出所得 = 克数 × 回购价；克均成本 = 总投入 ÷ 累计克数。手续费率示例 0.5%、价差示例 2 元/克，各银行积存与回购规则不同，以开户行现行报价为准",
+ "inputs": [
+  {
+   "id": "amt",
+   "label": "每月积存金额",
+   "def": "1000",
+   "unit": "元"
+  },
+  {
+   "id": "months",
+   "label": "积存月数",
+   "def": "12",
+   "unit": "月"
+  },
+  {
+   "id": "p0",
+   "label": "起始金价",
+   "def": "580",
+   "unit": "元/克"
+  },
+  {
+   "id": "drift",
+   "label": "金价月均涨幅",
+   "def": "0.3",
+   "unit": "%"
+  },
+  {
+   "id": "fee",
+   "label": "积存手续费率",
+   "def": "0.5",
+   "unit": "%"
+  },
+  {
+   "id": "spread",
+   "label": "回购价差",
+   "def": "2",
+   "unit": "元/克"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var A=Number(amt),MO=Number(months),P0=Number(p0),DR=Number(drift),FE=Number(fee),SP=Number(spread);if(!(A>0))return {ok:false,msg:'每月金额须大于 0'};if(!(MO>=1&&MO<=600)||Math.floor(MO)!==MO)return {ok:false,msg:'积存月数须为 1~600 的整数（循环上限）'};if(!(P0>0))return {ok:false,msg:'起始金价须大于 0'};if(!(DR>-99&&DR<=100))return {ok:false,msg:'月均涨幅须在 -99%~100% 之间'};if(!(FE>=0&&FE<=50))return {ok:false,msg:'手续费率须在 0~50% 之间'};if(!(SP>=0))return {ok:false,msg:'回购价差不能为负'};var g=0;for(var k=0;k<MO;k++){var pk=P0*Math.pow(1+DR/100,k);g+=A*(1-FE/100)/pk;}var pf=P0*Math.pow(1+DR/100,MO-1);if(!(pf>SP))return {ok:false,msg:'期末金价不大于回购价差，无法按此价差卖出'};var proceeds=g*(pf-SP);var paid=A*MO;if(!isFinite(proceeds))return {ok:false,msg:'参数超出计算范围'};return {ok:true,html:'<div class=\\\"big\\\">累计积存 '+g.toFixed(4)+' 克</div><div class=\\\"row\\\">总投入 '+M(paid)+' 元，克均成本 '+M(paid/g)+' 元/克；期末金价 '+M(pf)+' 元/克，按回购价 '+M(pf-SP)+' 元/克卖出得 '+M(proceeds)+' 元</div><div class=\\\"row\\\">盈亏 '+M(proceeds-paid)+' 元。金价按恒定月漂移为演示假设，实际积存按银行每日报价成交，克数与成本以账户记录为准</div>'};",
+ "test": {
+  "inputs": {
+   "amt": 1000,
+   "months": 12,
+   "p0": 580,
+   "drift": 0.3,
+   "fee": 0.5,
+   "spread": 2
+  },
+  "expect": "20.2509"
+ }
+},
+{
+ "id": "jrinsure3",
+ "cat": "jr",
+ "icon": "📜",
+ "name": "保单现金价值与减额缴清估算",
+ "desc": "已缴保费的现金价值、退保损失、减额缴清后保额与保单贷款上限演示估算（jrinsure 只算该买多少保额，不算已购保单的现金价值）",
+ "formula": "演示口径（非精算）：累计保费 = 年缴 × 已缴年数；现金价值 ≈ 累计保费 × 现金价值率（该率随保单年度变化极大——年金/增额寿早期常仅 10%~60%，缴满后渐超 100%，须以保单合同现金价值表为准，此处为可改演示值）；退保损失 = 累计保费 − 现金价值；减额缴清保额 ≈ 现金价值 ÷ 每万元保额所需现金价值 × 10000（用现金价值一次性抵清后续保费、保额相应降低，需保单支持且经保险公司核定）；保单贷款上限 ≈ 现金价值 × 80%（常见上限）",
+ "inputs": [
+  {
+   "id": "prem",
+   "label": "年缴保费",
+   "def": "10000",
+   "unit": "元"
+  },
+  {
+   "id": "yrs",
+   "label": "已缴年数",
+   "def": "5",
+   "unit": "年"
+  },
+  {
+   "id": "cvr",
+   "label": "现金价值率（占累计保费）",
+   "def": "55",
+   "unit": "%"
+  },
+  {
+   "id": "rpu",
+   "label": "减额缴清每万元保额需现金价值",
+   "def": "3200",
+   "unit": "元"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var PR=Number(prem),Y=Number(yrs),CV=Number(cvr),RP=Number(rpu);if(!(PR>0))return {ok:false,msg:'年缴保费须大于 0'};if(!(Y>=1&&Y<=50)||Math.floor(Y)!==Y)return {ok:false,msg:'已缴年数须为 1~50 的整数'};if(!(CV>=0&&CV<=1000))return {ok:false,msg:'现金价值率须在 0~1000% 之间'};if(!(RP>0))return {ok:false,msg:'每万元所需现金价值须大于 0'};var paid=PR*Y;var cv=paid*CV/100;var rpuAmt=cv/RP*10000;return {ok:true,html:'<div class=\\\"big\\\">估算现金价值 '+M(cv)+' 元</div><div class=\\\"row\\\">累计保费 '+M(paid)+' 元，此时退保'+(paid-cv>=0?'损失 '+M(paid-cv)+' 元':'反较累计保费多 '+M(cv-paid)+' 元')+'；若办减额缴清，保额约降至 '+M(rpuAmt)+' 元（此后免缴保费、保障缩水继续有效）</div><div class=\\\"row\\\">保单贷款上限约 '+M(cv*0.8)+' 元（现金价值 80%）。现金价值率与缴清折算均为演示值：真实数值以保单现金价值表与保险公司核定为准，退保/减额缴清前务必向保险公司书面确认</div>'};",
+ "test": {
+  "inputs": {
+   "prem": 10000,
+   "yrs": 5,
+   "cvr": 55,
+   "rpu": 3200
+  },
+  "expect": "27500.00"
+ }
+},
+{
+ "id": "jrcredit3",
+ "cat": "jr",
+ "icon": "⚖️",
+ "name": "分期vs最低还款vs贷款三方对比",
+ "desc": "同一笔钱：信用卡分期、最低还款滚着还、银行消费贷，三种还清总成本并排比（jrccard 只算分期年化，jrminpay 只估最低还款 30 天利息，jrcredit2 只模拟最低还款滚动）",
+ "formula": "同额同向比较（均以最终还清的总成本计，期限不同已注明）：分期总成本 = 金额 × 月费率 × 期数（本金另行分期偿还不计成本）；消费贷按等额本息年利率算总利息；最低还款按逐月模拟（上限 600 个月）：每月利息 = 余额 × 年利率÷12，最低还款 = max（当期账单 × 10%, 100 元），滚至还清统计总利息与月数（年利率默认 18.25% ≈ 日息万五 × 365）。分期实际年化高于名义费率×12，另见 jrccard",
+ "inputs": [
+  {
+   "id": "amt",
+   "label": "金额",
+   "def": "20000",
+   "unit": "元"
+  },
+  {
+   "id": "months",
+   "label": "分期/贷款期数",
+   "def": "12",
+   "unit": "月"
+  },
+  {
+   "id": "feeM",
+   "label": "分期月费率",
+   "def": "0.6",
+   "unit": "%"
+  },
+  {
+   "id": "loanR",
+   "label": "消费贷年利率",
+   "def": "6",
+   "unit": "%"
+  },
+  {
+   "id": "minR",
+   "label": "最低还款年利率",
+   "def": "18.25",
+   "unit": "%"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var A=Number(amt),Nn=Number(months),FM=Number(feeM),LR=Number(loanR),MR=Number(minR);if(!(A>0))return {ok:false,msg:'金额须大于 0'};if(!(Nn>=3&&Nn<=60)||Math.floor(Nn)!==Nn)return {ok:false,msg:'期数须为 3~60 的整数'};if(!(FM>=0&&FM<=10))return {ok:false,msg:'分期月费率须在 0~10% 之间'};if(!(LR>=0&&LR<=100))return {ok:false,msg:'贷款年利率须在 0~100% 之间'};if(!(MR>0&&MR<=100))return {ok:false,msg:'最低还款年利率须在 0~100% 之间'};var inst=A*FM/100*Nn;var i=LR/1200;var pmt=i===0?A/Nn:A*i/(1-Math.pow(1+i,-Nn));var loanInt=pmt*Nn-A;var bal=A,totI=0,mm=0,rm=MR/1200;while(bal>0.005&&mm<600){var it=bal*rm;var bill=bal+it;var pay=Math.min(bill,Math.max(bill*0.10,100));bal=bill-pay;totI+=it;mm++;}var cleared=bal<=0.005;var best=Math.min(inst,loanInt,cleared?totI:Infinity);var bname=best===inst?'信用卡分期':best===loanInt?'银行消费贷':'最低还款';return {ok:true,html:'<div class=\\\"big\\\">最省：'+bname+'，总成本 '+M(best)+' 元</div><div class=\\\"row\\\">① 分期（'+Nn+' 期）总手续费 '+M(inst)+' 元；② 消费贷（'+Nn+' 期等额本息）总利息 '+M(loanInt)+' 元；③ 最低还款总利息 '+(cleared?M(totI)+' 元（需 '+mm+' 个月还清）':'600 个月内未还清（余额仍 '+M(bal)+' 元），成本最高且伤征信')+'</div><div class=\\\"row\\\">最低还款期数远长于另两方，总利息按其实际还清期计；长期只还最低额影响征信与额度，三方对比仅计资金成本</div>'};",
+ "test": {
+  "inputs": {
+   "amt": 20000,
+   "months": 12,
+   "feeM": 0.6,
+   "loanR": 6,
+   "minR": 18.25
+  },
+  "expect": "655.94"
+ }
+},
+{
+ "id": "jrcarlo",
+ "cat": "jr",
+ "icon": "🎲",
+ "name": "蒙特卡洛投资终值分布（简化）",
+ "desc": "固定种子伪随机正态抽样，年年滚存给出终值中位数与分位区间（jr 既有工具均为确定式，无随机模拟）",
+ "formula": "简化蒙特卡洛：年收益 ~ 正态（均值 μ、波动 σ），伪随机采用 LCG（乘数 1664525、增量 1013904223，模 2³²）+ Box-Muller 变换，种子可填——同种子结果可复现；每年终值 ×（1 + μ + σz），单年因子下限截断为 0（有限责任近似）；统计中位数、P10/P90 与终值低于本金的概率。迭代上限：年数 ≤30、每组 ≤5000 次。正态假设低估肥尾，分布仅作量级演示，不构成收益预测",
+ "inputs": [
+  {
+   "id": "P",
+   "label": "初始本金",
+   "def": "100000",
+   "unit": "元"
+  },
+  {
+   "id": "mu",
+   "label": "年均收益 μ",
+   "def": "7",
+   "unit": "%"
+  },
+  {
+   "id": "sig",
+   "label": "年波动 σ",
+   "def": "15",
+   "unit": "%"
+  },
+  {
+   "id": "yrs",
+   "label": "年数",
+   "def": "10",
+   "unit": "年"
+  },
+  {
+   "id": "trials",
+   "label": "模拟次数",
+   "type": "select",
+   "def": "2000",
+   "options": [
+    {
+     "v": "1000",
+     "t": "1000 次"
+    },
+    {
+     "v": "2000",
+     "t": "2000 次"
+    },
+    {
+     "v": "5000",
+     "t": "5000 次"
+    }
+   ]
+  },
+  {
+   "id": "seed",
+   "label": "随机种子",
+   "def": "42"
+  }
+ ],
+ "run": "function M(x){return x.toFixed(2);}var P0=Number(P),MU=Number(mu)/100,SG=Number(sig)/100,Y=Number(yrs),TR=Number(trials),SD=Number(seed);if(!(P0>0))return {ok:false,msg:'初始本金须大于 0'};if(!(MU>-1&&MU<=10))return {ok:false,msg:'年均收益须在 -100%~1000% 之间'};if(!(SG>=0&&SG<=500))return {ok:false,msg:'年波动须在 0~500% 之间'};if(!(Y>=1&&Y<=30)||Math.floor(Y)!==Y)return {ok:false,msg:'年数须为 1~30 的整数（迭代上限）'};if(!(TR>=100&&TR<=5000))return {ok:false,msg:'模拟次数须在 100~5000 之间（迭代上限）'};var state=Math.floor(Math.abs(SD))>>>0;if(state===0)state=1;function nxt(){state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;}var vals=[];for(var s=0;s<TR;s++){var V=P0;for(var y=0;y<Y;y++){var u1=nxt();if(u1<=0)u1=1e-12;var u2=nxt();var z=Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);var f=1+MU+SG*z;if(f<0)f=0;V*=f;}vals.push(V);}vals.sort(function(a,b){return a-b;});var med=TR%2===1?vals[(TR-1)/2]:(vals[TR/2-1]+vals[TR/2])/2;var p10=vals[Math.floor(TR*0.10)],p90=vals[Math.floor(TR*0.90)];var loss=0;for(var q=0;q<TR;q++){if(vals[q]<P0)loss++;}return {ok:true,html:'<div class=\\\"big\\\">终值中位数 '+M(med)+' 元</div><div class=\\\"row\\\">P10 '+M(p10)+' 元 ~ P90 '+M(p90)+' 元（80% 区间）；终值低于本金的概率 '+(loss/TR*100).toFixed(1)+'%（'+TR+' 次模拟，种子 '+seed+'）</div><div class=\\\"row\\\">确定性复利终值（σ=0 时）'+M(P0*Math.pow(1+MU,Y))+' 元高于中位数：波动拖累使中位增速低于平均收益（方差排水）。正态假设不刻画肥尾与崩盘，结果仅作量级演示</div>'};",
+ "test": {
+  "inputs": {
+   "P": 100000,
+   "mu": 7,
+   "sig": 15,
+   "yrs": 10,
+   "trials": "2000",
+   "seed": 42
+  },
+  "expect": "178022.49"
+ }
+}
+);
+/* ===== R3-YD3 运动第三轮 25 工具（子任务产出，未合并） ===== */
+TOOLS.push(
+{
+ "id": "ydagegrade",
+ "cat": "yd",
+ "icon": "🎂",
+ "name": "年龄分级成绩 Age Grading",
+ "desc": "按WMA年龄系数节选表把成绩折算为年龄分级用时与百分比等级",
+ "formula": "年龄分级（WMA思路节选近似表，非官方完整表）：系数节点 男 30/40/50/60/70/80/90岁=1.000/0.960/0.905/0.835/0.750/0.645/0.520，女=1.000/0.965/0.915/0.850/0.770/0.670/0.550，节点间线性插值，<30岁取1；分级用时=实际用时×系数；百分比=公开组标准÷分级用时×100（男标准 5km 12:37/10km 26:11/半马 57:31/全马 2:00:35，女 14:06/29:17/1:04:31/2:14:04）；≥90世界级、80~90国家级、70~80地区级、60~70本地级",
+ "inputs": [
+  {
+   "id": "sex",
+   "label": "性别",
+   "type": "select",
+   "def": "m",
+   "options": [
+    {
+     "v": "m",
+     "t": "男"
+    },
+    {
+     "v": "f",
+     "t": "女"
+    }
+   ]
+  },
+  {
+   "id": "event",
+   "label": "项目",
+   "type": "select",
+   "def": "mar",
+   "options": [
+    {
+     "v": "5k",
+     "t": "5 km"
+    },
+    {
+     "v": "10k",
+     "t": "10 km"
+    },
+    {
+     "v": "hm",
+     "t": "半程马拉松"
+    },
+    {
+     "v": "mar",
+     "t": "全程马拉松"
+    }
+   ]
+  },
+  {
+   "id": "age",
+   "label": "年龄",
+   "unit": "岁",
+   "def": "50"
+  },
+  {
+   "id": "tmin",
+   "label": "成绩（分钟）",
+   "unit": "分",
+   "def": "180"
+  },
+  {
+   "id": "tsec",
+   "label": "成绩（秒）",
+   "unit": "秒",
+   "def": "0",
+   "hint": "0~59"
+  }
+ ],
+ "run": "var ag=Number(age),mm=Number(tmin),ss=Number(tsec);if(!(ag>=20&&ag<=90))return {ok:false,msg:'年龄须在 20~90 岁'};if(!(mm>=0)||!(ss>=0&&ss<60)||(mm*60+ss)<=0)return {ok:false,msg:'成绩须大于 0 且秒数 0~59'};var STD={m:{'5k':757,'10k':1571,hm:3451,mar:7235},f:{'5k':846,'10k':1757,hm:3871,mar:8044}};var std=(STD[String(sex)]||{})[String(event)];if(!std)return {ok:false,msg:'项目无效'};var NODES=[30,40,50,60,70,80,90];var FM=[1,0.960,0.905,0.835,0.750,0.645,0.520];var FF=[1,0.965,0.915,0.850,0.770,0.670,0.550];var F=String(sex)==='f'?FF:FM;var fac;if(ag<=30)fac=1;else{fac=F[F.length-1];for(var i=0;i<NODES.length-1;i++){if(ag>=NODES[i]&&ag<=NODES[i+1]){fac=F[i]+(F[i+1]-F[i])*(ag-NODES[i])/(NODES[i+1]-NODES[i]);break;}}}var T=mm*60+ss;if(T<std*0.8)return {ok:false,msg:'成绩快于公开组标准的 80%，超出人类合理范围，请核对'};var gt=T*fac;var pct=std/gt*100;function TS(s){s=Math.round(s);var h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return h+':'+('0'+m).slice(-2)+':'+('0'+x).slice(-2);}var lv=pct>=90?'世界级':pct>=80?'国家级':pct>=70?'地区级':pct>=60?'本地级':'大众健身级';return {ok:true,html:'<div class=\"big\">年龄分级 '+pct.toFixed(1)+'%（'+lv+'）</div><div class=\"row\">年龄系数 '+fac.toFixed(3)+'，分级用时 '+TS(gt)+'（实际 '+TS(T)+'）</div><div class=\"row\">系数为 WMA 思路节选近似表，正式评级请查 WMA 完整年龄分级表</div>'};",
+ "test": {
+  "inputs": {
+   "sex": "m",
+   "event": "mar",
+   "age": 50,
+   "tmin": 180,
+   "tsec": 0
+  },
+  "expect": "74.0"
+ }
+},
+{
+ "id": "ydpoints2",
+ "cat": "yd",
+ "icon": "🏅",
+ "name": "田径积分（WA公式版）",
+ "desc": "用World Athletics积分公式（Spiriev体系）把单项成绩换算为积分",
+ "formula": "WA 积分公式版（系数节选，Spiriev 体系）：径赛 Points=A×(B−P)^C，田赛 Points=A×(P−B)^C（P 跳远/跳高用 cm，其余用 m/秒），结果向下取整、差≤0 时计 0。系数：男子100m A25.4347 B18 C1.81；400m 1.53775/82/1.81；1500m 0.03768/480/1.85；跳远 0.14354/220/1.4；跳高 0.8465/75/1.42；铅球 51.39/1.5/1.05；标枪 10.14/7/1.08。与 yddecathlon/ydheptathlon 的分工：本工具为单项速查，综合项目请用全能计分",
+ "inputs": [
+  {
+   "id": "event",
+   "label": "项目（男子）",
+   "type": "select",
+   "def": "m100",
+   "options": [
+    {
+     "v": "m100",
+     "t": "100m（秒）"
+    },
+    {
+     "v": "m400",
+     "t": "400m（秒）"
+    },
+    {
+     "v": "m1500",
+     "t": "1500m（秒）"
+    },
+    {
+     "v": "mlj",
+     "t": "跳远（m）"
+    },
+    {
+     "v": "mhj",
+     "t": "跳高（m）"
+    },
+    {
+     "v": "msp",
+     "t": "铅球（m）"
+    },
+    {
+     "v": "mjt",
+     "t": "标枪（m）"
+    }
+   ]
+  },
+  {
+   "id": "perf",
+   "label": "成绩",
+   "def": "10",
+   "hint": "径赛填秒，田赛填米"
+  }
+ ],
+ "run": "var TB={m100:[25.4347,18,1.81,1,9,17.9],m400:[1.53775,82,1.81,1,40,81],m1500:[0.03768,480,1.85,1,200,479],mlj:[0.14354,220,1.4,0,3,9.5],mhj:[0.8465,75,1.42,0,1,2.6],msp:[51.39,1.5,1.05,0,5,24],mjt:[10.14,7,1.08,0,20,99]};var c=TB[String(event)];if(!c)return {ok:false,msg:'项目无效'};var p=Number(perf);if(!(p>=c[4]&&p<=c[5]))return {ok:false,msg:'成绩超出该项目合理范围（'+c[4]+'~'+c[5]+'），请核对单位（径赛秒/田赛米）'};var unit=(String(event)==='mlj'||String(event)==='mhj')?100:1;var d=c[3]?(c[1]-p):(p*unit-c[1]);var pts=d<=0?0:Math.floor(c[0]*Math.pow(d,c[2]));return {ok:true,html:'<div class=\"big\">'+pts+' 分</div><div class=\"row\">按 WA 积分公式节选系数计算：A='+c[0]+'，B='+c[1]+'，C='+c[2]+'</div><div class=\"row\">参考：100m 10.00 秒 = 1096 分；积分用于跨项目比较，正式排名以 WA 当期官方积分表为准</div>'};",
+ "test": {
+  "inputs": {
+   "event": "m100",
+   "perf": 10
+  },
+  "expect": "1096"
+ }
+},
+{
+ "id": "ydthrows",
+ "cat": "yd",
+ "icon": "🎯",
+ "name": "投掷出手速度与距离",
+ "desc": "投掷项目真空抛体口径：由出手速度/角度/高度算距离，或由距离反推所需出手速度",
+ "formula": "抛体口径（忽略空气阻力，铅球近似较好、铁饼/标枪仅作量级参考）：R=v·cosθ÷g×(v·sinθ+√(v²·sin²θ+2gh))，g=9.81；反推对 v 二分求解（上限 40 m/s，迭代 80 次）。器械参考：铅球男 7.26kg、铁饼男 2kg、标枪男 800g、链球男 7.26kg。与 ydpoints2 分工：本工具算物理出手参数，不算积分",
+ "inputs": [
+  {
+   "id": "mode",
+   "label": "功能",
+   "type": "select",
+   "def": "fwd",
+   "options": [
+    {
+     "v": "fwd",
+     "t": "速度 → 距离"
+    },
+    {
+     "v": "inv",
+     "t": "距离 → 所需速度"
+    }
+   ]
+  },
+  {
+   "id": "event",
+   "label": "项目",
+   "type": "select",
+   "def": "shot",
+   "options": [
+    {
+     "v": "shot",
+     "t": "铅球"
+    },
+    {
+     "v": "discus",
+     "t": "铁饼"
+    },
+    {
+     "v": "javelin",
+     "t": "标枪"
+    },
+    {
+     "v": "hammer",
+     "t": "链球"
+    }
+   ]
+  },
+  {
+   "id": "speed",
+   "label": "出手速度",
+   "unit": "m/s",
+   "def": "14",
+   "when": "mode=fwd"
+  },
+  {
+   "id": "dist",
+   "label": "目标距离",
+   "unit": "m",
+   "def": "20",
+   "when": "mode=inv"
+  },
+  {
+   "id": "angle",
+   "label": "出手角度",
+   "unit": "°",
+   "def": "42"
+  },
+  {
+   "id": "h",
+   "label": "出手高度",
+   "unit": "m",
+   "def": "2.1"
+  }
+ ],
+ "run": "var an=Number(angle),hh=Number(h);if(!(an>=15&&an<=55))return {ok:false,msg:'出手角度须在 15~55°'};if(!(hh>=0&&hh<=3))return {ok:false,msg:'出手高度须在 0~3 m'};var g=9.81;function R(v){var a=an*Math.PI/180;return v*Math.cos(a)/g*(v*Math.sin(a)+Math.sqrt(v*v*Math.sin(a)*Math.sin(a)+2*g*hh));}if(String(mode)==='fwd'){var v=Number(speed);if(!(v>=3&&v<=35))return {ok:false,msg:'出手速度须在 3~35 m/s（超出为超人数据）'};var r=R(v);return {ok:true,html:'<div class=\"big\">距离 ≈ '+r.toFixed(2)+' m</div><div class=\"row\">出手 '+v+' m/s、角度 '+an+'°、高度 '+hh+' m（真空抛体口径）</div><div class=\"row\">铁饼/标枪受气动升力影响实际可更远，本结果仅作量级参考</div>'};}var d=Number(dist);if(!(d>=1&&d<=110))return {ok:false,msg:'目标距离须在 1~110 m'};if(R(40)<d)return {ok:false,msg:'该角度/高度下 40 m/s 出手也达不到目标距离'};var lo=1,hi=40;for(var i=0;i<80;i++){var mid=(lo+hi)/2;if(R(mid)<d)lo=mid;else hi=mid;}var vv=(lo+hi)/2;return {ok:true,html:'<div class=\"big\">所需出手速度 ≈ '+vv.toFixed(2)+' m/s</div><div class=\"row\">目标 '+d+' m、角度 '+an+'°、高度 '+hh+' m（真空抛体口径二分反解）</div>'};",
+ "test": {
+  "inputs": {
+   "mode": "fwd",
+   "event": "shot",
+   "speed": 14,
+   "dist": 20,
+   "angle": 42,
+   "h": 2.1
+  },
+  "expect": "21.98"
+ }
+},
+{
+ "id": "ydlongjump",
+ "cat": "yd",
+ "icon": "🦘",
+ "name": "跳远距离（起跳物理口径）",
+ "desc": "由起跳速度与起跳角算跳远质心飞行距离，或反推目标距离所需起跳速度",
+ "formula": "质心抛体口径：R=v·cosθ÷g×(v·sinθ+√(v²·sin²θ+2g·Δh))，Δh=起跳时质心高−落地时质心高（典型 0.4~0.6 m）；反推对 v 二分求解。与 ydjump（垂直纵跳摸高）、ydjpower（纵跳功率）分工：本工具只算水平跳远飞行段，实际丈量成绩还含起跳板到质心、落地伸腿等约 ±0.2 m 修正",
+ "inputs": [
+  {
+   "id": "mode",
+   "label": "功能",
+   "type": "select",
+   "def": "fwd",
+   "options": [
+    {
+     "v": "fwd",
+     "t": "起跳速度 → 飞行距离"
+    },
+    {
+     "v": "inv",
+     "t": "目标距离 → 所需速度"
+    }
+   ]
+  },
+  {
+   "id": "speed",
+   "label": "起跳速度",
+   "unit": "m/s",
+   "def": "9.5",
+   "when": "mode=fwd"
+  },
+  {
+   "id": "dist",
+   "label": "目标飞行距离",
+   "unit": "m",
+   "def": "7",
+   "when": "mode=inv"
+  },
+  {
+   "id": "angle",
+   "label": "起跳角",
+   "unit": "°",
+   "def": "21",
+   "hint": "精英约 18~22°"
+  },
+  {
+   "id": "dh",
+   "label": "质心高度差 Δh",
+   "unit": "m",
+   "def": "0.5"
+  }
+ ],
+ "run": "var an=Number(angle),dh=Number(dh);if(!(an>=10&&an<=35))return {ok:false,msg:'跳远起跳角须在 10~35°'};if(!(dh>=0&&dh<=1.2))return {ok:false,msg:'质心高度差须在 0~1.2 m'};var g=9.81;function R(v){var a=an*Math.PI/180;return v*Math.cos(a)/g*(v*Math.sin(a)+Math.sqrt(v*v*Math.sin(a)*Math.sin(a)+2*g*dh));}if(String(mode)==='fwd'){var v=Number(speed);if(!(v>=3&&v<=12))return {ok:false,msg:'起跳速度须在 3~12 m/s（12 以上超出人类助跑速度）'};return {ok:true,html:'<div class=\"big\">飞行距离 ≈ '+R(v).toFixed(2)+' m</div><div class=\"row\">起跳 '+v+' m/s、角度 '+an+'°、Δh '+dh+' m；实际丈量成绩另有起跳/落地姿态修正约 ±0.2 m</div>'};}var d=Number(dist);if(!(d>=1&&d<=10))return {ok:false,msg:'目标距离须在 1~10 m'};if(R(12)<d)return {ok:false,msg:'该角度下即使 12 m/s 起跳也达不到目标距离'};var lo=2,hi=12;for(var i=0;i<80;i++){var mid=(lo+hi)/2;if(R(mid)<d)lo=mid;else hi=mid;}return {ok:true,html:'<div class=\"big\">所需起跳速度 ≈ '+((lo+hi)/2).toFixed(2)+' m/s</div><div class=\"row\">目标飞行 '+d+' m、角度 '+an+'°、Δh '+dh+' m（二分反解）</div>'};",
+ "test": {
+  "inputs": {
+   "mode": "fwd",
+   "speed": 9.5,
+   "dist": 7,
+   "angle": 21,
+   "dh": 0.5
+  },
+  "expect": "7.26"
+ }
+},
+{
+ "id": "ydhighjump",
+ "cat": "yd",
+ "icon": "🚧",
+ "name": "跳高可过高度估算（背越式）",
+ "desc": "由起跳时质心高度与竖直速度算质心最高点，再按技术类型修正为可过杆高度",
+ "formula": "质心抛体：质心最高点 H=h0+vy²÷(2g)，g=9.81。可过杆高度修正（经验）：背越式质心可低于横杆约 5 cm（杆高≈H+0.05）、跨越式质心须高于杆约 10 cm（杆高≈H−0.10）、剪式约 30 cm（杆高≈H−0.30）。精英 vy 约 4.3~4.9 m/s",
+ "inputs": [
+  {
+   "id": "vy",
+   "label": "起跳竖直速度 vy",
+   "unit": "m/s",
+   "def": "4.5"
+  },
+  {
+   "id": "h0",
+   "label": "起跳时质心高度 h0",
+   "unit": "m",
+   "def": "1.0"
+  },
+  {
+   "id": "tech",
+   "label": "技术",
+   "type": "select",
+   "def": "flop",
+   "options": [
+    {
+     "v": "flop",
+     "t": "背越式（+0.05）"
+    },
+    {
+     "v": "straddle",
+     "t": "跨越式/俯卧式（−0.10）"
+    },
+    {
+     "v": "scissors",
+     "t": "剪式（−0.30）"
+    }
+   ]
+  }
+ ],
+ "run": "var vy=Number(vy),h0=Number(h0);if(!(vy>=1.5&&vy<=6))return {ok:false,msg:'竖直速度须在 1.5~6 m/s（6 以上超出人类起跳）'};if(!(h0>=0.6&&h0<=1.4))return {ok:false,msg:'质心高度须在 0.6~1.4 m'};var M={flop:0.05,straddle:-0.10,scissors:-0.30};var mg=M[String(tech)];if(mg===undefined)return {ok:false,msg:'技术无效'};var peak=h0+vy*vy/(2*9.81);var bar=peak+mg;return {ok:true,html:'<div class=\"big\">可过高度 ≈ '+bar.toFixed(2)+' m</div><div class=\"row\">质心最高点 '+peak.toFixed(2)+' m（h0 '+h0+' + vy²/2g '+(vy*vy/19.62).toFixed(2)+'），技术修正 '+(mg>=0?'+':'')+mg.toFixed(2)+' m</div><div class=\"row\">未计横杆碰落、助跑转竖直效率差异，实际以试跳为准</div>'};",
+ "test": {
+  "inputs": {
+   "vy": 4.5,
+   "h0": 1.0,
+   "tech": "flop"
+  },
+  "expect": "2.08"
+ }
+},
+{
+ "id": "ydhurdles",
+ "cat": "yd",
+ "icon": "🏃",
+ "name": "跨栏栏间步数与节奏估算",
+ "desc": "按项目栏距、起跨/落地距离与你的步长，算栏间步数、全程总步数与调整后步长",
+ "formula": "栏间可用距离=栏距−起跨距离−落地距离；栏间步数=四舍五入（可用距离÷步长）；调整步长=可用距离÷栏间步数。总步数≈起跑到第一栏步数（第一栏距离÷步长取整）+(栏数−1)×栏间步数+冲刺段步数（跑入距离÷步长取整）。项目参数：110栏 栏距9.14/第一栏13.72/跑入14.02/10栏；100栏 8.50/13.00/10.50/10栏；400栏 35.00/45.00/40.00/10栏；起跨/落地默认 110栏 2.10/1.10、100栏 2.00/1.05、400栏 2.10/1.10（m）",
+ "inputs": [
+  {
+   "id": "event",
+   "label": "项目",
+   "type": "select",
+   "def": "h110",
+   "options": [
+    {
+     "v": "h110",
+     "t": "男子110m栏"
+    },
+    {
+     "v": "h100",
+     "t": "女子100m栏"
+    },
+    {
+     "v": "h400",
+     "t": "400m栏"
+    }
+   ]
+  },
+  {
+   "id": "stride",
+   "label": "栏间平跑步长",
+   "unit": "m",
+   "def": "1.98"
+  }
+ ],
+ "run": "var TB={h110:[13.72,9.14,14.02,10,2.10,1.10],h100:[13.00,8.50,10.50,10,2.00,1.05],h400:[45.00,35.00,40.00,10,2.10,1.10]};var c=TB[String(event)];if(!c)return {ok:false,msg:'项目无效'};var L=Number(stride);if(!(L>=0.8&&L<=2.8))return {ok:false,msg:'步长须在 0.8~2.8 m'};var avail=c[1]-c[4]-c[5];var steps=Math.max(1,Math.round(avail/L));var adj=avail/steps;var total=Math.round(c[0]/L)+(c[3]-1)*steps+Math.round(c[2]/L);var note=steps===3?'栏间 3 步为精英节奏':steps<=5?'栏间 '+steps+' 步，节奏可控':'栏间步数偏多，建议提高步长或速度';return {ok:true,html:'<div class=\"big\">栏间 '+steps+' 步</div><div class=\"row\">可用距离 '+avail.toFixed(2)+' m，调整后步长 '+adj.toFixed(2)+' m；'+note+'</div><div class=\"row\">全程总步数约 '+total+' 步（起跑段 '+Math.round(c[0]/L)+' + 栏间 '+(c[3]-1)+'×'+steps+' + 冲刺段 '+Math.round(c[2]/L)+'，未计跨栏步本身）</div>'};",
+ "test": {
+  "inputs": {
+   "event": "h110",
+   "stride": 1.98
+  },
+  "expect": "41"
+ }
+},
+{
+ "id": "ydrelay",
+ "cat": "yd",
+ "icon": "🔄",
+ "name": "4×100m接力成绩估算",
+ "desc": "四棒平跑100m成绩加交接棒飞行加成，估接力总成绩与逐棒累计",
+ "formula": "接力估算：总成绩=t1+(t2−加成)+(t3−加成)+(t4−加成)。第 1 棒起跑无加成，后三棒为跑动中交接，经验加成约 0.4~0.9 秒/棒（交接越熟练越大，默认 0.6）。平均速度=400÷总成绩",
+ "inputs": [
+  {
+   "id": "t1",
+   "label": "第1棒平跑100m",
+   "unit": "秒",
+   "def": "10"
+  },
+  {
+   "id": "t2",
+   "label": "第2棒平跑100m",
+   "unit": "秒",
+   "def": "10"
+  },
+  {
+   "id": "t3",
+   "label": "第3棒平跑100m",
+   "unit": "秒",
+   "def": "10"
+  },
+  {
+   "id": "t4",
+   "label": "第4棒平跑100m",
+   "unit": "秒",
+   "def": "10"
+  },
+  {
+   "id": "bonus",
+   "label": "每棒交接加成",
+   "unit": "秒",
+   "def": "0.6",
+   "hint": "0~1.2"
+  }
+ ],
+ "run": "var ts=[Number(t1),Number(t2),Number(t3),Number(t4)];for(var i=0;i<4;i++){if(!(ts[i]>=9&&ts[i]<=25))return {ok:false,msg:'单棒平跑成绩须在 9~25 秒（9 以下超出人类极限）'};}var b=Number(bonus);if(!(b>=0&&b<=1.2))return {ok:false,msg:'交接加成须在 0~1.2 秒'};var tot=ts[0];var cum=[ts[0]];for(var i=1;i<4;i++){tot+=ts[i]-b;cum.push(tot);}return {ok:true,html:'<div class=\"big\">接力总成绩 ≈ '+tot.toFixed(2)+' 秒</div><div class=\"row\">逐棒累计：'+cum.map(function(x){return x.toFixed(2);}).join(' / ')+' 秒；平均速度 '+(400/tot).toFixed(2)+' m/s</div><div class=\"row\">平跑合计 '+(ts[0]+ts[1]+ts[2]+ts[3]).toFixed(2)+' 秒 − 交接加成 3×'+b+' 秒；交接区失误不在估算内</div>'};",
+ "test": {
+  "inputs": {
+   "t1": 10,
+   "t2": 10,
+   "t3": 10,
+   "t4": 10,
+   "bonus": 0.6
+  },
+  "expect": "38.20"
+ }
+},
+{
+ "id": "yddecathlon",
+ "cat": "yd",
+ "icon": "🔟",
+ "name": "十项全能计分",
+ "desc": "按IAAF十项全能官方公式表系数算各单项得分与总分",
+ "formula": "IAAF 十项全能公式（官方系数）：径赛 Points=A×(B−P)^C，田赛 A×(P−B)^C，跳跃用 cm，差≤0 计 0，向下取整。系数（A/B/C）：100m 25.4347/18/1.81，跳远 0.14354/220/1.4，铅球 51.39/1.5/1.05，跳高 0.8465/75/1.42，400m 1.53775/82/1.81，110栏 5.74352/28.5/1.92，铁饼 12.91/4/1.1，撑竿跳 0.2797/100/1.35，标枪 10.14/7/1.08，1500m 0.03768/480/1.85。1500m 直接填秒数",
+ "inputs": [
+  {
+   "id": "p100",
+   "label": "100m",
+   "unit": "秒",
+   "def": "10.5"
+  },
+  {
+   "id": "lj",
+   "label": "跳远",
+   "unit": "m",
+   "def": "7.3"
+  },
+  {
+   "id": "sp",
+   "label": "铅球",
+   "unit": "m",
+   "def": "15"
+  },
+  {
+   "id": "hj",
+   "label": "跳高",
+   "unit": "m",
+   "def": "2.0"
+  },
+  {
+   "id": "p400",
+   "label": "400m",
+   "unit": "秒",
+   "def": "48"
+  },
+  {
+   "id": "ph",
+   "label": "110m栏",
+   "unit": "秒",
+   "def": "14.5"
+  },
+  {
+   "id": "dt",
+   "label": "铁饼",
+   "unit": "m",
+   "def": "45"
+  },
+  {
+   "id": "pv",
+   "label": "撑竿跳高",
+   "unit": "m",
+   "def": "4.8"
+  },
+  {
+   "id": "jt",
+   "label": "标枪",
+   "unit": "m",
+   "def": "60"
+  },
+  {
+   "id": "p1500",
+   "label": "1500m",
+   "unit": "秒",
+   "def": "270",
+   "hint": "如 4:30 填 270"
+  }
+ ],
+ "run": "var S=[[Number(p100),25.4347,18,1.81,1,9,20,1,'100m'],[Number(lj),0.14354,220,1.4,0,3,9.5,100,'跳远'],[Number(sp),51.39,1.5,1.05,0,5,25,1,'铅球'],[Number(hj),0.8465,75,1.42,0,1,2.6,100,'跳高'],[Number(p400),1.53775,82,1.81,1,40,80,1,'400m'],[Number(ph),5.74352,28.5,1.92,1,12,25,1,'110栏'],[Number(dt),12.91,4,1.1,0,10,70,1,'铁饼'],[Number(pv),0.2797,100,1.35,0,2,6.5,100,'撑竿跳'],[Number(jt),10.14,7,1.08,0,20,100,1,'标枪'],[Number(p1500),0.03768,480,1.85,1,200,600,1,'1500m']];var tot=0,parts=[];for(var i=0;i<S.length;i++){var r=S[i];if(!(r[0]>=r[5]&&r[0]<=r[6]))return {ok:false,msg:r[8]+' 成绩超出合理范围（'+r[5]+'~'+r[6]+'）'};var perf=r[0]*r[7];var d=r[4]?(r[2]-perf):(perf-r[2]);var pts=d<=0?0:Math.floor(r[1]*Math.pow(d,r[3]));tot+=pts;parts.push(r[8]+' '+pts);}return {ok:true,html:'<div class=\"big\">总分 '+tot+' 分</div><div class=\"row\">'+parts.join('｜')+'</div><div class=\"row\">按 IAAF 十项全能公式表系数计分；8000 分为世界级门槛参考</div>'};",
+ "test": {
+  "inputs": {
+   "p100": 10.5,
+   "lj": 7.3,
+   "sp": 15,
+   "hj": 2.0,
+   "p400": 48,
+   "ph": 14.5,
+   "dt": 45,
+   "pv": 4.8,
+   "jt": 60,
+   "p1500": 270
+  },
+  "expect": "8373"
+ }
+},
+{
+ "id": "ydheptathlon",
+ "cat": "yd",
+ "icon": "7️⃣",
+ "name": "七项全能计分（女子）",
+ "desc": "按IAAF女子七项全能公式表系数算各单项得分与总分",
+ "formula": "IAAF 女子七项全能公式（官方系数）：径赛 Points=A×(B−P)^C，田赛 A×(P−B)^C，跳跃用 cm，差≤0 计 0，向下取整。系数（A/B/C）：100m栏 9.23076/26.7/1.835，跳高 1.84523/75/1.348，铅球 56.0211/1.5/1.05，200m 4.99087/42.5/1.81，跳远 0.188807/210/1.41，标枪 15.9803/3.8/1.04，800m 0.11193/254/1.88。800m 直接填秒数",
+ "inputs": [
+  {
+   "id": "ph",
+   "label": "100m栏",
+   "unit": "秒",
+   "def": "13.5"
+  },
+  {
+   "id": "hj",
+   "label": "跳高",
+   "unit": "m",
+   "def": "1.8"
+  },
+  {
+   "id": "sp",
+   "label": "铅球",
+   "unit": "m",
+   "def": "14"
+  },
+  {
+   "id": "p200",
+   "label": "200m",
+   "unit": "秒",
+   "def": "24"
+  },
+  {
+   "id": "lj",
+   "label": "跳远",
+   "unit": "m",
+   "def": "6.2"
+  },
+  {
+   "id": "jt",
+   "label": "标枪",
+   "unit": "m",
+   "def": "45"
+  },
+  {
+   "id": "p800",
+   "label": "800m",
+   "unit": "秒",
+   "def": "135",
+   "hint": "如 2:15 填 135"
+  }
+ ],
+ "run": "var V={ph:Number(ph),hj:Number(hj),sp:Number(sp),p200:Number(p200),lj:Number(lj),jt:Number(jt),p800:Number(p800)};if(!(V.ph>=11&&V.ph<=25))return {ok:false,msg:'100m栏须在 11~25 秒'};if(!(V.hj>=1&&V.hj<=2.2))return {ok:false,msg:'跳高须在 1~2.2 m'};if(!(V.sp>=5&&V.sp<=22))return {ok:false,msg:'铅球须在 5~22 m'};if(!(V.p200>=20&&V.p200<=40))return {ok:false,msg:'200m须在 20~40 秒'};if(!(V.lj>=3&&V.lj<=7.5))return {ok:false,msg:'跳远须在 3~7.5 m'};if(!(V.jt>=15&&V.jt<=70))return {ok:false,msg:'标枪须在 15~70 m'};if(!(V.p800>=100&&V.p800<=300))return {ok:false,msg:'800m须在 100~300 秒'};function tr(a,b,c,p){var d=b-p;return d<=0?0:Math.floor(a*Math.pow(d,c));}function fd(a,b,c,p){var d=p-b;return d<=0?0:Math.floor(a*Math.pow(d,c));}var a=tr(9.23076,26.7,1.835,V.ph),b2=fd(1.84523,75,1.348,V.hj*100),c2=fd(56.0211,1.5,1.05,V.sp),d2=tr(4.99087,42.5,1.81,V.p200),e=fd(0.188807,210,1.41,V.lj*100),f=fd(15.9803,3.8,1.04,V.jt),g2=tr(0.11193,254,1.88,V.p800);var tot=a+b2+c2+d2+e+f+g2;return {ok:true,html:'<div class=\"big\">总分 '+tot+' 分</div><div class=\"row\">100栏 '+a+'｜跳高 '+b2+'｜铅球 '+c2+'｜200m '+d2+'｜跳远 '+e+'｜标枪 '+f+'｜800m '+g2+'</div><div class=\"row\">按 IAAF 女子七项全能公式表系数计分；6000 分为世界级门槛参考</div>'};",
+ "test": {
+  "inputs": {
+   "ph": 13.5,
+   "hj": 1.8,
+   "sp": 14,
+   "p200": 24,
+   "lj": 6.2,
+   "jt": 45,
+   "p800": 135
+  },
+  "expect": "6371"
+ }
+},
+{
+ "id": "ydultra",
+ "cat": "yd",
+ "icon": "🏔️",
+ "name": "超马配速衰减与补给停留估算",
+ "desc": "按每10km配速衰减率逐段累加超马总时间，并计入补给站停留",
+ "formula": "分段衰减模型（经验口径）：全程按 10 km 分段（末段按实际长度），第 i 段配速=基础配速×(1+衰减率)^i；总时间=Σ各段用时+补给站次数×单次停留。衰减率常见 2~5%/10km，与 ydmarathon（匀速配速表）、ydrieg（成绩预测）分工：本工具专算长距离后程衰减与停留",
+ "inputs": [
+  {
+   "id": "dist",
+   "label": "总距离",
+   "unit": "km",
+   "def": "100"
+  },
+  {
+   "id": "pace",
+   "label": "首段配速",
+   "unit": "分/km",
+   "def": "6"
+  },
+  {
+   "id": "decay",
+   "label": "每10km配速衰减",
+   "unit": "%",
+   "def": "3"
+  },
+  {
+   "id": "stops",
+   "label": "补给站停留次数",
+   "def": "5"
+  },
+  {
+   "id": "stopmin",
+   "label": "单次停留",
+   "unit": "分钟",
+   "def": "2"
+  }
+ ],
+ "run": "var D=Number(dist),P=Number(pace),dc=Number(decay),st=Number(stops),sm=Number(stopmin);if(!(D>=42&&D<=300))return {ok:false,msg:'超马距离须在 42~300 km'};if(!(P>=3&&P<=15))return {ok:false,msg:'配速须在 3~15 分/km'};if(!(dc>=0&&dc<=20))return {ok:false,msg:'衰减率须在 0~20%'};if(!(st>=0&&st<=30&&Math.floor(st)===st))return {ok:false,msg:'停留次数须为 0~30 的整数'};if(!(sm>=0&&sm<=30))return {ok:false,msg:'单次停留须在 0~30 分钟'};var n=Math.ceil(D/10);var tot=0;for(var i=0;i<n;i++){var seg=Math.min(10,D-i*10);tot+=seg*P*Math.pow(1+dc/100,i);}var stopT=st*sm;tot+=stopT;function TS(m){var s=Math.round(m*60);var h=Math.floor(s/3600),mm=Math.floor(s%3600/60),x=s%60;return h+':'+('0'+mm).slice(-2)+':'+('0'+x).slice(-2);}return {ok:true,html:'<div class=\"big\">预计总时间 '+TS(tot)+'</div><div class=\"row\">跑动 '+(tot-stopT).toFixed(1)+' 分钟 + 停留 '+stopT.toFixed(1)+' 分钟；全程平均配速 '+(tot/D).toFixed(2)+' 分/km，末段配速 '+(P*Math.pow(1+dc/100,n-1)).toFixed(2)+' 分/km</div><div class=\"row\">衰减为经验模型，实际受爬升、气温与补给执行影响很大</div>'};",
+ "test": {
+  "inputs": {
+   "dist": 100,
+   "pace": 6,
+   "decay": 3,
+   "stops": 5,
+   "stopmin": 2
+  },
+  "expect": "11:37:50"
+ }
+},
+{
+ "id": "ydtrail",
+ "cat": "yd",
+ "icon": "🥾",
+ "name": "越野跑努力距离（GAP/km-effort）",
+ "desc": "按ITRA努力公里口径把爬升折算为平地等效距离，算努力配速与平地等效时间",
+ "formula": "ITRA km-effort 口径：努力距离（km）=实际距离（km）+累计爬升（m）÷100。努力配速=实际用时÷努力距离；平地等效时间=努力配速×实际距离；爬升速率=爬升÷用时（m/h）。下降不折减（ITRA 口径只计爬升），与 ydaltpace（高原配速修正）分工不同",
+ "inputs": [
+  {
+   "id": "dist",
+   "label": "实际距离",
+   "unit": "km",
+   "def": "30"
+  },
+  {
+   "id": "gain",
+   "label": "累计爬升",
+   "unit": "m",
+   "def": "1500"
+  },
+  {
+   "id": "descent",
+   "label": "累计下降",
+   "unit": "m",
+   "def": "1500"
+  },
+  {
+   "id": "timemin",
+   "label": "实际用时",
+   "unit": "分钟",
+   "def": "240"
+  }
+ ],
+ "run": "var D=Number(dist),G=Number(gain),DE=Number(descent),T=Number(timemin);if(!(D>0&&D<=500))return {ok:false,msg:'距离须在 0~500 km'};if(!(G>=0&&G<=20000))return {ok:false,msg:'爬升须在 0~20000 m'};if(!(DE>=0&&DE<=20000))return {ok:false,msg:'下降须在 0~20000 m'};if(!(T>0&&T<=10000))return {ok:false,msg:'用时须大于 0'};var eff=D+G/100;var ep=T/eff;function PS(x){var s=Math.round(x*60);return Math.floor(s/60)+':'+('0'+(s%60)).slice(-2);}return {ok:true,html:'<div class=\"big\">努力距离 '+eff.toFixed(1)+' km-effort</div><div class=\"row\">努力配速 '+PS(ep)+'/km-effort，平地等效时间 '+(ep*D).toFixed(1)+' 分钟；爬升速率 '+(G/(T/60)).toFixed(0)+' m/h</div><div class=\"row\">实际配速 '+PS(T/D)+'/km，下降 '+DE+' m 按 ITRA 口径不折减；技术地形会使同等努力距离更慢</div>'};",
+ "test": {
+  "inputs": {
+   "dist": 30,
+   "gain": 1500,
+   "descent": 1500,
+   "timemin": 240
+  },
+  "expect": "45.0"
+ }
+},
+{
+ "id": "ydbackpack",
+ "cat": "yd",
+ "icon": "🎒",
+ "name": "负重行军代谢率（Pandolf方程）",
+ "desc": "用Pandolf方程算负重行走代谢率、时耗能与行军总耗能",
+ "formula": "Pandolf 方程：M=1.5W+2.0(W+L)(L/W)²+η(W+L)(1.5V²+0.35·V·G)（单位 W）；W 体重 kg、L 负重 kg、V 速度 m/s、G 坡度 %、η 地形系数（硬路 1.0、土路 1.1、山径 1.2、灌木 1.5、沙地/雪地 1.8）。耗能换算 1 W≈0.8604 kcal/h。本工具为行军/徒步负重专用，与 ydkcal（通用运动热量）分工",
+ "inputs": [
+  {
+   "id": "weight",
+   "label": "体重 W",
+   "unit": "kg",
+   "def": "70"
+  },
+  {
+   "id": "load",
+   "label": "负重 L",
+   "unit": "kg",
+   "def": "20"
+  },
+  {
+   "id": "speedkmh",
+   "label": "速度",
+   "unit": "km/h",
+   "def": "5.4"
+  },
+  {
+   "id": "grade",
+   "label": "坡度 G",
+   "unit": "%",
+   "def": "0"
+  },
+  {
+   "id": "terrain",
+   "label": "地形",
+   "type": "select",
+   "def": "road",
+   "options": [
+    {
+     "v": "road",
+     "t": "硬路 η=1.0"
+    },
+    {
+     "v": "dirt",
+     "t": "土路 η=1.1"
+    },
+    {
+     "v": "trail",
+     "t": "山径 η=1.2"
+    },
+    {
+     "v": "bush",
+     "t": "灌木 η=1.5"
+    },
+    {
+     "v": "sand",
+     "t": "沙地/雪地 η=1.8"
+    }
+   ]
+  },
+  {
+   "id": "hours",
+   "label": "行军时长",
+   "unit": "小时",
+   "def": "4"
+  }
+ ],
+ "run": "var W=Number(weight),L=Number(load),V=Number(speedkmh)/3.6,G=Number(grade),H=Number(hours);var ETA={road:1.0,dirt:1.1,trail:1.2,bush:1.5,sand:1.8};var eta=ETA[String(terrain)];if(eta===undefined)return {ok:false,msg:'地形无效'};if(!(W>=30&&W<=200))return {ok:false,msg:'体重须在 30~200 kg'};if(!(L>=0&&L<=80))return {ok:false,msg:'负重须在 0~80 kg'};if(!(V>=0.3&&V<=2.5))return {ok:false,msg:'速度须在约 1~9 km/h'};if(!(G>=-5&&G<=30))return {ok:false,msg:'坡度须在 -5~30%（Pandolf 适用域）'};if(!(H>0&&H<=24))return {ok:false,msg:'时长须在 0~24 小时'};var M=1.5*W+2.0*(W+L)*Math.pow(L/W,2)+eta*(W+L)*(1.5*V*V+0.35*V*G);if(!(M>0))return {ok:false,msg:'该坡度/速度组合超出 Pandolf 方程适用域'};return {ok:true,html:'<div class=\"big\">代谢率 ≈ '+M.toFixed(1)+' W</div><div class=\"row\">耗能 '+(M*0.8604).toFixed(1)+' kcal/h，行军 '+H+' 小时总耗能约 '+(M*0.8604*H).toFixed(0)+' kcal</div><div class=\"row\">Pandolf 方程为军方负重行军经验式，个体误差约 ±10~15%</div>'};",
+ "test": {
+  "inputs": {
+   "weight": 70,
+   "load": 20,
+   "speedkmh": 5.4,
+   "grade": 0,
+   "terrain": "road",
+   "hours": 4
+  },
+  "expect": "423.4"
+ }
+},
+{
+ "id": "ydreadiness",
+ "cat": "yd",
+ "icon": "🔋",
+ "name": "恢复准备度粗评（Readiness）",
+ "desc": "综合睡眠、静息心率偏移、HRV偏移与主观精力，给当日训练准备度粗评分",
+ "formula": "粗评口径（四项各 25 分，总分 100）：睡眠分=25×min(睡眠时数÷8,1)；静息心率分=25−3×max(今日静息心率−基线,0)（低至 0 封底，高于基线不加分）；HRV分=25×min(今日HRV÷基线HRV,1)；主观精力分=精力(1~10)÷10×25。≥85 可大强度，70~84 正常练，55~69 降量，＜55 建议恢复。仅为粗评，不替代医疗判断；与 ydrecovery（运动后心率恢复）分工不同",
+ "inputs": [
+  {
+   "id": "sleepH",
+   "label": "昨夜睡眠",
+   "unit": "小时",
+   "def": "8"
+  },
+  {
+   "id": "rhrToday",
+   "label": "今日静息心率",
+   "unit": "bpm",
+   "def": "55"
+  },
+  {
+   "id": "rhrBase",
+   "label": "基线静息心率",
+   "unit": "bpm",
+   "def": "55"
+  },
+  {
+   "id": "hrvToday",
+   "label": "今日 HRV (RMSSD)",
+   "unit": "ms",
+   "def": "60"
+  },
+  {
+   "id": "hrvBase",
+   "label": "基线 HRV (RMSSD)",
+   "unit": "ms",
+   "def": "60"
+  },
+  {
+   "id": "energy",
+   "label": "主观精力",
+   "def": "8",
+   "hint": "1~10"
+  }
+ ],
+ "run": "var s=Number(sleepH),rt=Number(rhrToday),rb=Number(rhrBase),ht=Number(hrvToday),hb=Number(hrvBase),en=Number(energy);if(!(s>=0&&s<=16))return {ok:false,msg:'睡眠须在 0~16 小时'};if(!(rt>=30&&rt<=120)||!(rb>=30&&rb<=120))return {ok:false,msg:'静息心率须在 30~120 bpm'};if(!(ht>=5&&ht<=300)||!(hb>=5&&hb<=300))return {ok:false,msg:'HRV 须在 5~300 ms'};if(!(en>=1&&en<=10))return {ok:false,msg:'主观精力须为 1~10'};var a=25*Math.min(s/8,1);var b=Math.max(0,25-3*Math.max(rt-rb,0));var c=25*Math.min(ht/hb,1);var d=en/10*25;var tot=a+b+c+d;var lv=tot>=85?'可上大强度':tot>=70?'状态正常，按计划练':tot>=55?'建议降量或降强度':'建议以恢复为主';return {ok:true,html:'<div class=\"big\">准备度 '+tot.toFixed(1)+' 分（'+lv+'）</div><div class=\"row\">睡眠 '+a.toFixed(1)+'｜静息心率 '+b.toFixed(1)+'（偏移 '+(rt-rb)+' bpm）｜HRV '+c.toFixed(1)+'（比值 '+(ht/hb).toFixed(2)+'）｜精力 '+d.toFixed(1)+'</div><div class=\"row\">粗评模型，单日数据噪声大，建议看 3~7 天趋势</div>'};",
+ "test": {
+  "inputs": {
+   "sleepH": 8,
+   "rhrToday": 55,
+   "rhrBase": 55,
+   "hrvToday": 60,
+   "hrvBase": 60,
+   "energy": 8
+  },
+  "expect": "95.0"
+ }
+},
+{
+ "id": "ydsleep2",
+ "cat": "yd",
+ "icon": "😴",
+ "name": "睡眠债估算",
+ "desc": "按需要的睡眠与实际平均睡眠之差，累计睡眠债并算补觉晚数",
+ "formula": "睡眠债（小时）=max(需要睡眠−实际平均睡眠,0)×天数；补清晚数=向上取整（睡眠债÷每晚多睡小时数）。债＞10 小时反应与表现下降明显为经验提示。与 ydsleep/shsleep（90 分钟周期入睡时刻规划）分工：本工具算累计欠账，不算入睡时刻",
+ "inputs": [
+  {
+   "id": "needH",
+   "label": "每晚需要睡眠",
+   "unit": "小时",
+   "def": "8"
+  },
+  {
+   "id": "avgH",
+   "label": "实际平均睡眠",
+   "unit": "小时",
+   "def": "6.5"
+  },
+  {
+   "id": "nights",
+   "label": "持续天数",
+   "unit": "天",
+   "def": "7"
+  },
+  {
+   "id": "extraH",
+   "label": "补觉每晚多睡",
+   "unit": "小时",
+   "def": "1"
+  }
+ ],
+ "run": "var n=Number(needH),a=Number(avgH),d=Number(nights),e=Number(extraH);if(!(n>=5&&n<=11))return {ok:false,msg:'需要睡眠须在 5~11 小时'};if(!(a>=0&&a<=16))return {ok:false,msg:'实际睡眠须在 0~16 小时'};if(!(d>=1&&d<=90&&Math.floor(d)===d))return {ok:false,msg:'天数须为 1~90 的整数'};if(!(e>0&&e<=3))return {ok:false,msg:'每晚多睡须在 0~3 小时'};var debt=Math.max(n-a,0)*d;if(debt<=0)return {ok:true,html:'<div class=\"big\">睡眠债 0 小时</div><div class=\"row\">实际平均 '+a+' 小时 ≥ 需要 '+n+' 小时，无累计欠账（多睡不折现）</div>'};var rec=Math.ceil(debt/e);var lv=debt>10?'债务较重：反应速度与耐力表现可能明显下降，优先补觉而非加练':debt>=5?'债务中等：高强度训练质量会打折':'债务较轻：数晚规律睡眠即可补清';return {ok:true,html:'<div class=\"big\">睡眠债 ≈ '+debt.toFixed(1)+' 小时</div><div class=\"row\">每晚欠 '+(n-a).toFixed(1)+' 小时 × '+d+' 天；按每晚多睡 '+e+' 小时约需 '+rec+' 晚补清</div><div class=\"row\">'+lv+'</div>'};",
+ "test": {
+  "inputs": {
+   "needH": 8,
+   "avgH": 6.5,
+   "nights": 7,
+   "extraH": 1
+  },
+  "expect": "10.5"
+ }
+},
+{
+ "id": "ydcreatine",
+ "cat": "yd",
+ "icon": "🧪",
+ "name": "肌酸补充剂量计算",
+ "desc": "按体重算肌酸冲击期每日/每份量与总量，或维持期每日量",
+ "formula": "肌酸口径（ISSN 综述常用）：冲击期 0.3 g/kg/天，分 4 份，持续 3~7 天；维持期每日量=clamp(0.057×体重, 3, 5) g（即通常 3~5 g/天）。一水肌酸为计。与 ydprotein（蛋白质需求）分工：本工具只算肌酸",
+ "inputs": [
+  {
+   "id": "weight",
+   "label": "体重",
+   "unit": "kg",
+   "def": "70"
+  },
+  {
+   "id": "mode",
+   "label": "阶段",
+   "type": "select",
+   "def": "load",
+   "options": [
+    {
+     "v": "load",
+     "t": "冲击期"
+    },
+    {
+     "v": "maint",
+     "t": "维持期"
+    }
+   ]
+  },
+  {
+   "id": "days",
+   "label": "冲击期天数",
+   "unit": "天",
+   "def": "5",
+   "when": "mode=load",
+   "hint": "3~7"
+  }
+ ],
+ "run": "var W=Number(weight);if(!(W>=30&&W<=200))return {ok:false,msg:'体重须在 30~200 kg'};if(String(mode)==='load'){var d=Number(days);if(!(d>=3&&d<=7&&Math.floor(d)===d))return {ok:false,msg:'冲击期天数须为 3~7 的整数'};var daily=0.3*W;return {ok:true,html:'<div class=\"big\">冲击期 '+daily.toFixed(1)+' g/天</div><div class=\"row\">分 4 份，每份 '+(daily/4).toFixed(2)+' g；'+d+' 天总量 '+(daily*d).toFixed(0)+' g</div><div class=\"row\">冲击期后转维持期 3~5 g/天；也可跳过冲击期直接维持，约 3~4 周同样饱和</div>'};}var dm=Math.min(5,Math.max(3,0.057*W));return {ok:true,html:'<div class=\"big\">维持期 '+dm.toFixed(1)+' g/天</div><div class=\"row\">按体重 '+W+' kg 折算并限制在常用 3~5 g/天区间，每日一次随餐即可</div>'};",
+ "test": {
+  "inputs": {
+   "weight": 70,
+   "mode": "load",
+   "days": 5
+  },
+  "expect": "21.0"
+ }
+},
+{
+ "id": "ydcaffeine2",
+ "cat": "yd",
+ "icon": "☕",
+ "name": "咖啡因运动剂量计算",
+ "desc": "按体重与目标mg/kg算赛前咖啡因总量、常见来源份数与安全提示",
+ "formula": "运动表现口径：有效剂量常见 3~6 mg/kg（赛前约 45~60 分钟摄入）；总量=体重×剂量。来源单份咖啡因参考：意式浓缩约 63 mg、滴滤咖啡约 95 mg、茶约 50 mg、能量胶约 100 mg、能量饮料约 80 mg、咖啡因片 200 mg。一般人群每日总咖啡因常见上限参考 400 mg，超过时给出提示。与 shcaffeine（摄入后代谢残量）分工：本工具算赛前该吃多少",
+ "inputs": [
+  {
+   "id": "weight",
+   "label": "体重",
+   "unit": "kg",
+   "def": "70"
+  },
+  {
+   "id": "dose",
+   "label": "目标剂量",
+   "unit": "mg/kg",
+   "def": "6",
+   "hint": "常用 3~6"
+  },
+  {
+   "id": "source",
+   "label": "来源",
+   "type": "select",
+   "def": "coffee",
+   "options": [
+    {
+     "v": "coffee",
+     "t": "滴滤咖啡 95mg/份"
+    },
+    {
+     "v": "espresso",
+     "t": "意式浓缩 63mg/份"
+    },
+    {
+     "v": "tea",
+     "t": "茶 50mg/份"
+    },
+    {
+     "v": "gel",
+     "t": "能量胶 100mg/份"
+    },
+    {
+     "v": "drink",
+     "t": "能量饮料 80mg/份"
+    },
+    {
+     "v": "pill",
+     "t": "咖啡因片 200mg/份"
+    }
+   ]
+  }
+ ],
+ "run": "var W=Number(weight),d=Number(dose);var MG={coffee:95,espresso:63,tea:50,gel:100,drink:80,pill:200};var per=MG[String(source)];if(per===undefined)return {ok:false,msg:'来源无效'};if(!(W>=30&&W<=200))return {ok:false,msg:'体重须在 30~200 kg'};if(!(d>0&&d<=9))return {ok:false,msg:'剂量须在 0~9 mg/kg（9 以上有明显副作用风险）'};var tot=W*d;var warn=tot>400?'<div class=\"row\">⚠️ 总量超过一般人群每日 400 mg 参考上限，非习惯摄入者请降至 3 mg/kg 左右先试</div>':'<div class=\"row\">总量在一般每日 400 mg 参考上限内</div>';return {ok:true,html:'<div class=\"big\">目标总量 '+tot.toFixed(0)+' mg</div><div class=\"row\">约合所选来源 '+(tot/per).toFixed(2)+' 份（单份 '+per+' mg）；建议赛前 45~60 分钟摄入，先在训练中验证耐受</div>'+warn};",
+ "test": {
+  "inputs": {
+   "weight": 70,
+   "dose": 6,
+   "source": "coffee"
+  },
+  "expect": "420"
+ }
+},
+{
+ "id": "ydaltitude2",
+ "cat": "yd",
+ "icon": "🏕️",
+ "name": "高原训练低氧剂量估算",
+ "desc": "按睡眠海拔、每日低氧时长与天数算低氧剂量与预期血红蛋白质量增益",
+ "formula": "低氧剂量（km·h）=睡眠海拔(km)×每日小时数×天数。增益经验口径：约每 245 km·h（约合 2500 m×14 h/天×1 周）Hb 质量增益约 1%，本工具按剂量÷245 估算并封顶 4%；睡眠海拔＜1800 m 时刺激多不足。低住高练/高住低练规划用，与 ydaltitude（高原反应风险）、ydaltpace/ydaltcorr（配速与成绩修正）分工",
+ "inputs": [
+  {
+   "id": "sleepAlt",
+   "label": "睡眠海拔",
+   "unit": "m",
+   "def": "2500"
+  },
+  {
+   "id": "hours",
+   "label": "每日低氧时长",
+   "unit": "小时",
+   "def": "14"
+  },
+  {
+   "id": "days",
+   "label": "持续天数",
+   "unit": "天",
+   "def": "21"
+  },
+  {
+   "id": "trainAlt",
+   "label": "主要训练海拔",
+   "unit": "m",
+   "def": "1000"
+  }
+ ],
+ "run": "var A=Number(sleepAlt),H=Number(hours),D=Number(days),TA=Number(trainAlt);if(!(A>=0&&A<=4500))return {ok:false,msg:'睡眠海拔须在 0~4500 m'};if(!(H>0&&H<=24))return {ok:false,msg:'每日时长须在 0~24 小时'};if(!(D>=1&&D<=90&&Math.floor(D)===D))return {ok:false,msg:'天数须为 1~90 的整数'};if(!(TA>=0&&TA<=4500))return {ok:false,msg:'训练海拔须在 0~4500 m'};var dose=A/1000*H*D;var gain=Math.min(dose/245,4);var note=A<1800?'睡眠海拔偏低，低氧刺激可能不足':TA>A+500?'训练海拔明显高于睡眠海拔，更接近高住高练，注意恢复':'高住低练结构（睡高练低）';return {ok:true,html:'<div class=\"big\">低氧剂量 '+dose.toFixed(0)+' km·h</div><div class=\"row\">预期 Hb 质量增益约 '+gain.toFixed(1)+'%（经验口径，封顶 4%）；'+note+'</div><div class=\"row\">增益个体差异大且回平原后约 2~3 周窗口最佳，铁状态不足会抵消效果</div>'};",
+ "test": {
+  "inputs": {
+   "sleepAlt": 2500,
+   "hours": 14,
+   "days": 21,
+   "trainAlt": 1000
+  },
+  "expect": "735"
+ }
+},
+{
+ "id": "ydbike2",
+ "cat": "yd",
+ "icon": "🚵",
+ "name": "骑行爬坡功率分解",
+ "desc": "把骑行所需功率拆为克服重力、滚阻与风阻三部分并计传动损耗",
+ "formula": "功率分解：P重力=m·g·v·sin(arctan(坡度))；P滚阻=m·g·v·Crr·cos(arctan(坡度))；P风阻=½·ρ·CdA·v³；总功率=(三者之和)÷(1−传动损耗)。g=9.81。与 ydftp（阈值功率测试）、ydgear（齿比速度）分工：本工具算给定速度/坡度需要多少瓦",
+ "inputs": [
+  {
+   "id": "mass",
+   "label": "总重（人+车）",
+   "unit": "kg",
+   "def": "80"
+  },
+  {
+   "id": "speedkmh",
+   "label": "速度",
+   "unit": "km/h",
+   "def": "20"
+  },
+  {
+   "id": "grade",
+   "label": "坡度",
+   "unit": "%",
+   "def": "8"
+  },
+  {
+   "id": "cda",
+   "label": "风阻面积 CdA",
+   "unit": "m²",
+   "def": "0.32",
+   "hint": "0.25~0.45"
+  },
+  {
+   "id": "crr",
+   "label": "滚阻系数 Crr",
+   "def": "0.005",
+   "hint": "0.002~0.015"
+  },
+  {
+   "id": "rho",
+   "label": "空气密度",
+   "unit": "kg/m³",
+   "def": "1.225"
+  },
+  {
+   "id": "loss",
+   "label": "传动损耗",
+   "unit": "%",
+   "def": "3"
+  }
+ ],
+ "run": "var m=Number(mass),v=Number(speedkmh)/3.6,gr=Number(grade),cda=Number(cda),crr=Number(crr),rho=Number(rho),ls=Number(loss);if(!(m>=30&&m<=200))return {ok:false,msg:'总重须在 30~200 kg'};if(!(v>0&&v<=25))return {ok:false,msg:'速度须在 0~90 km/h'};if(!(gr>=-15&&gr<=25))return {ok:false,msg:'坡度须在 -15~25%'};if(!(cda>=0.1&&cda<=0.8))return {ok:false,msg:'CdA 须在 0.1~0.8 m²'};if(!(crr>=0.001&&crr<=0.02))return {ok:false,msg:'Crr 须在 0.001~0.02'};if(!(rho>=0.5&&rho<=1.5))return {ok:false,msg:'空气密度须在 0.5~1.5 kg/m³'};if(!(ls>=0&&ls<=10))return {ok:false,msg:'传动损耗须在 0~10%'};var th=Math.atan(gr/100);var pg=m*9.81*v*Math.sin(th),pr=m*9.81*v*crr*Math.cos(th),pa=0.5*rho*cda*v*v*v;var sum=pg+pr+pa;if(sum<=0)return {ok:true,html:'<div class=\"big\">无需踩踏（净下滑）</div><div class=\"row\">重力分量 '+pg.toFixed(1)+' W 已超过滚阻 '+pr.toFixed(1)+' W + 风阻 '+pa.toFixed(1)+' W，该坡度下可滑行</div>'};var tot=sum/(1-ls/100);return {ok:true,html:'<div class=\"big\">总功率 ≈ '+tot.toFixed(1)+' W</div><div class=\"row\">重力 '+pg.toFixed(1)+' W｜滚阻 '+pr.toFixed(1)+' W｜风阻 '+pa.toFixed(1)+' W（传动损耗 '+ls+'% 后）</div><div class=\"row\">无风、匀速口径；爬坡时重力通常占主导</div>'};",
+ "test": {
+  "inputs": {
+   "mass": 80,
+   "speedkmh": 20,
+   "grade": 8,
+   "cda": 0.32,
+   "crr": 0.005,
+   "rho": 1.225,
+   "loss": 3
+  },
+  "expect": "415.5"
+ }
+},
+{
+ "id": "ydclimbpower",
+ "cat": "yd",
+ "icon": "📈",
+ "name": "爬坡垂直速度 VAM",
+ "desc": "由爬升量与用时算VAM、垂直功率与平均坡度（给距离时）",
+ "formula": "VAM=爬升(m)÷用时(h)，单位 m/h；垂直功率=m·g·VAM÷3600（W，总重口径）；相对垂直功率=g·VAM÷3600（W/kg）。给出行程距离时平均坡度=爬升÷距离×100%。与 ydclimb（攀岩等级对照）完全不同，本工具为骑行/越野爬坡",
+ "inputs": [
+  {
+   "id": "gain",
+   "label": "爬升量",
+   "unit": "m",
+   "def": "1000"
+  },
+  {
+   "id": "timemin",
+   "label": "用时",
+   "unit": "分钟",
+   "def": "60"
+  },
+  {
+   "id": "mass",
+   "label": "总重（人+车/装备）",
+   "unit": "kg",
+   "def": "80"
+  },
+  {
+   "id": "distkm",
+   "label": "行程距离（可填0）",
+   "unit": "km",
+   "def": "0"
+  }
+ ],
+ "run": "var G=Number(gain),T=Number(timemin),m=Number(mass),D=Number(distkm);if(!(G>0&&G<=10000))return {ok:false,msg:'爬升须在 0~10000 m'};if(!(T>0&&T<=5000))return {ok:false,msg:'用时须大于 0'};if(!(m>=30&&m<=250))return {ok:false,msg:'总重须在 30~250 kg'};if(!(D>=0&&D<=500))return {ok:false,msg:'距离须在 0~500 km'};var vam=G/(T/60);var pw=m*9.81*vam/3600;var gr=D>0?'<div class=\"row\">平均坡度 '+(G/(D*1000)*100).toFixed(1)+'%（距离 '+D+' km）</div>':'';return {ok:true,html:'<div class=\"big\">VAM '+vam.toFixed(0)+' m/h</div><div class=\"row\">垂直功率 '+pw.toFixed(1)+' W（相对 '+(pw/m).toFixed(2)+' W/kg）</div>'+gr+'<div class=\"row\">VAM 参考（骑行）：＞1600 职业级，1200~1600 很强，900~1200 业余 good，＜900 休闲</div>'};",
+ "test": {
+  "inputs": {
+   "gain": 1000,
+   "timemin": 60,
+   "mass": 80,
+   "distkm": 0
+  },
+  "expect": "1000"
+ }
+},
+{
+ "id": "ydrow2",
+ "cat": "yd",
+ "icon": "🚣",
+ "name": "水上划船桨频与船速",
+ "desc": "由桨频与每桨距离算船速、500m分段与目标距离用时（水上划船口径）",
+ "formula": "船速=桨频(spm)×每桨距离(m)（m/min）；500m 分段=500÷船速；目标用时=距离÷船速。与 ydrower/ydrowpace（Concept2 测功仪配速功率）分工：本工具为水上实际划行（桨频×桨幅效率），无功率换算",
+ "inputs": [
+  {
+   "id": "spm",
+   "label": "桨频",
+   "unit": "spm",
+   "def": "30"
+  },
+  {
+   "id": "dps",
+   "label": "每桨距离",
+   "unit": "m/桨",
+   "def": "9"
+  },
+  {
+   "id": "dist",
+   "label": "目标距离",
+   "unit": "m",
+   "def": "2000"
+  }
+ ],
+ "run": "var s=Number(spm),d=Number(dps),D=Number(dist);if(!(s>=10&&s<=50))return {ok:false,msg:'桨频须在 10~50 spm'};if(!(d>=4&&d<=20))return {ok:false,msg:'每桨距离须在 4~20 m'};if(!(D>=100&&D<=20000))return {ok:false,msg:'距离须在 100~20000 m'};var v=s*d;function TS(sec){sec=Math.round(sec);return Math.floor(sec/60)+':'+('0'+(sec%60)).slice(-2);}return {ok:true,html:'<div class=\"big\">船速 '+(v*60/1000).toFixed(2)+' km/h</div><div class=\"row\">500m 分段 '+TS(500/v*60)+'，'+D+'m 用时 '+TS(D/v*60)+'</div><div class=\"row\">每桨距离受技术、风浪与船型影响大，桨频高不等于船速快</div>'};",
+ "test": {
+  "inputs": {
+   "spm": 30,
+   "dps": 9,
+   "dist": 2000
+  },
+  "expect": "16.20"
+ }
+},
+{
+ "id": "ydarchery2",
+ "cat": "yd",
+ "icon": "🏹",
+ "name": "射箭环数统计",
+ "desc": "输入一轮各箭环数，算总环、平均箭值、10环/X环与金圈数量",
+ "formula": "统计口径：每箭 0~10 分，X 记 10 分并单列 X 数，M（脱靶）记 0；总环=Σ，平均箭值=总环÷箭数，金圈=9~10 环箭数，满环=箭数×10。单次输入上限 200 箭。与任何现有工具无重复（实验室首个射箭统计）",
+ "inputs": [
+  {
+   "id": "scores",
+   "label": "各箭环数",
+   "type": "text",
+   "def": "10,9,10,8,9,10",
+   "hint": "逗号/空格分隔，X=内10环，M=脱靶，如 10,X,9,M"
+  }
+ ],
+ "run": "var raw=String(scores).trim();if(!raw)return {ok:false,msg:'请输入环数'};if(raw.length>2000)return {ok:false,msg:'输入过长（上限 2000 字符）'};var parts=raw.split(/[\\s,，;；、]+/).filter(function(x){return x.length>0;});if(parts.length<1||parts.length>200)return {ok:false,msg:'箭数须在 1~200 之间（当前 '+parts.length+'）'};var tot=0,xn=0,gold=0,ten=0;for(var i=0;i<parts.length;i++){var t=parts[i].toUpperCase();var v;if(t==='X'){v=10;xn++;}else if(t==='M'){v=0;}else{v=Number(t);if(!(v>=0&&v<=10&&Math.floor(v)===v))return {ok:false,msg:'第 '+(i+1)+' 箭环数无效：'+parts[i]+'（须为 0~10 整数、X 或 M）'};}tot+=v;if(v>=9)gold++;if(v===10)ten++;}return {ok:true,html:'<div class=\"big\">总环 '+tot+' / '+(parts.length*10)+'</div><div class=\"row\">'+parts.length+' 箭，平均箭值 '+(tot/parts.length).toFixed(2)+'；10环（含X）'+ten+' 箭，X '+xn+' 箭，金圈（9~10）'+gold+' 箭</div><div class=\"row\">得分率 '+(tot/(parts.length*10)*100).toFixed(1)+'%</div>'};",
+ "test": {
+  "inputs": {
+   "scores": "10,9,10,8,9,10"
+  },
+  "expect": "56"
+ }
+},
+{
+ "id": "ydgolf2",
+ "cat": "yd",
+ "icon": "⛳",
+ "name": "高尔夫差点指数（多轮WHS简化）",
+ "desc": "输入多轮成绩差，取最佳若干轮平均算差点指数（WHS简化口径）",
+ "formula": "WHS 简化口径：每轮成绩差（Score Differential）由球场数据另行算出后填入本工具；场次≥8 时取最佳 8 轮平均，场次 3~7 时取最佳一半（向上取整）平均（低场次调整为本工具简化规则，非 WHS 完整调整表），结果保留 1 位小数。与 ydgolf（单轮成绩差估算）分工：本工具由多轮成绩差汇成差点指数",
+ "inputs": [
+  {
+   "id": "diffs",
+   "label": "各轮成绩差",
+   "type": "text",
+   "def": "12,10,15,9,18,11,14,8,20,13,16,9,12,17,10,15,11,19,14,13",
+   "hint": "逗号/空格分隔，3~40 个数"
+  }
+ ],
+ "run": "var raw=String(diffs).trim();if(!raw)return {ok:false,msg:'请输入成绩差'};if(raw.length>2000)return {ok:false,msg:'输入过长'};var parts=raw.split(/[\\s,，;；、]+/).filter(function(x){return x.length>0;});if(parts.length<3||parts.length>40)return {ok:false,msg:'场次须在 3~40 之间（当前 '+parts.length+'）'};var vals=[];for(var i=0;i<parts.length;i++){var v=Number(parts[i]);if(!(v>=-5&&v<=50))return {ok:false,msg:'第 '+(i+1)+' 个成绩差无效（须在 -5~50）'};vals.push(v);}vals.sort(function(a,b){return a-b;});var k=vals.length>=8?8:Math.ceil(vals.length/2);var s=0;for(var i=0;i<k;i++)s+=vals[i];var idx=s/k;return {ok:true,html:'<div class=\"big\">差点指数 '+idx.toFixed(1)+'</div><div class=\"row\">共 '+vals.length+' 轮，取最佳 '+k+' 轮（最低 '+vals[0].toFixed(1)+'）平均；全轮平均 '+(vals.reduce(function(a,b){return a+b;},0)/vals.length).toFixed(1)+'</div><div class=\"row\">WHS 简化口径，正式差点以协会系统（含低场次调整与异常成绩规则）为准</div>'};",
+ "test": {
+  "inputs": {
+   "diffs": "12,10,15,9,18,11,14,8,20,13,16,9,12,17,10,15,11,19,14,13"
+  },
+  "expect": "10.0"
+ }
+},
+{
+ "id": "ydtennis",
+ "cat": "yd",
+ "icon": "🎾",
+ "name": "网球发球速度（视频帧数法）",
+ "desc": "数视频里发球从击球到落地的帧数，估平均球速与峰值初速",
+ "formula": "视频帧数法：飞行时间=帧数÷帧率；平均球速=飞行距离÷飞行时间。发球飞行距离默认 18.29 m（底线到对方发球线）；峰值初速≈平均球速÷0.88（空气阻力使均速约为初速的 88%，经验系数）。雷达枪口径测的是初速，与本工具峰值估算对应",
+ "inputs": [
+  {
+   "id": "frames",
+   "label": "飞行帧数",
+   "def": "96",
+   "hint": "击球帧到落点帧"
+  },
+  {
+   "id": "fps",
+   "label": "拍摄帧率",
+   "unit": "fps",
+   "def": "240"
+  },
+  {
+   "id": "dist",
+   "label": "飞行距离",
+   "unit": "m",
+   "def": "18.29"
+  }
+ ],
+ "run": "var f=Number(frames),fps=Number(fps),d=Number(dist);if(!(f>=5&&f<=2000&&Math.floor(f)===f))return {ok:false,msg:'帧数须为 5~2000 的整数'};if(!(fps>=10&&fps<=2000))return {ok:false,msg:'帧率须在 10~2000 fps'};if(!(d>=5&&d<=30))return {ok:false,msg:'飞行距离须在 5~30 m'};var t=f/fps;var avg=d/t;var kmh=avg*3.6;return {ok:true,html:'<div class=\"big\">平均球速 '+kmh.toFixed(1)+' km/h</div><div class=\"row\">飞行时间 '+t.toFixed(3)+' 秒（'+f+' 帧 ÷ '+fps+' fps），峰值初速估算 '+(kmh/0.88).toFixed(1)+' km/h</div><div class=\"row\">帧数误差 1 帧在高速拍摄下影响约 '+(100/f).toFixed(1)+'%，慢动作帧率越高越准</div>'};",
+ "test": {
+  "inputs": {
+   "frames": 96,
+   "fps": 240,
+   "dist": 18.29
+  },
+  "expect": "164.6"
+ }
+},
+{
+ "id": "ydski",
+ "cat": "yd",
+ "icon": "⛷️",
+ "name": "滑雪刻滑转弯半径与向心G",
+ "desc": "由雪板侧切半径与立刃角算刻滑转弯半径、向心加速度与G值",
+ "formula": "刻滑几何近似：转弯半径 R转=R侧切×cos(立刃角)；向心加速度 a=v²÷R转；G 值=a÷9.81。立刃角越大转弯越急；公式为纯刻滑（无搓雪）近似，实际受雪况与板软硬影响",
+ "inputs": [
+  {
+   "id": "rsc",
+   "label": "雪板侧切半径",
+   "unit": "m",
+   "def": "16"
+  },
+  {
+   "id": "edge",
+   "label": "立刃角",
+   "unit": "°",
+   "def": "45"
+  },
+  {
+   "id": "speedkmh",
+   "label": "速度",
+   "unit": "km/h",
+   "def": "43.2"
+  }
+ ],
+ "run": "var R=Number(rsc),e=Number(edge),v=Number(speedkmh)/3.6;if(!(R>=5&&R<=40))return {ok:false,msg:'侧切半径须在 5~40 m'};if(!(e>=0&&e<=80))return {ok:false,msg:'立刃角须在 0~80°（90° 时半径为 0 无意义）'};if(!(v>0&&v<=40))return {ok:false,msg:'速度须在 0~144 km/h'};var rt=R*Math.cos(e*Math.PI/180);var a=v*v/rt;return {ok:true,html:'<div class=\"big\">转弯半径 '+rt.toFixed(2)+' m</div><div class=\"row\">向心加速度 '+a.toFixed(2)+' m/s² = '+(a/9.81).toFixed(2)+' G（速度 '+Number(speedkmh)+' km/h）</div><div class=\"row\">立刃角 0° 时即侧切半径本身；G 值越大对腿部力量要求越高</div>'};",
+ "test": {
+  "inputs": {
+   "rsc": 16,
+   "edge": 45,
+   "speedkmh": 43.2
+  },
+  "expect": "11.31"
+ }
+},
+{
+ "id": "ydowswim",
+ "cat": "yd",
+ "icon": "🌊",
+ "name": "公开水域游泳时间估算",
+ "desc": "由泳池百米配速、水流与绕标折线加成估公开水域完赛时间",
+ "formula": "公开水域口径：泳速=100÷百米配速（m/s）；对地速度=泳速+顺流分量（逆流为负，须大于 0）；实际游程=标称距离×(1+折线加成%)（绕标/看标走线，常见 3~10%）；时间=实际游程÷对地速度。与 ydswimpace（泳池配速换算）、ydcss/ydswolf 分工：本工具专算开放水域水流与走线影响",
+ "inputs": [
+  {
+   "id": "dist",
+   "label": "标称距离",
+   "unit": "m",
+   "def": "1500"
+  },
+  {
+   "id": "pace100",
+   "label": "泳池百米配速",
+   "unit": "秒/100m",
+   "def": "120"
+  },
+  {
+   "id": "current",
+   "label": "顺流分量",
+   "unit": "km/h",
+   "def": "0.5",
+   "hint": "顺流正、逆流负，-3~3"
+  },
+  {
+   "id": "extra",
+   "label": "折线加成",
+   "unit": "%",
+   "def": "0"
+  }
+ ],
+ "run": "var D=Number(dist),P=Number(pace100),cu=Number(current),ex=Number(extra);if(!(D>=100&&D<=50000))return {ok:false,msg:'距离须在 100~50000 m'};if(!(P>=40&&P<=600))return {ok:false,msg:'百米配速须在 40~600 秒'};if(!(cu>=-3&&cu<=3))return {ok:false,msg:'水流须在 -3~3 km/h'};if(!(ex>=0&&ex<=30))return {ok:false,msg:'折线加成须在 0~30%'};var swim=100/P*3.6;var eff=swim+cu;if(!(eff>0))return {ok:false,msg:'逆流速度不小于泳速，对地速度≤0，无法前进'};var real=D*(1+ex/100)/1000;var sec=real/eff*3600;function TS(s){s=Math.round(s);var h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h>0?h+':':'')+('0'+m).slice(-2)+':'+('0'+x).slice(-2);}return {ok:true,html:'<div class=\"big\">预计时间 '+TS(sec)+'</div><div class=\"row\">泳速 '+swim.toFixed(2)+' km/h，对地 '+eff.toFixed(2)+' km/h，实际游程 '+(real*1000).toFixed(0)+' m</div><div class=\"row\">无水流无折线时同距离需 '+TS(D/1000/swim*3600)+'；风浪与人群拥挤未计入</div>'};",
+ "test": {
+  "inputs": {
+   "dist": 1500,
+   "pace100": 120,
+   "current": 0.5,
+   "extra": 0
+  },
+  "expect": "25:43"
+ }
+}
+);
+/* ===== 元器件类第三轮（25 个）·R3 波次 yqj3 ===== */
+TOOLS.push(
+ {id:"yqthermistor2", cat:"yqj", icon:"🌡️", name:"热敏电阻Steinhart-Hart标定", desc:"三系数 Steinhart-Hart 方程测温与三点标定（进阶）",
+  formula:"器件角度（与 dz 电路分析分工）：Steinhart-Hart 方程 1/T = A + B·lnR + C·(lnR)³（T 为 K，R 为 Ω）。与 yqntc（已知 B 值的 Beta 简化方程）、yqntcb（两点反求 B）分工：本工具用三系数全温区模型，精度更高；标定模式由三组实测 (R,T) 联立解 A、B、C 并预测任意阻值温度。预设系数为 10kΩ NTC 常用手册值节选（A=1.129148e-3、B=2.34125e-4、C=8.76741e-8）",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"use", options:[{v:"use",t:"已知系数：阻值 → 温度"},{v:"cal",t:"三点标定：解系数并预测"}]},
+   {id:"ca", label:"系数 A", def:"0.001129148", when:"mode=use"},
+   {id:"cb", label:"系数 B", def:"0.000234125", when:"mode=use"},
+   {id:"cc", label:"系数 C", def:"8.76741e-8", when:"mode=use"},
+   {id:"rr", label:"实测阻值 R", unit:"Ω", def:"10000", when:"mode=use"},
+   {id:"r1", label:"标定点1 阻值 R1", unit:"Ω", def:"32650.37", when:"mode=cal"},
+   {id:"t1", label:"标定点1 温度", unit:"℃", def:"0", when:"mode=cal"},
+   {id:"r2", label:"标定点2 阻值 R2", unit:"Ω", def:"10000", when:"mode=cal"},
+   {id:"t2", label:"标定点2 温度", unit:"℃", def:"25", when:"mode=cal"},
+   {id:"r3", label:"标定点3 阻值 R3", unit:"Ω", def:"3601.03", when:"mode=cal"},
+   {id:"t3", label:"标定点3 温度", unit:"℃", def:"50", when:"mode=cal"},
+   {id:"rp", label:"待预测阻值 Rp", unit:"Ω", def:"1070.45", when:"mode=cal"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}function Tof(A,B,C,R){var x=Math.log(R);return 1/(A+B*x+C*x*x*x)-273.15;}if(String(mode)==='use'){var A=Number(ca),B=Number(cb),C=Number(cc),R=Number(rr);if(!isFinite(A)||!isFinite(B)||!isFinite(C))return {ok:false,msg:'三个系数须为数字'};if(!(R>0&&R<=1e9))return {ok:false,msg:'阻值须在 0~1e9 Ω'};var tc=Tof(A,B,C,R);if(!isFinite(tc)||tc<-100||tc>300)return {ok:false,msg:'算得温度超出 −100~300 ℃ 合理范围，系数与阻值可能不匹配'};return {ok:true,html:'<div class=\"big\">T = '+F(tc)+' ℃</div><div class=\"row\">Steinhart-Hart：1/T = A + B·lnR + C·(lnR)³，R = '+F(R)+' Ω，lnR = '+F(Math.log(R))+'</div><div class=\"row\">三系数模型在宽温区精度优于单 B 值 Beta 方程，系数须与具体器件同批标定</div>'};}var Rs=[Number(r1),Number(r2),Number(r3)],Ts=[Number(t1),Number(t2),Number(t3)],RP=Number(rp);for(var i=0;i<3;i++){if(!(Rs[i]>0&&Rs[i]<=1e9))return {ok:false,msg:'标定阻值须在 0~1e9 Ω'};if(!(Ts[i]>-273.15&&Ts[i]<=300))return {ok:false,msg:'标定温度须在 −273~300 ℃'};}if(Rs[0]===Rs[1]||Rs[1]===Rs[2]||Rs[0]===Rs[2])return {ok:false,msg:'三个标定点阻值不能相同'};if(!(RP>0&&RP<=1e9))return {ok:false,msg:'待预测阻值须在 0~1e9 Ω'};var M=[];for(var i2=0;i2<3;i2++){var x2=Math.log(Rs[i2]);M.push([1,x2,x2*x2*x2,1/(Ts[i2]+273.15)]);}for(var c=0;c<3;c++){var pv=c;for(var k=c+1;k<3;k++){if(Math.abs(M[k][c])>Math.abs(M[pv][c]))pv=k;}if(Math.abs(M[pv][c])<1e-15)return {ok:false,msg:'标定点过于接近，方程组无解'};var tmp=M[c];M[c]=M[pv];M[pv]=tmp;for(var k2=c+1;k2<3;k2++){var f=M[k2][c]/M[c][c];for(var j=c;j<4;j++)M[k2][j]-=f*M[c][j];}}var sol=[0,0,0];for(var i3=2;i3>=0;i3--){var s=M[i3][3];for(var j2=i3+1;j2<3;j2++)s-=M[i3][j2]*sol[j2];sol[i3]=s/M[i3][i3];}var tp2=Tof(sol[0],sol[1],sol[2],RP);if(!isFinite(tp2)||tp2<-100||tp2>300)return {ok:false,msg:'预测温度超出合理范围，标定点可能有误'};return {ok:true,html:'<div class=\"big\">预测 T = '+F(tp2)+' ℃</div><div class=\"row\">标定得 A = '+sol[0].toExponential(4)+'，B = '+sol[1].toExponential(4)+'，C = '+sol[2].toExponential(4)+'；Rp = '+F(RP)+' Ω</div><div class=\"row\">标定点应覆盖实际使用温区，外推温区误差会放大</div>'};",
+  test:{inputs:{mode:"use",ca:"0.001129148",cb:"0.000234125",cc:"8.76741e-8",rr:"10000",r1:"32650.37",t1:"0",r2:"10000",t2:"25",r3:"3601.03",t3:"50",rp:"1070.45"}, expect:"24.9997"}},
+ {id:"yqpt1000", cat:"yqj", icon:"🌡️", name:"PT1000铂电阻换算", desc:"PT1000 温度-阻值双向换算（Callendar–Van Dusen）",
+  formula:"器件角度：PT1000 与 PT100 同为 IEC 60751 铂电阻，区别在 R0：PT1000 的 R(0℃)=1000 Ω，系数同 A=3.9083e-3/℃、B=−5.775e-7/℃²；正温段 R = 1000×(1 + A·t + B·t²)，反解取二次方程物理根；灵敏度约 3.85 Ω/℃（PT100 的 10 倍），两线制引线电阻误差占比更小。负温段未计三次项 C(t−100)t³，为外推近似。与 yqpt100（一次项近似）、dzpt100（PT100 电路侧）分工：本工具专算 PT1000 器件",
+  inputs:[
+   {id:"mode", label:"换算方向", type:"select", def:"t2r", options:[{v:"t2r",t:"温度 → 电阻"},{v:"r2t",t:"电阻 → 温度"}]},
+   {id:"t", label:"温度 t", unit:"℃", def:"100", when:"mode=t2r"},
+   {id:"rr", label:"电阻 R", unit:"Ω", def:"1385.05", when:"mode=r2t"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var A=3.9083e-3,B=-5.775e-7;if(String(mode)==='t2r'){var tt=Number(t);if(!(tt>=-50&&tt<=500))return {ok:false,msg:'温度须在 −50~500 ℃ 口径范围内'};var r=1000*(1+A*tt+B*tt*tt);return {ok:true,html:'<div class=\"big\">R = '+r.toFixed(2)+' Ω</div><div class=\"row\">R = 1000×(1 + 3.9083e-3×'+F(tt)+' − 5.775e-7×'+F(tt)+'²)；平均灵敏度约 3.85 Ω/℃'+(tt<0?'；负温段为正温式外推（未计三次项）':'')+'</div>'};}var rv=Number(rr);if(!(rv>=803&&rv<=2810))return {ok:false,msg:'电阻须在约 803~2810 Ω（对应 −50~500 ℃）范围内，超出请核对是否 PT100 器件'};var cc2=1-rv/1000;var disc=A*A-4*B*cc2;if(disc<0)return {ok:false,msg:'无实数解'};var t2=(-A+Math.sqrt(disc))/(2*B);if(!(t2>=-50.5&&t2<=500.5))return {ok:false,msg:'反解温度超出 −50~500 ℃ 口径范围'};return {ok:true,html:'<div class=\"big\">t = '+t2.toFixed(2)+' ℃</div><div class=\"row\">由 B·t² + A·t + (1 − R/1000) = 0 取物理根，R = '+F(rv)+' Ω</div>'};",
+  test:{inputs:{mode:"t2r",t:"100",rr:"1385.05"}, expect:"1385.05"}},
+ {id:"yqtc2", cat:"yqj", icon:"🌡️", name:"热电偶分度表进阶换算", desc:"K 型分度表插值 + 冷端电势补偿（非线性进阶版）",
+  formula:"器件角度进阶版（与 yqtc 线性塞贝克近似分工）：采用 K 型分度表节选（ITS-90，0 ℃ 参考端，节点 −100~1200 ℃，数值为 NIST 分度表节选）分段线性插值；冷端补偿用电势法：热端电势 = 实测电势 + 冷端温度对应电势，再反查分度表，比固定 µV/℃ 线性近似准确。超出分度表范围直接拒绝，不外推",
+  inputs:[
+   {id:"dir", label:"换算方向", type:"select", def:"t2v", options:[{v:"t2v",t:"温度 → 实测电势（扣冷端）"},{v:"v2t",t:"实测电势 → 温度（含冷端补偿）"}]},
+   {id:"temp", label:"热端温度 T", unit:"℃", def:"100", when:"dir=t2v"},
+   {id:"vmv", label:"实测热电势 V", unit:"mV", def:"3.0845", when:"dir=v2t"},
+   {id:"cj", label:"冷端温度", unit:"℃", def:"25", hint:"冷端（参考端）实际温度"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var TT=[-100,-50,0,50,100,150,200,250,300,350,400,450,500,550,600,700,800,900,1000,1100,1200];var VV=[-3.889,-1.889,0,2.023,4.096,6.138,8.138,10.153,12.209,14.293,16.397,18.516,20.644,22.776,24.905,29.129,33.275,37.326,41.276,45.119,48.838];function vOf(t){for(var i=0;i<TT.length-1;i++){if(t>=TT[i]&&t<=TT[i+1]){return VV[i]+(VV[i+1]-VV[i])*(t-TT[i])/(TT[i+1]-TT[i]);}}return null;}function tOf(v){for(var i=0;i<VV.length-1;i++){if(v>=VV[i]&&v<=VV[i+1]){return TT[i]+(TT[i+1]-TT[i])*(v-VV[i])/(VV[i+1]-VV[i]);}}return null;}var cj2=Number(cj);if(!(cj2>=-100&&cj2<=1200))return {ok:false,msg:'冷端温度超出分度表 −100~1200 ℃ 范围'};var vcj=vOf(cj2);if(String(dir)==='t2v'){var t=Number(temp);if(!(t>=-100&&t<=1200))return {ok:false,msg:'热端温度超出分度表 −100~1200 ℃ 范围，拒绝外推'};var vh=vOf(t);var vm=vh-vcj;return {ok:true,html:'<div class=\"big\">实测电势 = '+F(vm)+' mV</div><div class=\"row\">热端 '+F(t)+' ℃ 对应电势 '+F(vh)+' mV，冷端 '+F(cj2)+' ℃ 电势 '+F(vcj)+' mV，实测 = 热端 − 冷端（分度表插值）</div>'};}var vv=Number(vmv);if(!isFinite(vv))return {ok:false,msg:'热电势无效'};var vh2=vv+vcj;var t3=tOf(vh2);if(t3===null)return {ok:false,msg:'补偿后电势超出分度表 −3.889~48.838 mV 范围，拒绝外推'};return {ok:true,html:'<div class=\"big\">T = '+F(t3)+' ℃</div><div class=\"row\">电势法补偿：实测 '+F(vv)+' mV + 冷端电势 '+F(vcj)+' mV = 热端电势 '+F(vh2)+' mV，再反查分度表</div>'};",
+  test:{inputs:{dir:"t2v",temp:"100",vmv:"3.0845",cj:"0"}, expect:"4.096"}},
+ {id:"yqencoder2", cat:"yqj", icon:"🎯", name:"编码器测速M/T法", desc:"增量编码器 M 法/T 法测速与量化误差（器件侧进阶）",
+  formula:"器件角度（与 djencoder 分辨率换算分工：那边算 CPR/角度，本工具算测速）：M 法（定时间计数）：n = 计数 ÷ (CPR × 门控时间) × 60（r/min），量化误差约 ±1 计数 → 相对误差 ≈ 1÷计数，适合高速；T 法（测脉冲周期）：n = 定时器频率 ÷ (CPR × 周期计数值) × 60，适合低速。CPR = PPR × 倍频后的每转计数",
+  inputs:[
+   {id:"mode", label:"测速方法", type:"select", def:"m", options:[{v:"m",t:"M 法（门控计数）"},{v:"t",t:"T 法（周期计数）"}]},
+   {id:"cpr", label:"每转计数 CPR", unit:"脉冲/转", def:"4096"},
+   {id:"gate", label:"门控时间", unit:"ms", def:"100", when:"mode=m"},
+   {id:"cnt", label:"门控内计数", unit:"个", def:"4096", when:"mode=m"},
+   {id:"ft", label:"定时器频率", unit:"MHz", def:"1", when:"mode=t"},
+   {id:"ncyc", label:"单脉冲周期计数值", unit:"个", def:"10000", when:"mode=t"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var cp=Number(cpr);if(!(cp>=1&&cp<=1e7)||Math.floor(cp)!==cp)return {ok:false,msg:'CPR 须为 1~1e7 的整数'};if(String(mode)==='m'){var g=Number(gate),cn=Number(cnt);if(!(g>0&&g<=60000))return {ok:false,msg:'门控时间须在 0~60000 ms'};if(!(cn>=1&&cn<=1e9)||Math.floor(cn)!==cn)return {ok:false,msg:'计数须为正整数（计数为 0 时 M 法无结果，请延长门控或改用 T 法）'};var rpm=cn/(cp*(g/1000))*60;var err=100/cn;return {ok:true,html:'<div class=\"big\">转速 = '+F(rpm)+' r/min</div><div class=\"row\">M 法：'+cn+' 计数 ÷ ('+cp+' × '+F(g/1000)+' s) × 60；±1 计数量化误差约 '+F(err)+' %，转速越低误差越大</div>'};}var ft2=Number(ft),nc=Number(ncyc);if(!(ft2>0&&ft2<=1000))return {ok:false,msg:'定时器频率须在 0~1000 MHz'};if(!(nc>=1&&nc<=1e12)||Math.floor(nc)!==nc)return {ok:false,msg:'周期计数值须为正整数'};var rpm2=ft2*1e6/(cp*nc)*60;var err2=100/nc;return {ok:true,html:'<div class=\"big\">转速 = '+F(rpm2)+' r/min</div><div class=\"row\">T 法：脉冲频率 = '+F(ft2*1e6/nc)+' Hz；±1 计数误差约 '+F(err2)+' %，高速时周期计数变小、误差增大</div>'};",
+  test:{inputs:{mode:"m",cpr:"4096",gate:"100",cnt:"4096",ft:"1",ncyc:"10000"}, expect:"600"}},
+ {id:"yqvaristor2", cat:"yqj", icon:"⚡", name:"压敏电阻钳位与能量进阶", desc:"按非线性指数估钳位电压、峰值功率与吸收能量",
+  formula:"器件角度进阶版（与 yqmov 按工作电压选压敏电压分工：那边选型，本工具算钳位/能量）：氧化锌压敏伏安非线性 V ∝ I^(1/α)，α 为非线性指数（ZnO 典型 20~50，手册口径）；以 1 mA 点压敏电压 Vn 为基准：Vc = Vn × (Ip÷0.001)^(1/α)；峰值功率 Pp = Vc × Ip；吸收能量按矩形波近似 W ≈ Vc × Ip × tw（tw 为脉冲宽度，8/20µs 波形为等效近似，实际以手册钳位曲线为准）",
+  inputs:[
+   {id:"vn", label:"压敏电压 Vn（1mA）", unit:"V", def:"470"},
+   {id:"ip", label:"浪涌电流 Ip", unit:"A", def:"100"},
+   {id:"alpha", label:"非线性指数 α", def:"30", hint:"ZnO 典型 20~50，按手册填"},
+   {id:"tw", label:"脉冲宽度 tw", unit:"µs", def:"20"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var v=Number(vn),ip2=Number(ip),al=Number(alpha),tw2=Number(tw);if(!(v>0&&v<=1e5))return {ok:false,msg:'压敏电压须在 0~100000 V'};if(!(ip2>=0.001&&ip2<=200000))return {ok:false,msg:'浪涌电流须在 0.001~200000 A（1 mA 以下钳位模型不适用）'};if(!(al>=5&&al<=100))return {ok:false,msg:'非线性指数 α 须在 5~100'};if(!(tw2>0&&tw2<=10000))return {ok:false,msg:'脉冲宽度须在 0~10000 µs'};var vc=v*Math.pow(ip2/0.001,1/al);var pp=vc*ip2;var w=vc*ip2*tw2/1e6;return {ok:true,html:'<div class=\"big\">钳位电压 Vc ≈ '+F(vc)+' V</div><div class=\"row\">峰值功率 Pp = '+F(pp)+' W，吸收能量 W ≈ '+F(w)+' J（矩形波近似，tw = '+F(tw2)+' µs）</div><div class=\"row\">后级器件耐压须高于 Vc 并留裕量；能量须小于器件额定吸收能量，超限须升档或加级间配合</div>'};",
+  test:{inputs:{vn:"470",ip:"100",alpha:"30",tw:"20"}, expect:"689.8657"}},
+ {id:"yqgas", cat:"yqj", icon:"🌫️", name:"MQ气体传感器浓度近似", desc:"由分压输出算 Rs 与 ppm 近似值（须标定）",
+  formula:"器件角度：MQ 系列 Rs 由负载分压反算：Rs = RL × (Vc − Vout) ÷ Vout；浓度按数据手册灵敏度曲线的幂律拟合 ppm = A × (Rs÷R0)^B（A、B 为曲线拟合值节选：LPG 574.25/−2.222、CO 36974/−3.109、烟雾 3616.1/−2.677）。R0 为清洁空气/标定点电阻，必须实测标定；未标定时结果仅作量级参考，温湿度与个体差异可致数倍误差，不可作安全报警依据",
+  inputs:[
+   {id:"gas", label:"目标气体（拟合曲线）", type:"select", def:"lpg", options:[{v:"lpg",t:"液化气 LPG（MQ-2 拟合）"},{v:"co",t:"一氧化碳 CO（MQ-2 拟合）"},{v:"smoke",t:"烟雾（MQ-2 拟合）"}]},
+   {id:"vc", label:"加热/回路电压 Vc", unit:"V", def:"5"},
+   {id:"vout", label:"分压输出 Vout", unit:"V", def:"2.5"},
+   {id:"rl", label:"负载电阻 RL", unit:"kΩ", def:"10"},
+   {id:"r0", label:"标定电阻 R0", unit:"kΩ", def:"10", hint:"标定状态下实测 Rs，按手册标定点填"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var AB={lpg:[574.25,-2.222],co:[36974,-3.109],smoke:[3616.1,-2.677]};var ab=AB[String(gas)];if(!ab)return {ok:false,msg:'请选择气体'};var v=Number(vc),vo=Number(vout),rl2=Number(rl),r02=Number(r0);if(!(v>0&&v<=50))return {ok:false,msg:'回路电压须在 0~50 V'};if(!(vo>0&&vo<v))return {ok:false,msg:'输出电压须大于 0 且小于回路电压（等于或超过时 Rs 无意义）'};if(!(rl2>0))return {ok:false,msg:'负载电阻须大于 0'};if(!(r02>0))return {ok:false,msg:'标定电阻 R0 须大于 0（须实测标定）'};var rs=rl2*(v-vo)/vo;var ratio=rs/r02;if(!(ratio>=0.05&&ratio<=20))return {ok:false,msg:'Rs/R0 = '+F(ratio)+' 超出拟合曲线 0.05~20 适用范围，拒绝外推'};var ppm=ab[0]*Math.pow(ratio,ab[1]);return {ok:true,html:'<div class=\"big\">浓度 ≈ '+F(ppm)+' ppm</div><div class=\"row\">Rs = '+F(rs)+' kΩ，Rs/R0 = '+F(ratio)+'（幂律拟合近似）</div><div class=\"row\">⚠ 必须用已知浓度实测标定 R0 后才有参考意义；预热不足、温湿度变化都会显著改变读数</div>'};",
+  test:{inputs:{gas:"lpg",vc:"5",vout:"2.5",rl:"10",r0:"10"}, expect:"574.25"}},
+ {id:"yqtilt", cat:"yqj", icon:"📐", name:"加速度计静态倾角", desc:"由三轴加速度算俯仰角、横滚角与总倾角",
+  formula:"器件角度：静态（无动态加速度）时重力在三轴投影：俯仰 pitch = atan2(−ax, √(ay²+az²))，横滚 roll = atan2(ay, az)，总倾角 = acos(az÷|a|)，输入单位 g。合加速度 |a| 应 ≈ 1 g，偏离 0.8~1.2 g 说明存在振动/动态加速度，角度不可信（仅提示，不拒绝）",
+  inputs:[
+   {id:"ax", label:"X 轴加速度 ax", unit:"g", def:"-0.5"},
+   {id:"ay", label:"Y 轴加速度 ay", unit:"g", def:"0"},
+   {id:"az", label:"Z 轴加速度 az", unit:"g", def:"0.8660254"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax2=Math.abs(x);if(ax2>=1e7||ax2<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var x=Number(ax),y=Number(ay),z=Number(az);if(!isFinite(x)||!isFinite(y)||!isFinite(z))return {ok:false,msg:'三轴读数须为数字'};if(Math.abs(x)>20||Math.abs(y)>20||Math.abs(z)>20)return {ok:false,msg:'读数超出 ±20 g 合理量程'};var mag=Math.sqrt(x*x+y*y+z*z);if(!(mag>0.01))return {ok:false,msg:'合加速度过小（接近失重/无数据），无法解算倾角'};var pitch=Math.atan2(-x,Math.sqrt(y*y+z*z))*180/Math.PI;var roll=Math.atan2(y,z)*180/Math.PI;var cz=z/mag;if(cz>1)cz=1;if(cz<-1)cz=-1;var incl=Math.acos(cz)*180/Math.PI;var warn=(mag<0.8||mag>1.2)?'<div class=\"row\">⚠ 合加速度 '+F(mag)+' g 偏离 1 g，可能有振动或动态运动，静态倾角口径不成立</div>':'';return {ok:true,html:'<div class=\"big\">俯仰 pitch = '+pitch.toFixed(2)+'°</div><div class=\"row\">横滚 roll = '+roll.toFixed(2)+'°，距竖直总倾角 = '+incl.toFixed(2)+'°，合加速度 '+F(mag)+' g</div>'+warn};",
+  test:{inputs:{ax:"-0.5",ay:"0",az:"0.8660254"}, expect:"30.00"}},
+ {id:"yqgyro", cat:"yqj", icon:"🧭", name:"陀螺仪零偏标度修正", desc:"零偏与标度因数误差修正、积分漂移估算",
+  formula:"器件角度口径计算：修正角速度 ω = (原始读数 − 零偏) ÷ (1 + 标度误差%)；积分角度 = ω × 时间；未修正时零偏单独造成的漂移 = 零偏 × 时间。零偏须静止采样实测，标度误差按转台/已知转角标定；温漂会使零偏随温度变化，本工具为单点标定口径",
+  inputs:[
+   {id:"raw", label:"原始角速度读数", unit:"°/s", def:"101"},
+   {id:"bias", label:"零偏（静止实测）", unit:"°/s", def:"1"},
+   {id:"sf", label:"标度因数误差", unit:"%", def:"1", hint:"可正可负，按标定填"},
+   {id:"dur", label:"积分时长", unit:"s", def:"10"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var r=Number(raw),b=Number(bias),s=Number(sf),d=Number(dur);if(!isFinite(r)||Math.abs(r)>10000)return {ok:false,msg:'角速度读数超出 ±10000 °/s 合理量程'};if(!isFinite(b)||Math.abs(b)>1000)return {ok:false,msg:'零偏超出 ±1000 °/s 合理范围'};if(!(s>-90&&s<=100))return {ok:false,msg:'标度误差须在 −90%~100%（接近 −100% 时修正发散）'};if(!(d>=0&&d<=86400))return {ok:false,msg:'时长须在 0~86400 s'};var w=(r-b)/(1+s/100);return {ok:true,html:'<div class=\"big\">修正角速度 = '+F(w)+' °/s</div><div class=\"row\">积分 '+F(d)+' s：修正后角度 '+F(w*d)+'°，未修正 '+F(r*d)+'°；其中零偏漂移占 '+F(b*d)+'°</div><div class=\"row\">长时间积分漂移主要由零偏决定，须静止重标或与加速度计/磁力计融合</div>'};",
+  test:{inputs:{raw:"101",bias:"1",sf:"1",dur:"10"}, expect:"99.0099"}},
+ {id:"yqpressure2", cat:"yqj", icon:"🌡️", name:"压阻压力传感器桥式输出", desc:"mV/V 灵敏度桥式压力传感器输出与反算（器件侧）",
+  formula:"器件角度（与 dz 桥路分析、yqstrain 应变片分工：本工具是压阻式压力传感器器件口径）：满量程输出 FSO（mV/V）× 激励电压 = 满量程毫伏输出；Vout = 零点偏置 + FSO × Vex × (P÷Pfs)，线性器件口径；反算 P = (Vout − 偏置) ÷ (FSO × Vex) × Pfs。超量程 1.5 倍拒绝（过压可能损坏膜片）",
+  inputs:[
+   {id:"mode", label:"计算方向", type:"select", def:"f", options:[{v:"f",t:"压力 → 输出电压"},{v:"r",t:"输出电压 → 压力"}]},
+   {id:"fso", label:"满量程灵敏度 FSO", unit:"mV/V", def:"2"},
+   {id:"vex", label:"桥路激励电压 Vex", unit:"V", def:"5"},
+   {id:"pfs", label:"满量程压力 Pfs", unit:"kPa", def:"100"},
+   {id:"off", label:"零点偏置", unit:"mV", def:"0"},
+   {id:"p", label:"被测压力 P", unit:"kPa", def:"50", when:"mode=f"},
+   {id:"vmv", label:"实测输出 Vout", unit:"mV", def:"5", when:"mode=r"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var fs=Number(fso),vx=Number(vex),pf=Number(pfs),of=Number(off);if(!(fs>0&&fs<=100))return {ok:false,msg:'FSO 须在 0~100 mV/V'};if(!(vx>0&&vx<=50))return {ok:false,msg:'激励电压须在 0~50 V'};if(!(pf>0))return {ok:false,msg:'满量程压力须大于 0'};if(!isFinite(of)||Math.abs(of)>1000)return {ok:false,msg:'零点偏置超出合理范围'};var fsMv=fs*vx;if(String(mode)==='f'){var pp=Number(p);if(!(pp>=0))return {ok:false,msg:'表压不能为负（负压型请用差压/绝压口径核对）'};if(pp>1.5*pf)return {ok:false,msg:'压力超过量程 1.5 倍，拒绝计算（过压有损坏膜片风险）'};var vo=of+fsMv*pp/pf;return {ok:true,html:'<div class=\"big\">Vout = '+F(vo)+' mV</div><div class=\"row\">满量程输出 = '+F(fs)+' mV/V × '+F(vx)+' V = '+F(fsMv)+' mV；P/Pfs = '+F(pp/pf)+'，另加零点偏置 '+F(of)+' mV</div>'};}var vm=Number(vmv);if(!isFinite(vm))return {ok:false,msg:'输出电压无效'};var pr=(vm-of)/fsMv*pf;if(!(pr>=0&&pr<=1.5*pf))return {ok:false,msg:'该输出反算压力 '+F(pr)+' kPa 超出 0~1.5 倍量程范围，请核对偏置与接线'};return {ok:true,html:'<div class=\"big\">P = '+F(pr)+' kPa</div><div class=\"row\">由 (Vout − 偏置) ÷ 满量程输出 × Pfs 反算，满量程输出 '+F(fsMv)+' mV</div>'};",
+  test:{inputs:{mode:"f",fso:"2",vex:"5",pfs:"100",off:"0",p:"50",vmv:"5"}, expect:"5 mV"}}
+);
+TOOLS.push(
+ {id:"yqloadcell", cat:"yqj", icon:"⚖️", name:"称重传感器输出与分度", desc:"额定量程/灵敏度算输出电压与每分度微伏数",
+  formula:"器件角度：称重传感器满量程输出 = 灵敏度（mV/V）× 激励电压（mV）；Vout = 满量程输出 × (载荷÷额定量程)；每分度信号 = 满量程输出(µV) ÷ 检定分度数 n。分度信号过小（如 <0.5 µV）时仪表噪声与温漂难以保证分度精度（经验提示口径）",
+  inputs:[
+   {id:"mode", label:"计算方向", type:"select", def:"f", options:[{v:"f",t:"载荷 → 输出"},{v:"r",t:"输出 → 载荷"}]},
+   {id:"cap", label:"额定量程", unit:"kg", def:"100"},
+   {id:"sens", label:"灵敏度", unit:"mV/V", def:"2"},
+   {id:"vex", label:"激励电压", unit:"V", def:"10"},
+   {id:"ndiv", label:"检定分度数 n", def:"3000"},
+   {id:"load", label:"载荷", unit:"kg", def:"50", when:"mode=f"},
+   {id:"vmv", label:"实测输出", unit:"mV", def:"10", when:"mode=r"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var cp=Number(cap),sn=Number(sens),vx=Number(vex),nd=Number(ndiv);if(!(cp>0&&cp<=1e7))return {ok:false,msg:'额定量程须在 0~1e7 kg'};if(!(sn>0&&sn<=20))return {ok:false,msg:'灵敏度须在 0~20 mV/V'};if(!(vx>0&&vx<=50))return {ok:false,msg:'激励电压须在 0~50 V（过高会使传感器自热）'};if(!(nd>=100&&nd<=30000)||Math.floor(nd)!==nd)return {ok:false,msg:'分度数须为 100~30000 的整数'};var fsMv=sn*vx;var upd=fsMv*1000/nd;if(String(mode)==='f'){var ld=Number(load);if(!(ld>=0))return {ok:false,msg:'载荷不能为负'};if(ld>1.5*cp)return {ok:false,msg:'载荷超过量程 1.5 倍，拒绝计算（超载有损坏风险）'};var vo=fsMv*ld/cp;return {ok:true,html:'<div class=\"big\">Vout = '+F(vo)+' mV</div><div class=\"row\">满量程输出 '+F(fsMv)+' mV（'+F(sn)+' mV/V × '+F(vx)+' V）；每分度信号 '+F(upd)+' µV'+(upd<0.5?'，低于 0.5 µV，分度精度难以保证':'')+'</div>'};}var vm=Number(vmv);if(!isFinite(vm)||vm<0)return {ok:false,msg:'输出电压不能为负'};var ld2=vm/fsMv*cp;if(ld2>1.5*cp)return {ok:false,msg:'该输出反算载荷超过量程 1.5 倍，请核对接线与激励'};return {ok:true,html:'<div class=\"big\">载荷 = '+F(ld2)+' kg</div><div class=\"row\">由 Vout ÷ 满量程输出 × 量程反算；每分度信号 '+F(upd)+' µV</div>'};",
+  test:{inputs:{mode:"f",cap:"100",sens:"2",vex:"10",ndiv:"3000",load:"50",vmv:"10"}, expect:"10 mV"}},
+ {id:"yqprox", cat:"yqj", icon:"📡", name:"接近开关有效感应距离", desc:"按被测金属材料折减系数算有效感应距离",
+  formula:"器件角度口径：电感式接近开关额定距离 Sn 以标准钢靶（Fe360）标定，其他金属按折减系数修正 Se = Sn × k（系数为厂家样本节选典型值：不锈钢 0.75、黄铜 0.45、铝 0.40、铜 0.30）；非金属/电容式不适用本表。实际安装还受齐平/非齐平安装与温度影响，判定留 10% 动作余量提示",
+  inputs:[
+   {id:"sn", label:"额定感应距离 Sn", unit:"mm", def:"8"},
+   {id:"mat", label:"被测材料", type:"select", def:"alu", options:[{v:"steel",t:"碳钢（k=1.00，标准靶）"},{v:"ss",t:"不锈钢（k=0.75）"},{v:"brass",t:"黄铜（k=0.45）"},{v:"alu",t:"铝（k=0.40）"},{v:"cu",t:"铜（k=0.30）"}]},
+   {id:"dist", label:"实际安装距离", unit:"mm", def:"3"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var K={steel:1,ss:0.75,brass:0.45,alu:0.4,cu:0.3};var k=K[String(mat)];if(k===undefined)return {ok:false,msg:'请选择材料'};var s=Number(sn),d=Number(dist);if(!(s>0&&s<=500))return {ok:false,msg:'额定距离须在 0~500 mm'};if(!(d>=0))return {ok:false,msg:'安装距离不能为负'};var se=s*k;var ok=d<=se;var tight=ok&&d>0.9*se;return {ok:true,html:'<div class=\"big\">有效感应距离 Se = '+F(se)+' mm</div><div class=\"row\">Sn '+F(s)+' mm × 材料系数 '+k+'；安装距离 '+F(d)+' mm：'+(ok?(tight?'可检出但余量不足 10%，振动下可能误动作':'✅ 可靠检出'):'❌ 超出有效距离，检不出')+'</div><div class=\"row\">系数为样本节选典型值，具体型号以厂家曲线为准</div>'};",
+  test:{inputs:{sn:"8",mat:"alu",dist:"3"}, expect:"3.2"}},
+ {id:"yqbuzz", cat:"yqj", icon:"🔔", name:"蜂鸣器驱动与声压", desc:"有源蜂鸣器降压电阻、三极管基极电阻与声压衰减",
+  formula:"器件角度（与 yqspk 扬声器灵敏度口径分工：本工具是有源蜂鸣器驱动电路）：Vs 高于额定 Vb 时串联电阻 R = (Vs − Vb) ÷ Ib；三极管饱和驱动按强制 β=10 取基极电流 Ibq = Ib÷10，基极电阻 Rb = (Vs − 0.7) ÷ Ibq；声压按距离衰减 SPL(d) = SPL0 − 20·log10(d÷d0)，SPL0 为样本标称（如 85 dB @10 cm）",
+  inputs:[
+   {id:"vs", label:"电源电压 Vs", unit:"V", def:"5"},
+   {id:"vb", label:"蜂鸣器额定电压 Vb", unit:"V", def:"5"},
+   {id:"ib", label:"蜂鸣器额定电流 Ib", unit:"mA", def:"30"},
+   {id:"spl", label:"标称声压 SPL0", unit:"dB", def:"85"},
+   {id:"d0", label:"标称距离 d0", unit:"cm", def:"10"},
+   {id:"d", label:"实际距离 d", unit:"cm", def:"100"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var s=Number(vs),b=Number(vb),im=Number(ib),sp=Number(spl),d0v=Number(d0),dv=Number(d);if(!(s>0&&s<=60))return {ok:false,msg:'电源电压须在 0~60 V'};if(!(b>0&&b<=60))return {ok:false,msg:'额定电压须在 0~60 V'};if(s<b)return {ok:false,msg:'电源电压低于蜂鸣器额定电压，响度不足，请换低压规格或升压'};if(!(im>0&&im<=2000))return {ok:false,msg:'额定电流须在 0~2000 mA'};if(!isFinite(sp))return {ok:false,msg:'声压须为数字'};if(!(d0v>0&&dv>0))return {ok:false,msg:'距离须大于 0'};var rser=s>b?(s-b)/(im/1000):0;var rb=(s-0.7)/((im/10)/1000);if(!(rb>0))return {ok:false,msg:'电源电压过低，无法按饱和口径取基极电阻'};var spl2=sp-20*Math.log10(dv/d0v);return {ok:true,html:'<div class=\"big\">'+F(dv)+' cm 处声压 ≈ '+F(spl2)+' dB</div><div class=\"row\">'+(s>b?'需串联降压电阻 R = '+F(rser)+' Ω（功耗 '+F((s-b)*im/1000)+' W）':'Vs = Vb，可直接驱动（仍建议三极管扩流）')+'；三极管基极电阻 Rb ≈ '+F(rb)+' Ω（强制 β=10 口径）</div><div class=\"row\">GPIO 引脚电流不足时必须经三极管/MOS 驱动，并联续流或 RC 抑制感性尖峰（电磁式）</div>'};",
+  test:{inputs:{vs:"5",vb:"5",ib:"30",spl:"85",d0:"10",d:"100"}, expect:"65"}},
+ {id:"yqstepdrv", cat:"yqj", icon:"🦶", name:"步进驱动器电流设定", desc:"A4988/DRV8825 由 Vref 与采样电阻算斩波电流（驱动器侧）",
+  formula:"驱动器角度（与 djstepdiv 电机细分、djstepper2 矩频分工：本工具只算驱动器电流设定）：A4988 模块口径 Itrip = Vref ÷ (8 × Rs)；DRV8825 模块口径 Itrip = Vref ÷ (5 × Rs)（Rs 为采样电阻，模块常见 0.068/0.1 Ω，以板上丝印为准）；并反算达到电机额定电流所需的 Vref。电流设定超过电机额定会发热退磁，不足会丢步",
+  inputs:[
+   {id:"drv", label:"驱动器", type:"select", def:"a4988", options:[{v:"a4988",t:"A4988（I = Vref÷(8Rs)）"},{v:"drv8825",t:"DRV8825（I = Vref÷(5Rs)）"}]},
+   {id:"vref", label:"设定电压 Vref", unit:"V", def:"0.8"},
+   {id:"rs", label:"采样电阻 Rs", unit:"Ω", def:"0.1"},
+   {id:"irate", label:"电机额定电流", unit:"A", def:"1.5"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var k=String(drv)==='drv8825'?5:8;var v=Number(vref),rs2=Number(rs),ir=Number(irate);if(!(v>=0&&v<=5))return {ok:false,msg:'Vref 须在 0~5 V（超出常见调节范围）'};if(!(rs2>0&&rs2<=2))return {ok:false,msg:'采样电阻须在 0~2 Ω'};if(!(ir>0&&ir<=20))return {ok:false,msg:'电机额定电流须在 0~20 A'};var i=v/(k*rs2);var vneed=ir*k*rs2;var vd=i>ir?'⚠ 设定电流超过电机额定 '+F(ir)+' A，电机将过热':(i<0.7*ir?'⚠ 设定电流不足额定 70%，高转矩下易丢步':'✅ 在额定电流附近');return {ok:true,html:'<div class=\"big\">斩波电流 Itrip = '+F(i)+' A</div><div class=\"row\">口径 I = Vref ÷ ('+k+' × Rs)；达到额定 '+F(ir)+' A 需 Vref = '+F(vneed)+' V</div><div class=\"row\">判定：'+vd+'；调节 Vref 时用绝缘螺丝刀并实测，勿带电拔插电机</div>'};",
+  test:{inputs:{drv:"a4988",vref:"0.8",rs:"0.1",irate:"1.5"}, expect:"1 A"}},
+ {id:"yqbldc2", cat:"yqj", icon:"🌀", name:"无刷电机KV与电频率", desc:"由 KV 值算空载转速、电角频率与转矩常数",
+  formula:"器件角度（与 dj 电机机械侧分工）：空载转速 n ≈ KV × V（KV 单位 r/min/V，实际带载约低 10%~20%）；电角频率 fe = (n÷60) × 极对数；机械角速度 ω = 2πn÷60；转矩常数 Kt = 60 ÷ (2π × KV)（N·m/A，与反电势常数 SI 等值）。极数须为偶数",
+  inputs:[
+   {id:"kv", label:"KV 值", unit:"r/min/V", def:"1000"},
+   {id:"volt", label:"供电电压", unit:"V", def:"12"},
+   {id:"poles", label:"极数（偶数）", def:"14"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var k=Number(kv),v=Number(volt),pl=Number(poles);if(!(k>0&&k<=100000))return {ok:false,msg:'KV 须在 0~100000'};if(!(v>0&&v<=500))return {ok:false,msg:'电压须在 0~500 V'};if(!(pl>=2&&pl<=64)||Math.floor(pl)!==pl||pl%2!==0)return {ok:false,msg:'极数须为 2~64 的偶数'};var rpm=k*v;var fe=rpm/60*(pl/2);var om=2*Math.PI*rpm/60;var kt=60/(2*Math.PI*k);return {ok:true,html:'<div class=\"big\">空载转速 ≈ '+F(rpm)+' r/min</div><div class=\"row\">电角频率 fe = '+F(fe)+' Hz（极对数 '+pl/2+'）；机械角速度 '+F(om)+' rad/s；转矩常数 Kt ≈ '+kt.toFixed(6)+' N·m/A</div><div class=\"row\">带载转速约为空载的 80%~90%；电调换相频率即 fe，选电调须覆盖</div>'};",
+  test:{inputs:{kv:"1000",volt:"12",poles:"14"}, expect:"12000"}},
+ {id:"yqfuse2", cat:"yqj", icon:"🧨", name:"熔断器熔断时间与分断校核", desc:"器件级：由熔化 I²t 反算熔断时间并校核分断能力",
+  formula:"器件角度（与 dgfuse 按负载选额定电流、dgfuse2 与电缆的 I²t 配合校验分工：本工具算熔断时间与分断能力）：绝热近似下熔化 I²t 近似恒定，熔断时间 t = 熔化 I²t ÷ 故障电流²（该口径在短时大电流段较准，长于约 100 ms 后散热不可忽略、实际时间更长）；分断校核：预期短路电流必须小于熔断器额定分断能力，否则拒绝（可能炸管/持续燃弧）",
+  inputs:[
+   {id:"i2t", label:"熔化 I²t", unit:"A²s", def:"100"},
+   {id:"ifault", label:"故障电流", unit:"A", def:"100"},
+   {id:"ibreak", label:"额定分断能力", unit:"kA", def:"50"},
+   {id:"isc", label:"预期短路电流", unit:"kA", def:"10"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var q=Number(i2t),iv=Number(ifault),br=Number(ibreak),sc=Number(isc);if(!(q>0&&q<=1e12))return {ok:false,msg:'熔化 I²t 须在 0~1e12 A²s'};if(!(iv>0&&iv<=1e6))return {ok:false,msg:'故障电流须在 0~1e6 A'};if(!(br>0))return {ok:false,msg:'分断能力须大于 0'};if(!(sc>=0))return {ok:false,msg:'预期短路电流不能为负'};if(sc>br)return {ok:false,msg:'分断能力不足：预期短路电流 '+F(sc)+' kA 超过额定分断 '+F(br)+' kA，必须换高分断规格'};var t=q/(iv*iv);var tms=t*1000;return {ok:true,html:'<div class=\"big\">熔断时间 ≈ '+F(tms)+' ms</div><div class=\"row\">t = I²t ÷ I² = '+F(q)+' ÷ '+F(iv)+'² = '+F(t)+' s；分断校核 ✅ 预期 '+F(sc)+' kA ≤ 额定 '+F(br)+' kA</div><div class=\"row\">'+(t>0.1?'⚠ 时间长于约 100 ms，散热使恒定 I²t 近似误差变大，实际以时间-电流曲线为准':'短时段绝热近似较可信，精细配合仍以厂家时间-电流曲线为准')+'</div>'};",
+  test:{inputs:{i2t:"100",ifault:"100",ibreak:"50",isc:"10"}, expect:"10 ms"}},
+ {id:"yqdiode2", cat:"yqj", icon:"➡️", name:"二极管导通与恢复损耗进阶", desc:"肖特基/快恢复二极管导通损耗与反向恢复损耗",
+  formula:"器件角度进阶版（与 yqdiode 简单 Vf×I 分工）：导通模型 Vf = V0 + rd×If，导通损耗 Pcond = V0×Iavg + rd×Irms²（V0 为门槛电压，rd 为微分电阻，按手册 Vf 曲线两点拟合）；反向恢复损耗 Prr ≈ Qrr × Vr × fsw（Qrr 为恢复电荷，肖特基近似为零、快恢复/普通管不可忽略）。总损耗 = Pcond + Prr，结温另按热阻校核",
+  inputs:[
+   {id:"v0", label:"门槛电压 V0", unit:"V", def:"0.4"},
+   {id:"rd", label:"微分电阻 rd", unit:"mΩ", def:"10"},
+   {id:"iavg", label:"平均电流 Iavg", unit:"A", def:"10"},
+   {id:"irms", label:"有效值电流 Irms", unit:"A", def:"10"},
+   {id:"qrr", label:"恢复电荷 Qrr", unit:"nC", def:"0", hint:"肖特基填 0"},
+   {id:"vr", label:"反向电压 Vr", unit:"V", def:"50"},
+   {id:"fsw", label:"开关频率 fsw", unit:"kHz", def:"100"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var v=Number(v0),r=Number(rd),ia=Number(iavg),ir2=Number(irms),q=Number(qrr),vr2=Number(vr),f=Number(fsw);if(!(v>=0&&v<=5))return {ok:false,msg:'门槛电压须在 0~5 V'};if(!(r>=0&&r<=10000))return {ok:false,msg:'微分电阻须在 0~10000 mΩ'};if(!(ia>=0&&ia<=10000))return {ok:false,msg:'平均电流须在 0~10000 A'};if(!(ir2>=0&&ir2<=10000))return {ok:false,msg:'有效值电流须在 0~10000 A'};if(ir2<ia)return {ok:false,msg:'有效值电流不应小于平均电流（波形系数 ≥1），请核对'};if(!(q>=0&&q<=1e6))return {ok:false,msg:'恢复电荷须在 0~1e6 nC'};if(!(vr2>=0&&vr2<=10000))return {ok:false,msg:'反向电压须在 0~10000 V'};if(!(f>=0&&f<=100000))return {ok:false,msg:'开关频率须在 0~100000 kHz'};var pc=v*ia+(r/1000)*ir2*ir2;var pr=q*vr2*f*1e-6;var tot=pc+pr;return {ok:true,html:'<div class=\"big\">总损耗 = '+F(tot)+' W</div><div class=\"row\">导通损耗 Pcond = V0×Iavg + rd×Irms² = '+F(pc)+' W；恢复损耗 Prr = Qrr×Vr×fsw = '+F(pr)+' W</div><div class=\"row\">高频下恢复损耗占比上升，肖特基无恢复损耗但反向漏电大，选型须兼顾耐压与漏电</div>'};",
+  test:{inputs:{v0:"0.4",rd:"10",iavg:"10",irms:"10",qrr:"0",vr:"50",fsw:"100"}, expect:"5 W"}},
+ {id:"yqtvs", cat:"yqj", icon:"⚡", name:"信号线TVS结电容选型", desc:"高速信号线 TVS 结电容对带宽/上升时间的影响（器件侧）",
+  formula:"器件角度（与 dztvs 电源线 TVS 的 Vrwm/峰值功率校核分工：本工具算信号线结电容影响）：TVS 结电容 Cj 与源阻抗 Rs 构成低通：f3dB = 1 ÷ (2π·Rs·Cj)，10%~90% 上升时间 tr ≈ 2.2·Rs·Cj；tr 应明显小于码元周期 UI（经验取 tr < 0.3×UI）。电源线大功率 TVS 的 Cj 常达数百 pF 以上，不可用于高速信号线，须选低电容（<1~15 pF）型号",
+  inputs:[
+   {id:"cj", label:"TVS 结电容 Cj", unit:"pF", def:"15"},
+   {id:"rs", label:"信号源阻抗 Rs", unit:"Ω", def:"50"},
+   {id:"rate", label:"信号速率", unit:"Mbps", def:"480"},
+   {id:"vw", label:"线路工作电压", unit:"V", def:"5"},
+   {id:"vrwm", label:"TVS 反向关断 Vrwm", unit:"V", def:"5.5"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var c=Number(cj),r=Number(rs),rt=Number(rate),v=Number(vw),vr2=Number(vrwm);if(!(c>0&&c<=100000))return {ok:false,msg:'结电容须在 0~100000 pF'};if(!(r>0&&r<=10000))return {ok:false,msg:'源阻抗须在 0~10000 Ω'};if(!(rt>0&&rt<=1000000))return {ok:false,msg:'速率须在 0~1000000 Mbps'};if(!(v>0))return {ok:false,msg:'工作电压须大于 0'};if(!(vr2>=v))return {ok:false,msg:'Vrwm 低于线路工作电压，TVS 会在正常信号下漏电/钳位，必须换高 Vrwm 规格'};var f3=1/(2*Math.PI*r*c*1e-12)/1e6;var tr=2.2*r*c*1e-12*1e9;var ui=1000/rt;var ok=tr<0.3*ui;return {ok:true,html:'<div class=\"big\">带宽 f3dB ≈ '+F(f3)+' MHz</div><div class=\"row\">上升时间 tr ≈ '+F(tr)+' ns，码元周期 UI = '+F(ui)+' ns：'+(ok?'✅ tr < 0.3×UI，电容影响可接受':'❌ tr 过大将闭合眼图，须换更低结电容 TVS')+'</div><div class=\"row\">Vrwm '+F(vr2)+' V ≥ 工作电压 '+F(v)+' V ✅；差分线还要求两线电容匹配</div>'};",
+  test:{inputs:{cj:"15",rs:"50",rate:"480",vw:"5",vrwm:"5.5"}, expect:"212.2066"}},
+ {id:"yqcommonmode", cat:"yqj", icon:"🧲", name:"共模电感阻抗与插损", desc:"共模电感感抗与 50Ω 系统插入损耗近似",
+  formula:"器件角度口径：共模电感在电感主导频段的共模阻抗近似 Z ≈ XL = 2πfL（L 为共模电感量）；50 Ω 测试系统（源/负载各 50 Ω）插入损耗近似 IL = 20·log10(1 + Z ÷ (2×50))。高频段绕组寄生电容使阻抗见顶回落，本近似仅在电感主导段成立，选型以厂家共模阻抗曲线为准；差模信号因磁通抵消基本不受影响",
+  inputs:[
+   {id:"lmh", label:"共模电感量 L", unit:"mH", def:"0.1"},
+   {id:"f", label:"噪声频率 f", unit:"MHz", def:"1"},
+   {id:"z0", label:"系统阻抗 Z0（单端）", unit:"Ω", def:"50"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var l=Number(lmh),f2=Number(f),z=Number(z0);if(!(l>0&&l<=1000))return {ok:false,msg:'电感量须在 0~1000 mH'};if(!(f2>0&&f2<=10000))return {ok:false,msg:'频率须在 0~10000 MHz'};if(!(z>0))return {ok:false,msg:'系统阻抗须大于 0'};var xl=2*Math.PI*f2*1e6*l*1e-3;var il=20*Math.log10(1+xl/(2*z));return {ok:true,html:'<div class=\"big\">插损 IL ≈ '+F(il)+' dB</div><div class=\"row\">共模感抗 XL = 2πfL = '+F(xl)+' Ω（f = '+F(f2)+' MHz，L = '+F(l)+' mH）；IL = 20log10(1 + XL÷(2×'+F(z)+'))</div><div class=\"row\">寄生电容会限制高频效果，布局上共模电感两侧走线勿跨接耦合</div>'};",
+  test:{inputs:{lmh:"0.1",f:"1",z0:"50"}, expect:"17.2464"}}
+);
+TOOLS.push(
+ {id:"yqferrite2", cat:"yqj", icon:"🍩", name:"铁氧体磁环AL值与匝数", desc:"由 AL 值算电感/匝数并校核磁通密度（磁环器件）",
+  formula:"器件角度（与 yqbead 磁珠阻抗口径分工：磁珠看高频阻抗，本工具是磁环电感设计）：L = AL × N²（AL 单位 nH/匝²，手册给定）；反算 N = √(L÷AL) 向上取整；磁通密度校核 B = L×I ÷ (N × Ae)（SI），B 超过材料饱和磁密（铁氧体典型约 0.3~0.5 T）会饱和、感量骤降",
+  inputs:[
+   {id:"mode", label:"计算方向", type:"select", def:"nl", options:[{v:"nl",t:"匝数 → 电感"},{v:"ln",t:"目标电感 → 匝数"}]},
+   {id:"al", label:"电感系数 AL", unit:"nH/匝²", def:"1000"},
+   {id:"n", label:"匝数 N", unit:"匝", def:"10", when:"mode=nl"},
+   {id:"luh", label:"目标电感 L", unit:"µH", def:"100", when:"mode=ln"},
+   {id:"ae", label:"磁芯截面积 Ae", unit:"cm²", def:"1"},
+   {id:"imax", label:"最大电流 I", unit:"A", def:"1"},
+   {id:"bsat", label:"饱和磁密 Bsat", unit:"T", def:"0.4"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var al2=Number(al),ae2=Number(ae),im=Number(imax),bs=Number(bsat);if(!(al2>0&&al2<=1e6))return {ok:false,msg:'AL 须在 0~1e6 nH/匝²'};if(!(ae2>0))return {ok:false,msg:'截面积须大于 0'};if(!(im>=0))return {ok:false,msg:'电流不能为负'};if(!(bs>0&&bs<=2))return {ok:false,msg:'饱和磁密须在 0~2 T'};var nn,luh2;if(String(mode)==='nl'){nn=Number(n);if(!(nn>=1&&nn<=10000)||Math.floor(nn)!==nn)return {ok:false,msg:'匝数须为 1~10000 的整数'};luh2=al2*nn*nn/1000;}else{var lt=Number(luh);if(!(lt>0&&lt<=1e9))return {ok:false,msg:'目标电感须在 0~1e9 µH'};nn=Math.ceil(Math.sqrt(lt*1000/al2));luh2=al2*nn*nn/1000;}var lh=luh2*1e-6;var bb=nn>0?lh*im/(nn*ae2*1e-4):0;return {ok:true,html:'<div class=\"big\">L = '+F(luh2)+' µH（N = '+nn+' 匝）</div><div class=\"row\">B = L×I÷(N×Ae) = '+F(bb)+' T @ '+F(im)+' A：'+(bb>bs?'❌ 超过 Bsat '+F(bs)+' T，将饱和，须加匝/换大磁芯/开气隙':'✅ 未超 Bsat '+F(bs)+' T')+'</div><div class=\"row\">AL 随材料与温度有公差（常见 ±25%），批量设计留裕量</div>'};",
+  test:{inputs:{mode:"nl",al:"1000",n:"10",luh:"100",ae:"1",imax:"1",bsat:"0.4"}, expect:"100"}},
+ {id:"yqtransformer2", cat:"yqj", icon:"🔄", name:"小变压器匝比与阻抗变换", desc:"匝数比算次级电压、反射阻抗与次级电流",
+  formula:"器件角度（与 yqturns 每伏匝数/铁芯设计分工：那边算绕多少匝，本工具算匝比变换关系）：理想变压器 Vs = Vp × (Ns÷Np)；阻抗反射 Zp = ZL × (Np÷Ns)²；电流 Is = Ip × (Np÷Ns)；容量 VA ≈ Vp × Ip。实际变压器有铜损铁损与漏感，负载调整率另计，本工具为理想口径",
+  inputs:[
+   {id:"np", label:"初级匝数 Np", unit:"匝", def:"1000"},
+   {id:"ns", label:"次级匝数 Ns", unit:"匝", def:"100"},
+   {id:"vp", label:"初级电压 Vp", unit:"V", def:"220"},
+   {id:"zl", label:"次级负载阻抗 ZL", unit:"Ω", def:"8"},
+   {id:"ip", label:"初级电流 Ip", unit:"A", def:"0.5"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var a=Number(np),b=Number(ns),v=Number(vp),z=Number(zl),i=Number(ip);if(!(a>=1&&a<=1e7)||Math.floor(a)!==a)return {ok:false,msg:'初级匝数须为正整数'};if(!(b>=1&&b<=1e7)||Math.floor(b)!==b)return {ok:false,msg:'次级匝数须为正整数'};if(!(v>0&&v<=100000))return {ok:false,msg:'初级电压须在 0~100000 V'};if(!(z>0))return {ok:false,msg:'负载阻抗须大于 0（短路时本理想模型不适用）'};if(!(i>=0&&i<=10000))return {ok:false,msg:'初级电流须在 0~10000 A'};var vs=v*b/a;var zp=z*(a/b)*(a/b);var is2=i*a/b;return {ok:true,html:'<div class=\"big\">Vs = '+F(vs)+' V</div><div class=\"row\">匝比 Np:Ns = '+F(a/b)+' : 1；反射到初级的阻抗 Zp = '+F(zp)+' Ω；次级电流 Is ≈ '+F(is2)+' A，容量约 '+F(v*i)+' VA（理想口径）</div>'};",
+  test:{inputs:{np:"1000",ns:"100",vp:"220",zl:"8",ip:"0.5"}, expect:"800"}},
+ {id:"yqbattery3", cat:"yqj", icon:"🔋", name:"纽扣/锂电池寿命估算", desc:"计入自放电与可用容量比的电池工作寿命",
+  formula:"器件角度（与 dz 电池 Peukert/内阻、dzbattsp 等电路侧分工：本工具是小容量一次/二次电池器件寿命口径）：自放电等效电流 Isd = 容量 × 年自放电率 ÷ 8760 h；可用容量 = 标称容量 × 可用比（脉冲负载/低温会降低可用比，按样本填）；寿命 = 可用容量 ÷ (平均负载电流 + Isd)。纽扣电池参考容量节选：CR2032 约 220 mAh、CR2450 约 600 mAh（IEC 标称口径，以厂家样本为准）",
+  inputs:[
+   {id:"cap", label:"标称容量", unit:"mAh", def:"220", hint:"CR2032 约 220、CR2450 约 600"},
+   {id:"load", label:"平均负载电流", unit:"µA", def:"10"},
+   {id:"sd", label:"年自放电率", unit:"%/年", def:"1"},
+   {id:"util", label:"可用容量比", unit:"%", def:"90", hint:"连续小电流接近 100%，脉冲/低温调低"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var c=Number(cap),ld=Number(load),sd2=Number(sd),ut=Number(util);if(!(c>0&&c<=1000000))return {ok:false,msg:'容量须在 0~1000000 mAh'};if(!(ld>=0&&ld<=1e7))return {ok:false,msg:'负载电流须在 0~1e7 µA'};if(!(sd2>=0&&sd2<=100))return {ok:false,msg:'自放电率须在 0~100 %/年'};if(!(ut>0&&ut<=100))return {ok:false,msg:'可用容量比须在 0~100 %'};var isd=c*(sd2/100)/8760*1000;var tot=ld+isd;if(!(tot>0))return {ok:false,msg:'负载与自放电均为 0，寿命无穷大无意义'};var life=c*(ut/100)/(tot/1000);return {ok:true,html:'<div class=\"big\">寿命 ≈ '+F(life)+' 小时（约 '+F(life/8760)+' 年）</div><div class=\"row\">自放电等效电流 '+F(isd)+' µA，负载 '+F(ld)+' µA，可用容量 '+F(c*ut/100)+' mAh</div><div class=\"row\">脉冲大电流时纽扣电池内阻压降显著，可用比应按脉冲样本曲线调低</div>'};",
+  test:{inputs:{cap:"220",load:"10",sd:"1",util:"100"}, expect:"21461.0245"}},
+ {id:"yqcrystal2", cat:"yqj", icon:"💎", name:"晶振驱动电平与负阻裕量", desc:"Pierce 振荡负阻裕量与晶体驱动功率校核（器件侧）",
+  formula:"器件角度（与 dzxtal 负载电容合成、dzxtal2 负载牵引频偏分工：本工具算起振裕量与驱动）：Pierce 电路负阻近似 |−R| ≈ gm ÷ (ω²·C1·C2)（ω = 2πf，C1/C2 为两端负载电容）；裕量 = |−R| ÷ ESR，工程口径要求 ≥5 倍（部分厂家要求 10 倍）才可靠起振；驱动功率 P = I² × ESR（I 为晶体电流 rms），不得超过晶体最大驱动电平（常见 100 µW）",
+  inputs:[
+   {id:"esr", label:"晶体等效电阻 ESR", unit:"Ω", def:"40"},
+   {id:"gm", label:"放大器跨导 gm", unit:"mS", def:"10"},
+   {id:"f", label:"振荡频率 f", unit:"MHz", def:"16"},
+   {id:"c1", label:"负载电容 C1", unit:"pF", def:"18"},
+   {id:"c2", label:"负载电容 C2", unit:"pF", def:"18"},
+   {id:"ix", label:"晶体电流 I（rms）", unit:"mA", def:"0.5"},
+   {id:"pmax", label:"最大驱动电平", unit:"µW", def:"100"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var e=Number(esr),g=Number(gm),f2=Number(f),a=Number(c1),b=Number(c2),ix2=Number(ix),pm=Number(pmax);if(!(e>0&&e<=10000))return {ok:false,msg:'ESR 须在 0~10000 Ω'};if(!(g>0&&g<=1000))return {ok:false,msg:'跨导须在 0~1000 mS'};if(!(f2>0&&f2<=1000))return {ok:false,msg:'频率须在 0~1000 MHz'};if(!(a>0&&b>0))return {ok:false,msg:'负载电容须大于 0'};if(!(ix2>=0&&ix2<=100))return {ok:false,msg:'晶体电流须在 0~100 mA'};if(!(pm>0))return {ok:false,msg:'最大驱动电平须大于 0'};var w=2*Math.PI*f2*1e6;var neg=(g/1000)/(w*w*(a*1e-12)*(b*1e-12));var mg=neg/e;var pw=ix2*ix2*e;return {ok:true,html:'<div class=\"big\">负阻 |−R| ≈ '+F(neg)+' Ω</div><div class=\"row\">裕量 = |−R| ÷ ESR = '+F(mg)+' 倍：'+(mg>=5?'✅ ≥5 倍，起振裕量合格':'❌ 不足 5 倍，低温/批量离散下可能不起振，须增大 gm 或减 C1/C2')+'</div><div class=\"row\">驱动功率 P = I²×ESR = '+F(pw)+' µW'+(pw>pm?'，❌ 超过最大驱动 '+F(pm)+' µW，须串联限流/降激励':'，未超最大驱动 '+F(pm)+' µW ✅')+'</div>'};",
+  test:{inputs:{esr:"40",gm:"10",f:"16",c1:"18",c2:"18",ix:"0.5",pmax:"100"}, expect:"3053.9033"}},
+ {id:"yqrelay2", cat:"yqj", icon:"🧲", name:"继电器吸合释放进阶", desc:"线圈温升后电阻变化对吸合/释放电压与电流的影响",
+  formula:"器件角度进阶版（与 yqrelaycoil 常温线圈电流/功耗分工）：铜线圈电阻随温度变化 R(T) = R20 × (1 + 0.00393×(T − 20))（铜温度系数口径）；吸合安匝不变时，热态必须动作电压近似随电阻同比例上升：Vpick(T) ≈ Vpick(20℃) × R(T)÷R20，释放电压同口径；热态线圈电流 I = Vn ÷ R(T) 下降，自保持能力与触点压力随之变化",
+  inputs:[
+   {id:"vn", label:"线圈额定电压 Vn", unit:"V", def:"12"},
+   {id:"r20", label:"线圈电阻 R20（20℃）", unit:"Ω", def:"400"},
+   {id:"temp", label:"线圈温度 T", unit:"℃", def:"20"},
+   {id:"pick", label:"20℃ 必须动作电压比", unit:"%", def:"70", hint:"样本 Must Operate，常见 70%~80%"},
+   {id:"rel", label:"20℃ 释放电压比", unit:"%", def:"10", hint:"样本 Must Release，常见 5%~10%"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var v=Number(vn),r=Number(r20),t=Number(temp),pk=Number(pick),rl2=Number(rel);if(!(v>0&&v<=1000))return {ok:false,msg:'额定电压须在 0~1000 V'};if(!(r>0))return {ok:false,msg:'线圈电阻须大于 0'};if(!(t>=-40&&t<=200))return {ok:false,msg:'线圈温度须在 −40~200 ℃'};if(!(pk>0&&pk<100))return {ok:false,msg:'动作电压比须在 0~100 %'};if(!(rl2>0&&rl2<pk))return {ok:false,msg:'释放电压比须大于 0 且小于动作电压比'};var rt=r*(1+0.00393*(t-20));var i=v/rt*1000;var vp=v*pk/100*(rt/r);var vr2=v*rl2/100*(rt/r);var warn=vp>v?'⚠ 热态必须动作电压已高于额定电压，额定电压下可能不吸合，须降温或选低动作电压规格':'';return {ok:true,html:'<div class=\"big\">R('+F(t)+'℃) = '+F(rt)+' Ω</div><div class=\"row\">线圈电流 '+F(i)+' mA；必须动作电压 ≈ '+F(vp)+' V，释放电压 ≈ '+F(vr2)+' V（热态口径）</div>'+(warn?'<div class=\"row\">'+warn+'</div>':'<div class=\"row\">电源电压（含纹波谷值）须高于热态必须动作电压才可靠吸合</div>')};",
+  test:{inputs:{vn:"12",r20:"400",temp:"20",pick:"70",rel:"10"}, expect:"8.4"}},
+ {id:"yqconnector", cat:"yqj", icon:"🔌", name:"连接器温度降额", desc:"环境温度升高时连接器允许电流降额与接触功耗",
+  formula:"器件角度口径（厂家降额曲线线性化节选）：环境温度不超过降额起点 Tstart 时允许电流 = 额定电流；超过后线性降额 I = Irated × (Tmax − Tamb) ÷ (Tmax − Tstart)，Tmax 为外壳/端子最高温度；环境达到 Tmax 时允许电流为 0（拒绝）。接触功耗 P = I² × Rc（Rc 为接触电阻），端子温升还与线径散热有关，本工具只算降额与接触发热功率",
+  inputs:[
+   {id:"irated", label:"额定电流 Irated", unit:"A", def:"3"},
+   {id:"tamb", label:"环境温度 Tamb", unit:"℃", def:"85"},
+   {id:"tstart", label:"降额起点 Tstart", unit:"℃", def:"60"},
+   {id:"tmax", label:"最高允许温度 Tmax", unit:"℃", def:"105"},
+   {id:"rc", label:"接触电阻 Rc", unit:"mΩ", def:"5"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var ir=Number(irated),ta=Number(tamb),ts=Number(tstart),tm=Number(tmax),rc2=Number(rc);if(!(ir>0&&ir<=1000))return {ok:false,msg:'额定电流须在 0~1000 A'};if(!(ta>=-40&&ta<=300))return {ok:false,msg:'环境温度须在 −40~300 ℃'};if(!(ts>=-40&&tm>ts))return {ok:false,msg:'须满足 Tmax 大于 Tstart 且均在 −40 ℃ 以上'};if(ta>=tm)return {ok:false,msg:'环境温度已达/超过最高允许温度 '+F(tm)+' ℃，该连接器在此环境无可用电流，必须换耐高温规格或降温'};if(!(rc2>=0&&rc2<=10000))return {ok:false,msg:'接触电阻须在 0~10000 mΩ'};var ia=ta<=ts?ir:ir*(tm-ta)/(tm-ts);var pc=ia*ia*rc2/1000;return {ok:true,html:'<div class=\"big\">允许电流 = '+F(ia)+' A</div><div class=\"row\">'+(ta<=ts?'环境未过降额起点，全额使用':'降额系数 (Tmax−Tamb)÷(Tmax−Tstart) = '+F((tm-ta)/(tm-ts)))+'；满降额电流下单触点发热 P = I²Rc = '+F(pc)+' W</div><div class=\"row\">多芯同时载流还须再乘并联降额系数（按厂家曲线），本工具为单触点温度口径</div>'};",
+  test:{inputs:{irated:"3",tamb:"85",tstart:"60",tmax:"105",rc:"5"}, expect:"1.3333"}},
+ {id:"yqpcbpad", cat:"yqj", icon:"🎯", name:"通孔焊盘与孔径设计", desc:"按 IPC 口径由成品孔径算钻孔与焊盘直径（器件/工艺侧）",
+  formula:"器件/工艺角度（与 dzpcb 走线载流、dzpcb2 差分/过孔电感分工：本工具算焊盘几何）：IPC-2222 口径节选近似：钻孔直径 ≈ 成品孔径 + 0.1 mm（电镀补偿）；焊盘直径 = 钻孔 + 2 × 环宽（环宽按可制造性等级节选：一级 0.25、二级 0.20、三级 0.15 mm，等级越高环宽越小、密度越高）；阻焊开窗 ≈ 焊盘 + 0.15 mm（单边扩 0.075 口径）。引脚孔径还须大于引脚对角尺寸并留装配间隙",
+  inputs:[
+   {id:"hole", label:"成品孔径（镀后）", unit:"mm", def:"0.8"},
+   {id:"cls", label:"可制造性等级（环宽）", type:"select", def:"c1", options:[{v:"c1",t:"一级（环宽 0.25 mm）"},{v:"c2",t:"二级（环宽 0.20 mm）"},{v:"c3",t:"三级（环宽 0.15 mm）"}]},
+   {id:"pin", label:"引脚直径/对角（参考）", unit:"mm", def:"0.6", hint:"仅作间隙提示，可填 0"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);return String(parseFloat(x.toFixed(4)));}var RING={c1:0.25,c2:0.2,c3:0.15};var ring=RING[String(cls)];if(ring===undefined)return {ok:false,msg:'请选择等级'};var h=Number(hole),pn=Number(pin);if(!(h>0&&h<=20))return {ok:false,msg:'成品孔径须在 0~20 mm'};if(!(pn>=0&&pn<=20))return {ok:false,msg:'引脚尺寸须在 0~20 mm'};if(pn>0&&h<pn+0.1)return {ok:false,msg:'成品孔径小于引脚 + 0.1 mm 装配间隙，插不进，请加大孔径'};var drill=h+0.1;var pad=drill+2*ring;var sm=pad+0.15;return {ok:true,html:'<div class=\"big\">焊盘直径 = '+F(pad)+' mm</div><div class=\"row\">钻孔 '+F(drill)+' mm（成品孔 '+F(h)+' + 镀层补偿 0.1），环宽 '+ring+' mm；阻焊开窗约 '+F(sm)+' mm</div><div class=\"row\">板厚孔径比（厚径比）过高时电镀困难，厚板大孔径比请与板厂确认工艺能力</div>'};",
+  test:{inputs:{hole:"0.8",cls:"c1",pin:"0.6"}, expect:"1.4"}}
+);
 
 
 /* 数据驱动工具自动注册渲染器（必须在所有 TOOLS.push 之后、初始化之前执行） */
