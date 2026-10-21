@@ -6998,6 +6998,278 @@ TOOLS.push(
   test:{inputs:{rset:"12.5", vin:"12"}, expect:"100"}}
 );
 
+/* ===== R3 电机工具新增 25 工具（2026-10-21） cat=dj ===== */
+TOOLS.push(
+ {id:"djencoder", cat:"dj", icon:"🎯", name:"编码器分辨率换算", desc:"由线数与倍频算每转计数与角度分辨率，可选按导程算线位移脉冲数",
+  formula:"每转计数 CPR = PPR × 倍频（1/2/4 倍频为正交解码常用口径）；角度分辨率 = 360° ÷ CPR；线位移模式：每毫米脉冲数 = CPR ÷ 每转位移（丝杠导程或滚轮周长，mm），脉冲数 = 位移 × 每毫米脉冲数",
+  inputs:[
+   {id:"mode", label:"计算模式", def:"rev", type:"select", options:[{v:"rev", t:"每转计数 + 角度分辨率"}, {v:"linear", t:"线位移 → 脉冲数"}]},
+   {id:"ppr", label:"编码器线数 PPR", unit:"线/转", def:"1024"},
+   {id:"mult", label:"倍频系数", def:"4", type:"select", options:[{v:"1", t:"1 倍频"}, {v:"2", t:"2 倍频"}, {v:"4", t:"4 倍频"}]},
+   {id:"disp", label:"线位移", unit:"mm", def:"100", when:"mode=linear"},
+   {id:"lead", label:"每转位移（导程/周长）", unit:"mm/转", def:"10", hint:"丝杠导程或测量轮周长", when:"mode=linear"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var pp=Number(ppr),mu=Number(mult);if(!(pp>0)||Math.floor(pp)!==pp)return {ok:false,msg:'线数 PPR 须为正整数'};if(!(mu===1||mu===2||mu===4))return {ok:false,msg:'倍频系数须为 1、2 或 4'};var cnt=pp*mu;var ang=360/cnt;var h='<div class=\"big\">每转计数 CPR = '+cnt+' 脉冲/转</div><div class=\"row\">角度分辨率 = 360 ÷ '+cnt+' = '+F(ang)+' °/脉冲</div>';if(String(mode)==='linear'){var dd=Number(disp),ll=Number(lead);if(!(dd>=0))return {ok:false,msg:'线位移不能为负'};if(!(ll>0))return {ok:false,msg:'每转位移（导程）须大于 0'};var per=cnt/ll;h+='<div class=\"row\">每毫米脉冲数 = '+F(per)+' 脉冲/mm；位移 '+F(dd)+' mm 对应脉冲数 = '+F(dd*per)+' 个</div>';}return {ok:true,html:h};",
+  test:{inputs:{mode:"rev", ppr:1024, mult:"4", disp:100, lead:10}, expect:"4096"}},
+ {id:"djrack", cat:"dj", icon:"🦷", name:"齿轮齿条传动", desc:"模数与齿数算分度圆、每转位移与线速度",
+  formula:"分度圆直径 d = m × z（mm）；齿条每转位移 = π·m·z（mm/转）；线速度 v = π·m·z·n（mm/min），n 为齿轮转速 r/min",
+  inputs:[
+   {id:"m", label:"模数 m", unit:"mm", def:"2"},
+   {id:"z", label:"齿轮齿数 z", def:"20"},
+   {id:"n", label:"齿轮转速 n", unit:"r/min", def:"300"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var mm=Number(m),zz=Number(z),nn=Number(n);if(!(mm>0))return {ok:false,msg:'模数须大于 0'};if(!(zz>0)||Math.floor(zz)!==zz)return {ok:false,msg:'齿数须为正整数'};if(!(nn>=0))return {ok:false,msg:'转速不能为负'};var d=mm*zz;var per=Math.PI*d;var v=per*nn;return {ok:true,html:'<div class=\"big\">每转位移 = '+F(per)+' mm/转</div><div class=\"row\">分度圆直径 d = m·z = '+F(d)+' mm；线速度 v = '+F(v)+' mm/min = '+F(v/1000)+' m/min（n = '+F(nn)+' r/min）</div>'};",
+  test:{inputs:{m:2, z:20, n:300}, expect:"125.6637"}},
+ {id:"djbscrew", cat:"dj", icon:"🌀", name:"滚珠丝杠参数", desc:"导程角、传动效率近似、每转位移与脉冲当量",
+  formula:"导程角 γ = atan(P ÷ (π·d))，P 导程、d 公称直径（mm）；传动效率近似 η = tanγ ÷ tan(γ+φ)，φ = atan(μ)，μ 为当量摩擦系数（滚珠丝杠约 0.003~0.005，近似式，厂家样本为准）；脉冲当量 = 导程 ÷ 每转脉冲数",
+  inputs:[
+   {id:"d", label:"公称直径 d", unit:"mm", def:"20"},
+   {id:"P", label:"导程 P", unit:"mm", def:"10"},
+   {id:"mu", label:"当量摩擦系数 μ", def:"0.003", hint:"滚珠丝杠约 0.003~0.005"},
+   {id:"ppr", label:"每转脉冲数", unit:"脉冲/转", def:"10000"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var dd=Number(d),PP=Number(P),muu=Number(mu),pr=Number(ppr);if(!(dd>0))return {ok:false,msg:'公称直径须大于 0'};if(!(PP>0))return {ok:false,msg:'导程须大于 0'};if(!(muu>=0))return {ok:false,msg:'摩擦系数不能为负'};if(!(pr>0)||Math.floor(pr)!==pr)return {ok:false,msg:'每转脉冲数须为正整数'};var gam=Math.atan(PP/(Math.PI*dd));var phi=Math.atan(muu);var eta=Math.tan(gam)/Math.tan(gam+phi);var gd=gam*180/Math.PI;var eq=PP/pr;return {ok:true,html:'<div class=\"big\">导程角 γ = '+F(gd)+' °</div><div class=\"row\">传动效率 η ≈ tanγ/tan(γ+φ) = '+F(eta*100)+' %（φ = atan μ = '+F(phi*180/Math.PI)+' °，滚动摩擦近似）；每转位移 = 导程 '+F(PP)+' mm；脉冲当量 = '+F(eq)+' mm/脉冲 = '+F(eq*1000)+' μm/脉冲</div>'};",
+  test:{inputs:{d:20, P:10, mu:0.003, ppr:10000}, expect:"9.0431"}},
+ {id:"djcoupl", cat:"dj", icon:"🔗", name:"联轴器选型计算扭矩", desc:"额定扭矩乘工况系数得计算扭矩，按样本额定扭矩选型",
+  formula:"额定扭矩 Tn = 9550 × P ÷ n（N·m，P 为 kW，n 为 r/min）；计算扭矩 Tc = Tn × KA，KA 工况系数：平稳 1.25、轻冲击 1.5、中冲击 1.75、重冲击 2.25（常用经验值）；选型时联轴器样本额定扭矩应 ≥ Tc",
+  inputs:[
+   {id:"P", label:"传递功率 P", unit:"kW", def:"7.5"},
+   {id:"n", label:"转速 n", unit:"r/min", def:"1450"},
+   {id:"ka", label:"工况系数 KA", def:"1.5", type:"select", options:[{v:"1.25", t:"平稳载荷 ×1.25"}, {v:"1.5", t:"轻冲击 ×1.5"}, {v:"1.75", t:"中冲击 ×1.75"}, {v:"2.25", t:"重冲击 ×2.25"}]}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var PP=Number(P),NN=Number(n),KA=Number(ka);if(!(PP>0))return {ok:false,msg:'功率须大于 0'};if(!(NN>0))return {ok:false,msg:'转速须大于 0'};if(!(KA>0))return {ok:false,msg:'工况系数无效'};var Tn=9550*PP/NN;var Tc=Tn*KA;return {ok:true,html:'<div class=\"big\">计算扭矩 Tc = '+F(Tc)+' N·m</div><div class=\"row\">额定扭矩 Tn = 9550×P÷n = '+F(Tn)+' N·m，KA = '+KA+'；选型：联轴器样本额定扭矩应 ≥ Tc，并校核孔径范围与最高转速</div>'};",
+  test:{inputs:{P:7.5, n:1450, ka:"1.5"}, expect:"74.0948"}},
+ {id:"djflywheel", cat:"dj", icon:"🎡", name:"飞轮转动惯量设计", desc:"由能量波动与转速不均匀系数算所需飞轮转动惯量",
+  formula:"J = ΔE ÷ (ωm² × δ)；ωm = 2πn ÷ 60（rad/s）；δ 为转速不均匀系数：粗略机械 1/20、一般机械 1/50、发电机/精密 1/100 或自定义；飞轮总储能 E = ½·J·ωm²，ΔE 为每周期最大能量波动（J）",
+  inputs:[
+   {id:"dE", label:"最大能量波动 ΔE", unit:"J", def:"1000"},
+   {id:"n", label:"平均转速 n", unit:"r/min", def:"1500"},
+   {id:"delta", label:"转速不均匀系数 δ", def:"0.02", type:"select", options:[{v:"0.05", t:"δ = 1/20（粗略机械）"}, {v:"0.02", t:"δ = 1/50（一般机械）"}, {v:"0.01", t:"δ = 1/100（发电机/精密）"}, {v:"custom", t:"自定义 δ"}]},
+   {id:"dcustom", label:"自定义 δ", def:"0.03", hint:"0~1 之间的小数", when:"delta=custom"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var EE=Number(dE),NN=Number(n);if(!(EE>0))return {ok:false,msg:'能量波动 ΔE 须大于 0'};if(!(NN>0))return {ok:false,msg:'转速须大于 0'};var dl;if(String(delta)==='custom'){dl=Number(dcustom);if(!(dl>0&&dl<=1))return {ok:false,msg:'自定义 δ 应在 (0,1] 之间'};}else{dl=Number(delta);if(!(dl>0))return {ok:false,msg:'δ 无效'};}var w=2*Math.PI*NN/60;var J=EE/(w*w*dl);var Etot=0.5*J*w*w;return {ok:true,html:'<div class=\"big\">所需转动惯量 J = '+F(J)+' kg·m²</div><div class=\"row\">ωm = 2πn/60 = '+F(w)+' rad/s，δ = '+dl+'；飞轮总储能 E = ½Jωm² = '+F(Etot/1000)+' kJ（注：J 为系统总需求惯量，应扣除轴系原有惯量）</div>'};",
+  test:{inputs:{dE:1000, n:1500, delta:"0.02", dcustom:0.03}, expect:"2.0264"}},
+ {id:"djke", cat:"dj", icon:"🔄", name:"电机常数 Kt/Ke/Kv 换算", desc:"转矩常数、反电势常数与速度常数三者互转，含 V/krpm 口径",
+  formula:"SI 口径下 Kt[N·m/A] 与 Ke[V/(rad/s)] 数值相等；Kv[rpm/V] = 60 ÷ (2π·Ke)；Ke 若以 V/krpm 给出，先换算 Ke(SI) = Ke[V/krpm] × 60 ÷ (2000π)，且 Kv = 1000 ÷ Ke[V/krpm]（无刷/伺服电机手册常用口径）",
+  inputs:[
+   {id:"mode", label:"已知常数", def:"ke", type:"select", options:[{v:"kt", t:"Kt（N·m/A）"}, {v:"ke", t:"Ke（V/(rad/s)）"}, {v:"ke1000", t:"Ke（V/krpm）"}, {v:"kv", t:"Kv（rpm/V）"}]},
+   {id:"val", label:"常数值", def:"0.1"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var vv=Number(val);if(!(vv>0))return {ok:false,msg:'常数值须大于 0'};var Ke,Kt,Kv;var md=String(mode);if(md==='kt'){Kt=vv;Ke=vv;}else if(md==='ke'){Ke=vv;Kt=vv;}else if(md==='ke1000'){Ke=vv*60/(2000*Math.PI);Kt=Ke;}else if(md==='kv'){Ke=60/(2*Math.PI*vv);Kt=Ke;}else{return {ok:false,msg:'模式无效'};}Kv=60/(2*Math.PI*Ke);return {ok:true,html:'<div class=\"big\">Kv = '+F(Kv)+' rpm/V</div><div class=\"row\">Ke = '+F(Ke)+' V/(rad/s)，Kt = Ke（SI 数值相等）= '+F(Kt)+' N·m/A；Ke 的 V/krpm 口径 = '+F(Ke*2000*Math.PI/60)+' V/krpm</div>'};",
+  test:{inputs:{mode:"ke", val:0.1}, expect:"95.493"}},
+ {id:"djwinding", cat:"dj", icon:"🧵", name:"电机绕组改绕线径", desc:"保持槽面积不变：改并绕根数或改匝数时换算新线径",
+  formula:"保持槽内铜截面积不变：改并绕根数 d₂ = d₁ × √(n₁÷n₂)（如单根改双根 d₂ = d₁÷√2）；改匝数（串联匝数改变，槽面积不变）d′ = d × √(N÷N′)，N 为原匝数、N′ 为新匝数",
+  inputs:[
+   {id:"mode", label:"改绕方式", def:"roots", type:"select", options:[{v:"roots", t:"改并绕根数"}, {v:"turns", t:"改匝数"}]},
+   {id:"d1", label:"原线径 d₁", unit:"mm", def:"1", when:"mode=roots"},
+   {id:"n1", label:"原并绕根数 n₁", def:"1", when:"mode=roots"},
+   {id:"n2", label:"新并绕根数 n₂", def:"2", when:"mode=roots"},
+   {id:"dt", label:"原线径 d", unit:"mm", def:"0.8", when:"mode=turns"},
+   {id:"Nt", label:"原匝数 N", def:"100", when:"mode=turns"},
+   {id:"Nt2", label:"新匝数 N′", def:"120", when:"mode=turns"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}if(String(mode)==='roots'){var dd=Number(d1),a=Number(n1),b=Number(n2);if(!(dd>0))return {ok:false,msg:'原线径须大于 0'};if(!(a>0)||Math.floor(a)!==a||!(b>0)||Math.floor(b)!==b)return {ok:false,msg:'并绕根数须为正整数'};var d2=dd*Math.sqrt(a/b);return {ok:true,html:'<div class=\"big\">新线径 d₂ = '+F(d2)+' mm</div><div class=\"row\">d₂ = d₁×√(n₁/n₂) = '+F(dd)+'×√('+a+'/'+b+')；截面积校验：n₁d₁² = '+F(a*dd*dd)+'，n₂d₂² = '+F(b*d2*d2)+'（mm²，应相等）</div>'};}var dtv=Number(dt),NN=Number(Nt),N2=Number(Nt2);if(!(dtv>0))return {ok:false,msg:'原线径须大于 0'};if(!(NN>0)||Math.floor(NN)!==NN||!(N2>0)||Math.floor(N2)!==N2)return {ok:false,msg:'匝数须为正整数'};var dd2=dtv*Math.sqrt(NN/N2);return {ok:true,html:'<div class=\"big\">新线径 d′ = '+F(dd2)+' mm</div><div class=\"row\">d′ = d×√(N/N′) = '+F(dtv)+'×√('+NN+'/'+N2+')；匝数增则线径减，保持槽面积不变（改绕后须复核电流密度与温升）</div>'};",
+  test:{inputs:{mode:"roots", d1:1, n1:1, n2:2, dt:0.8, Nt:100, Nt2:120}, expect:"0.7071"}},
+ {id:"djrestemp", cat:"dj", icon:"🌡️", name:"电阻法测绕组温升", desc:"由冷热电阻算绕组热态温度与温升，铜/铝常数分支",
+  formula:"t₂ = (R₂÷R₁) × (K + t₁) − K；K：铜 235、铝 225；R₁/t₁ 为冷态电阻/温度，R₂ 为热态电阻；温升 Δt = t₂ − 环境温度（判定绕组最高温度请对照绝缘等级：B 级 130 ℃、F 级 155 ℃、H 级 180 ℃）",
+  inputs:[
+   {id:"mat", label:"导体材料", def:"235", type:"select", options:[{v:"235", t:"铜（K = 235）"}, {v:"225", t:"铝（K = 225）"}]},
+   {id:"R1", label:"冷态电阻 R₁", unit:"Ω", def:"10"},
+   {id:"t1", label:"冷态温度 t₁", unit:"℃", def:"20"},
+   {id:"R2", label:"热态电阻 R₂", unit:"Ω", def:"12"},
+   {id:"tamb", label:"环境温度", unit:"℃", def:"40"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var K=Number(mat),r1=Number(R1),r2=Number(R2),tt=Number(t1),ta=Number(tamb);if(!(r1>0))return {ok:false,msg:'冷态电阻须大于 0'};if(!(r2>0))return {ok:false,msg:'热态电阻须大于 0'};if(!(tt>=-100&&tt<=300))return {ok:false,msg:'冷态温度超出合理范围'};if(!(ta>=-100&&ta<=300))return {ok:false,msg:'环境温度超出合理范围'};var t2=(r2/r1)*(K+tt)-K;var rise=t2-ta;return {ok:true,html:'<div class=\"big\">热态绕组温度 t₂ = '+F(t2)+' °C</div><div class=\"row\">温升 Δt = t₂ − 环境温度 = '+F(rise)+' K（K = '+K+'，R₂/R₁ = '+F(r2/r1)+'）；判定请对照所用绝缘等级的绕组最高温度限值</div>'};",
+  test:{inputs:{mat:"235", R1:10, t1:20, R2:12, tamb:40}, expect:"71"}},
+ {id:"djduct", cat:"dj", icon:"💨", name:"风道风量与动压", desc:"截面积乘风速算风量，并给动压，圆形/矩形截面分支",
+  formula:"Q = A × v × 3600（m³/h）；圆形 A = π·D²/4，矩形 A = a×b（尺寸输入 mm 自动换算 m²）；动压 q = ρv²/2，空气密度 ρ = 1.2 kg/m³（20 ℃ 近似）",
+  inputs:[
+   {id:"shape", label:"截面形状", def:"round", type:"select", options:[{v:"round", t:"圆形风道"}, {v:"rect", t:"矩形风道"}]},
+   {id:"D", label:"圆管直径 D", unit:"mm", def:"500", when:"shape=round"},
+   {id:"a", label:"矩形边长 a", unit:"mm", def:"600", when:"shape=rect"},
+   {id:"b", label:"矩形边长 b", unit:"mm", def:"400", when:"shape=rect"},
+   {id:"v", label:"风速 v", unit:"m/s", def:"8"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var vv=Number(v);if(!(vv>=0))return {ok:false,msg:'风速不能为负'};var A;if(String(shape)==='round'){var DD=Number(D);if(!(DD>0))return {ok:false,msg:'直径须大于 0'};A=Math.PI/4*(DD/1000)*(DD/1000);}else{var aa=Number(a),bb=Number(b);if(!(aa>0)||!(bb>0))return {ok:false,msg:'矩形边长须大于 0'};A=aa*bb/1000000;}var Q=A*vv*3600;var q=1.2*vv*vv/2;return {ok:true,html:'<div class=\"big\">风量 Q = '+F(Q)+' m³/h</div><div class=\"row\">截面积 A = '+F(A)+' m²，风速 v = '+F(vv)+' m/s；动压 q = ρv²/2 = '+F(q)+' Pa（ρ = 1.2 kg/m³）</div>'};",
+  test:{inputs:{shape:"round", D:500, a:600, b:400, v:8}, expect:"5654.8668"}},
+ {id:"djpumphead", cat:"dj", icon:"🚰", name:"水泵总扬程估算", desc:"几何扬程加沿程与局部损失估算总扬程",
+  formula:"H = H几何 + λ·(L/D)·(v²/2g) + Σζ·(v²/2g)；g = 9.81 m/s²；沿程阻力系数 λ 默认 0.02（钢管紊流常用近似，可改）；Σζ 为阀门、弯头等局部阻力系数之和",
+  inputs:[
+   {id:"Hz", label:"几何扬程", unit:"m", def:"20"},
+   {id:"lam", label:"沿程阻力系数 λ", def:"0.02", hint:"钢管紊流常用 0.02 左右"},
+   {id:"L", label:"管长 L", unit:"m", def:"100"},
+   {id:"D", label:"管内径 D", unit:"mm", def:"100"},
+   {id:"v", label:"流速 v", unit:"m/s", def:"2"},
+   {id:"zeta", label:"局部阻力系数 Σζ", def:"5"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var hz=Number(Hz),lamv=Number(lam),LL=Number(L),DD=Number(D),vv=Number(v),zz=Number(zeta);if(!(hz>=0))return {ok:false,msg:'几何扬程不能为负'};if(!(lamv>=0))return {ok:false,msg:'λ 不能为负'};if(!(LL>=0))return {ok:false,msg:'管长不能为负'};if(!(DD>0))return {ok:false,msg:'管内径须大于 0'};if(!(vv>=0))return {ok:false,msg:'流速不能为负'};if(!(zz>=0))return {ok:false,msg:'Σζ 不能为负'};var vh=vv*vv/(2*9.81);var hf=lamv*(LL/(DD/1000))*vh;var hl=zz*vh;var H=hz+hf+hl;return {ok:true,html:'<div class=\"big\">总扬程 H ≈ '+F(H)+' m</div><div class=\"row\">沿程损失 hf = λ(L/D)(v²/2g) = '+F(hf)+' m，局部损失 hζ = Σζ(v²/2g) = '+F(hl)+' m，几何扬程 '+F(hz)+' m（g = 9.81 m/s²）</div>'};",
+  test:{inputs:{Hz:20, lam:0.02, L:100, D:100, v:2, zeta:5}, expect:"25.0968"}},
+ {id:"djtimingbelt", cat:"dj", icon:"⛓️", name:"同步带设计", desc:"节圆直径、中心距与节线长互算，并校核小轮包角",
+  formula:"节圆直径 d = p × z ÷ π（p 节距 mm）；节线长近似 Lp ≈ 2C + π(d₁+d₂)/2 + (d₂−d₁)²/(4C)；由 Lp 反算 C 取二次方程大根 C = [B + √(B² − 2(d₂−d₁)²)]/4，B = Lp − π(d₁+d₂)/2；小轮包角 α₁ = 180° − 2·asin((d₂−d₁)/(2C))，一般应 ≥ 120°",
+  inputs:[
+   {id:"mode", label:"计算模式", def:"len", type:"select", options:[{v:"len", t:"由中心距算节线长"}, {v:"center", t:"由节线长算中心距"}]},
+   {id:"p", label:"带节距 p", unit:"mm", def:"5"},
+   {id:"z1", label:"小带轮齿数 z₁", def:"20"},
+   {id:"z2", label:"大带轮齿数 z₂", def:"40"},
+   {id:"C", label:"中心距 C", unit:"mm", def:"300", when:"mode=len"},
+   {id:"Lp", label:"节线长 Lp", unit:"mm", def:"750.84", when:"mode=center"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var pp=Number(p),za=Number(z1),zb=Number(z2);if(!(pp>0))return {ok:false,msg:'节距须大于 0'};if(!(za>0)||Math.floor(za)!==za||!(zb>0)||Math.floor(zb)!==zb)return {ok:false,msg:'带轮齿数须为正整数'};var d1=pp*za/Math.PI,d2=pp*zb/Math.PI;var base=Math.PI*(d1+d2)/2;var CC,Lpp;if(String(mode)==='len'){CC=Number(C);if(!(CC>0))return {ok:false,msg:'中心距须大于 0'};Lpp=2*CC+base+(d2-d1)*(d2-d1)/(4*CC);}else{Lpp=Number(Lp);if(!(Lpp>0))return {ok:false,msg:'节线长须大于 0'};var B=Lpp-base;var disc=B*B-2*(d2-d1)*(d2-d1);if(disc<0)return {ok:false,msg:'节线长过短：不足以绕过两带轮，请加大节线长'};CC=(B+Math.sqrt(disc))/4;if(!(CC>0))return {ok:false,msg:'节线长过短：反算中心距不为正，请加大节线长'};}var s=(d2-d1)/(2*CC);if(s>1||s<-1)return {ok:false,msg:'中心距过小：两带轮节圆相交，无法传动'};var ang=180-2*Math.asin(s)*180/Math.PI;var big=(String(mode)==='len')?('节线长 Lp ≈ '+F(Lpp)+' mm'):('中心距 C ≈ '+F(CC)+' mm');return {ok:true,html:'<div class=\"big\">'+big+'</div><div class=\"row\">节圆直径 d₁ = '+F(d1)+' mm，d₂ = '+F(d2)+' mm；小轮包角 α₁ ≈ '+F(ang)+' °'+(ang<120?'（＜120°，建议加大中心距或加张紧轮）':'（≥120°，包角合格）')+'</div>'};",
+  test:{inputs:{mode:"len", p:5, z1:20, z2:40, C:300, Lp:750.84}, expect:"750.8443"}},
+ {id:"djbrakeres", cat:"dj", icon:"🔥", name:"变频器制动电阻", desc:"由直流母线电压与制动功率算电阻值与平均功率选型",
+  formula:"R = Udc² ÷ Pbrake（Ω，Udc 直流母线电压 V，默认 700 V 为 400 V 级变频器制动时母线电压近似，可改）；「按电机功率估算」分支 Pbrake ≈ 电机额定功率 × 制动转矩比（额定转速附近近似）；电阻平均功率 = Pbrake × 制动占空比，额定功率应 ≥ 平均功率并留裕量，且 R 不得小于变频器允许的最小制动电阻",
+  inputs:[
+   {id:"mode", label:"制动功率来源", def:"ratio", type:"select", options:[{v:"ratio", t:"按电机功率 × 制动转矩比估算"}, {v:"direct", t:"直接输入制动功率"}]},
+   {id:"Udc", label:"直流母线电压 Udc", unit:"V", def:"700"},
+   {id:"Pm", label:"电机功率", unit:"kW", def:"7.5", when:"mode=ratio"},
+   {id:"ratio", label:"制动转矩比", unit:"%", def:"100", hint:"100 表示约额定转矩制动", when:"mode=ratio"},
+   {id:"Pb", label:"制动功率", unit:"kW", def:"5", when:"mode=direct"},
+   {id:"duty", label:"制动占空比", unit:"%", def:"20", hint:"制动时间占周期比例"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var UU=Number(Udc),du=Number(duty);if(!(UU>0))return {ok:false,msg:'母线电压须大于 0'};if(!(du>0&&du<=100))return {ok:false,msg:'占空比应在 (0,100] % 之间'};var pb;if(String(mode)==='ratio'){var PM=Number(Pm),RT=Number(ratio);if(!(PM>0))return {ok:false,msg:'电机功率须大于 0'};if(!(RT>0))return {ok:false,msg:'制动转矩比须大于 0'};pb=PM*RT/100;}else{pb=Number(Pb);if(!(pb>0))return {ok:false,msg:'制动功率须大于 0'};}var R=UU*UU/(pb*1000);var Pavg=pb*du/100;return {ok:true,html:'<div class=\"big\">制动电阻 R = '+F(R)+' Ω</div><div class=\"row\">制动功率 Pb = '+F(pb)+' kW；平均功率 = Pb × 占空比 '+du+' % = '+F(Pavg)+' kW，电阻额定功率应 ≥ 平均功率并留裕量（常用 ≥1.5 倍或查厂家选型表）；R 为 Udc²/Pb 近似值，实际不得小于变频器允许最小制动电阻</div>'};",
+  test:{inputs:{mode:"ratio", Udc:700, Pm:7.5, ratio:100, Pb:5, duty:20}, expect:"65.3333"}},
+ {id:"djrms", cat:"dj", icon:"📊", name:"伺服周期均方根扭矩", desc:"加速/恒速/减速三段扭矩与时长算 RMS 扭矩并与额定比较",
+  formula:"Trms = √[(T₁²t₁ + T₂²t₂ + T₃²t₃) ÷ (t₁+t₂+t₃)]，三段分别为加速、恒速（匀速）、减速段的扭矩幅值（N·m）与时长（s）；选型要求 Trms ≤ 电机额定扭矩（扭矩取幅值，方向已平方消去）",
+  inputs:[
+   {id:"Ta", label:"加速段扭矩", unit:"N·m", def:"10"},
+   {id:"ta", label:"加速时长", unit:"s", def:"0.5"},
+   {id:"Tc", label:"恒速段扭矩", unit:"N·m", def:"4"},
+   {id:"tc", label:"恒速时长", unit:"s", def:"2"},
+   {id:"Td", label:"减速段扭矩", unit:"N·m", def:"8"},
+   {id:"td", label:"减速时长", unit:"s", def:"0.5"},
+   {id:"Tr", label:"电机额定扭矩", unit:"N·m", def:"6"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var TA=Number(Ta),ta2=Number(ta),TC=Number(Tc),tc2=Number(tc),TD=Number(Td),td2=Number(td),TR=Number(Tr);if(!isFinite(TA)||!isFinite(TC)||!isFinite(TD))return {ok:false,msg:'扭矩须为数值'};if(!(ta2>=0)||!(tc2>=0)||!(td2>=0))return {ok:false,msg:'时长不能为负'};var tt=ta2+tc2+td2;if(!(tt>0))return {ok:false,msg:'三段总时长须大于 0'};if(!(TR>0))return {ok:false,msg:'额定扭矩须大于 0'};var rms=Math.sqrt((TA*TA*ta2+TC*TC*tc2+TD*TD*td2)/tt);var pct=rms/TR*100;return {ok:true,html:'<div class=\"big\">周期均方根扭矩 Trms = '+F(rms)+' N·m</div><div class=\"row\">占额定 '+F(pct)+' %（额定 '+F(TR)+' N·m）：'+(rms<=TR?'未超过额定，连续工作选型可行（峰值扭矩另行校核）':'超过额定，需放大电机机座或降低负载/加减速时间')+'</div>'};",
+  test:{inputs:{Ta:10, ta:0.5, Tc:4, tc:2, Td:8, td:0.5, Tr:6}, expect:"6.1644"}},
+ {id:"djhydpump", cat:"dj", icon:"🛢️", name:"液压泵流量与功率", desc:"排量与转速算理论/实际流量，压力算驱动功率",
+  formula:"理论流量 Q理 = Vg × n ÷ 1000（L/min，Vg 排量 mL/r，n 转速 r/min）；实际流量 Q = Q理 × ηv；驱动功率 P = p × Q ÷ (60 × η总)（kW，p 压力 MPa，η总为总效率）",
+  inputs:[
+   {id:"Vg", label:"泵排量 Vg", unit:"mL/r", def:"25"},
+   {id:"n", label:"转速 n", unit:"r/min", def:"1450"},
+   {id:"etav", label:"容积效率 ηv", unit:"%", def:"95"},
+   {id:"p", label:"工作压力 p", unit:"MPa", def:"16"},
+   {id:"etat", label:"总效率 η总", unit:"%", def:"85"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var VG=Number(Vg),NN=Number(n),EV=Number(etav),PP=Number(p),ET=Number(etat);if(!(VG>0))return {ok:false,msg:'排量须大于 0'};if(!(NN>=0))return {ok:false,msg:'转速不能为负'};if(!(EV>0&&EV<=100))return {ok:false,msg:'容积效率应在 (0,100] % 之间'};if(!(PP>=0))return {ok:false,msg:'压力不能为负'};if(!(ET>0&&ET<=100))return {ok:false,msg:'总效率应在 (0,100] % 之间'};var Qth=VG*NN/1000;var Q=Qth*EV/100;var P=PP*Q*100/(60*ET);return {ok:true,html:'<div class=\"big\">实际流量 Q = '+F(Q)+' L/min</div><div class=\"row\">理论流量 = Vg×n = '+F(Qth)+' L/min（ηv = '+EV+' %）；驱动功率 P = p·Q/(60·η总) = '+F(P)+' kW</div>'};",
+  test:{inputs:{Vg:25, n:1450, etav:95, p:16, etat:85}, expect:"34.4375"}},
+ {id:"djhydmotor", cat:"dj", icon:"⚙️", name:"液压马达扭矩与转速", desc:"由压差与排量算输出扭矩，由流量算转速",
+  formula:"输出扭矩 T = Δp × Vg × ηm ÷ (2π)（N·m，Δp 压差 MPa，Vg 排量 mL/r，ηm 机械效率）；转速 n = Q × 1000 × ηv ÷ Vg（r/min，Q 流量 L/min，ηv 容积效率）",
+  inputs:[
+   {id:"dp", label:"压差 Δp", unit:"MPa", def:"16"},
+   {id:"Vg", label:"马达排量 Vg", unit:"mL/r", def:"100"},
+   {id:"Q", label:"输入流量 Q", unit:"L/min", def:"40"},
+   {id:"etam", label:"机械效率 ηm", unit:"%", def:"90"},
+   {id:"etav", label:"容积效率 ηv", unit:"%", def:"95"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var DP=Number(dp),VG=Number(Vg),QQ=Number(Q),EM=Number(etam),EV=Number(etav);if(!(DP>=0))return {ok:false,msg:'压差不能为负'};if(!(VG>0))return {ok:false,msg:'排量须大于 0'};if(!(QQ>=0))return {ok:false,msg:'流量不能为负'};if(!(EM>0&&EM<=100))return {ok:false,msg:'机械效率应在 (0,100] % 之间'};if(!(EV>0&&EV<=100))return {ok:false,msg:'容积效率应在 (0,100] % 之间'};var T=DP*VG*(EM/100)/(2*Math.PI);var n=QQ*1000*(EV/100)/VG;return {ok:true,html:'<div class=\"big\">输出扭矩 T = '+F(T)+' N·m</div><div class=\"row\">转速 n = Q·ηv/Vg = '+F(n)+' r/min（Δp = '+F(DP)+' MPa，Vg = '+F(VG)+' mL/r）</div>'};",
+  test:{inputs:{dp:16, Vg:100, Q:40, etam:90, etav:95}, expect:"229.1831"}},
+ {id:"djcomp", cat:"dj", icon:"🎈", name:"空压机理论排量", desc:"单作用活塞空压机理论排量与实际排量估算",
+  formula:"理论排量 V理 = (π/4)·D²·S·n·z（m³/min，D 缸径、S 行程换算为 m，n 转速 r/min，z 气缸数，单作用口径）；实际排量 ≈ V理 × 容积效率 ηv（ηv 已综合余隙容积、泄漏与进气损失，常用 0.7~0.9）",
+  inputs:[
+   {id:"D", label:"气缸直径 D", unit:"mm", def:"100"},
+   {id:"S", label:"活塞行程 S", unit:"mm", def:"100"},
+   {id:"n", label:"转速 n", unit:"r/min", def:"1000"},
+   {id:"z", label:"气缸数 z", def:"2"},
+   {id:"etav", label:"容积效率 ηv", unit:"%", def:"85"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var DD=Number(D),SS=Number(S),NN=Number(n),ZZ=Number(z),EV=Number(etav);if(!(DD>0))return {ok:false,msg:'缸径须大于 0'};if(!(SS>0))return {ok:false,msg:'行程须大于 0'};if(!(NN>=0))return {ok:false,msg:'转速不能为负'};if(!(ZZ>0)||Math.floor(ZZ)!==ZZ)return {ok:false,msg:'气缸数须为正整数'};if(!(EV>0&&EV<=100))return {ok:false,msg:'容积效率应在 (0,100] % 之间'};var V=Math.PI/4*(DD/1000)*(DD/1000)*(SS/1000)*NN*ZZ;var Va=V*EV/100;return {ok:true,html:'<div class=\"big\">理论排量 = '+F(V)+' m³/min</div><div class=\"row\">实际排量 ≈ '+F(Va)+' m³/min（容积效率 '+EV+' %，含余隙容积、泄漏与进气损失，单作用活塞式口径；双作用请按双倍活塞面积另算）</div>'};",
+  test:{inputs:{D:100, S:100, n:1000, z:2, etav:85}, expect:"1.5708"}},
+ {id:"djscrewconv", cat:"dj", icon:"🪱", name:"螺旋输送机输送量", desc:"螺旋直径、螺距、转速算输送量与简化功率",
+  formula:"Q = 60 × (π/4)D² × S × n × ψ × ρ × k（t/h，D 螺旋直径、S 螺距换算 m，ψ 填充系数，ρ 物料堆积密度 t/m³，k 倾角系数：0° 1、10° 0.8、20° 0.65、30° 0.5，近似表）；功率简化估算 P ≈ Q·L ÷ (367 × η)（kW，仅物料水平输送分量，未计倾角提升与附加阻力，注明近似）",
+  inputs:[
+   {id:"D", label:"螺旋直径 D", unit:"mm", def:"300"},
+   {id:"S", label:"螺距 S", unit:"mm", def:"300"},
+   {id:"n", label:"转速 n", unit:"r/min", def:"100"},
+   {id:"psi", label:"填充系数 ψ", def:"0.3", hint:"0~1，常用 0.15~0.45"},
+   {id:"rho", label:"物料密度 ρ", unit:"t/m³", def:"0.8"},
+   {id:"ang", label:"倾角系数 k", def:"1", type:"select", options:[{v:"1", t:"水平 0° k=1"}, {v:"0.8", t:"倾角 10° k=0.8"}, {v:"0.65", t:"倾角 20° k=0.65"}, {v:"0.5", t:"倾角 30° k=0.5"}]},
+   {id:"L", label:"输送长度 L", unit:"m", def:"10"},
+   {id:"eta", label:"传动效率 η", def:"0.9"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var DD=Number(D),SS=Number(S),NN=Number(n),PS=Number(psi),RH=Number(rho),KK=Number(ang),LL=Number(L),ET=Number(eta);if(!(DD>0))return {ok:false,msg:'螺旋直径须大于 0'};if(!(SS>0))return {ok:false,msg:'螺距须大于 0'};if(!(NN>=0))return {ok:false,msg:'转速不能为负'};if(!(PS>0&&PS<=1))return {ok:false,msg:'填充系数应在 (0,1] 之间'};if(!(RH>0))return {ok:false,msg:'物料密度须大于 0'};if(!(KK>0))return {ok:false,msg:'倾角系数无效'};if(!(LL>=0))return {ok:false,msg:'输送长度不能为负'};if(!(ET>0&&ET<=1))return {ok:false,msg:'传动效率应在 (0,1] 之间'};var Q=60*(Math.PI/4)*(DD/1000)*(DD/1000)*(SS/1000)*NN*PS*RH*KK;var P=Q*LL/(367*ET);return {ok:true,html:'<div class=\"big\">输送量 Q ≈ '+F(Q)+' t/h</div><div class=\"row\">功率简化估算 P ≈ Q·L/(367·η) = '+F(P)+' kW（仅物料输送分量，未计倾角提升功率与轴承附加阻力，工程选型请查设计手册复核）</div>'};",
+  test:{inputs:{D:300, S:300, n:100, psi:0.3, rho:0.8, ang:"1", L:10, eta:0.9}, expect:"30.5363"}},
+ {id:"djhoist", cat:"dj", icon:"🏗️", name:"卷扬提升功率与绳拉力", desc:"载荷质量、提升速度与滑轮组倍率算功率与钢丝绳拉力",
+  formula:"总重力 G = m × g（g = 9.81 m/s²）；钢丝绳拉力 = G ÷ 倍率（滑轮组倍率 1/2/4）；提升功率 P = m·g·v ÷ η（kW，v 提升速度 m/s，η 总效率，未计加速功率与钢丝绳自重）",
+  inputs:[
+   {id:"m", label:"载荷质量 m", unit:"kg", def:"1000"},
+   {id:"v", label:"提升速度 v", unit:"m/s", def:"0.5"},
+   {id:"eta", label:"总效率 η", unit:"%", def:"85"},
+   {id:"ratio", label:"滑轮组倍率", def:"2", type:"select", options:[{v:"1", t:"倍率 1（直拉）"}, {v:"2", t:"倍率 2"}, {v:"4", t:"倍率 4"}]}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var MM=Number(m),VV=Number(v),ET=Number(eta),RA=Number(ratio);if(!(MM>0))return {ok:false,msg:'载荷质量须大于 0'};if(!(VV>=0))return {ok:false,msg:'提升速度不能为负'};if(!(ET>0&&ET<=100))return {ok:false,msg:'总效率应在 (0,100] % 之间'};if(!(RA>0))return {ok:false,msg:'倍率无效'};var G=MM*9.81;var Trope=G/RA;var P=G*VV/(ET/100)/1000;return {ok:true,html:'<div class=\"big\">电机功率 P ≈ '+F(P)+' kW</div><div class=\"row\">钢丝绳拉力 = m·g/倍率 = '+F(Trope/1000)+' kN（总重力 '+F(G/1000)+' kN，倍率 '+RA+'，η = '+ET+' %；未计加速功率与绳自重，选绳另按安全系数校核）</div>'};",
+  test:{inputs:{m:1000, v:0.5, eta:85, ratio:"2"}, expect:"5.7706"}},
+ {id:"djconveyor", cat:"dj", icon:"📦", name:"带式输送机功率估算", desc:"摩擦系数法简化估算：水平功率加提升功率除以效率",
+  formula:"简化摩擦系数法（近似）：物料水平功率 P₁ = f × Q × L ÷ 367（kW），提升功率 P₂ = Q × H ÷ 367（kW），轴功率 P = (P₁+P₂) ÷ η；Q 输送量 t/h，L 水平投影长度 m，H 提升高度 m，f 运行阻力系数（常用 0.02~0.035）；367 = 3600÷9.81 换算常数。水平功率中带速 v 约去，v 仅用于物料线密度 q = Q÷(3.6v) 校核。本法未计带体自重、托辊与清扫器附加阻力，仅作估算",
+  inputs:[
+   {id:"Q", label:"输送量 Q", unit:"t/h", def:"200"},
+   {id:"v", label:"带速 v", unit:"m/s", def:"2"},
+   {id:"L", label:"水平投影长度 L", unit:"m", def:"100"},
+   {id:"H", label:"提升高度 H", unit:"m", def:"10"},
+   {id:"f", label:"运行阻力系数 f", def:"0.03", hint:"常用 0.02~0.035"},
+   {id:"eta", label:"传动效率 η", unit:"%", def:"90"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var QQ=Number(Q),VV=Number(v),LL=Number(L),HH=Number(H),FF=Number(f),ET=Number(eta);if(!(QQ>=0))return {ok:false,msg:'输送量不能为负'};if(!(VV>0))return {ok:false,msg:'带速须大于 0'};if(!(LL>=0))return {ok:false,msg:'长度不能为负'};if(!(HH>=0))return {ok:false,msg:'提升高度不能为负（下运工况另算）'};if(!(FF>=0))return {ok:false,msg:'阻力系数不能为负'};if(!(ET>0&&ET<=100))return {ok:false,msg:'传动效率应在 (0,100] % 之间'};var P1=FF*QQ*LL/367;var P2=QQ*HH/367;var P=(P1+P2)/(ET/100);var q=QQ/(3.6*VV);return {ok:true,html:'<div class=\"big\">估算轴功率 P ≈ '+F(P)+' kW</div><div class=\"row\">物料水平功率 '+F(P1)+' kW + 提升功率 '+F(P2)+' kW，除以效率 '+ET+' %；物料线密度 q = Q/(3.6v) = '+F(q)+' kg/m。摩擦系数法近似：未计带体自重与托辊、清扫器附加阻力，仅作估算，电机选型另留裕量</div>'};",
+  test:{inputs:{Q:200, v:2, L:100, H:10, f:0.03, eta:90}, expect:"7.8716"}},
+ {id:"djstir", cat:"dj", icon:"🥄", name:"搅拌器功率", desc:"功率准数法算搅拌功率并提示雷诺数流区",
+  formula:"P = Np × ρ × n³ × d⁵（W，n 为转速 r/s 由 r/min 换算，d 桨径 m，ρ 密度 kg/m³）；功率准数 Np 按桨型（湍流区恒定口径）：涡轮式约 5、桨式约 1.5、锚式约 0.7；搅拌雷诺数 Re = ρ·n·d² ÷ μ，Re ≥ 10⁴ 为湍流（Np 口径适用），10~10⁴ 过渡区 Np 随 Re 变化，＜10 层流应另用层流公式",
+  inputs:[
+   {id:"Np", label:"桨型（功率准数 Np）", def:"5", type:"select", options:[{v:"5", t:"涡轮式 Np≈5"}, {v:"1.5", t:"桨式 Np≈1.5"}, {v:"0.7", t:"锚式 Np≈0.7"}]},
+   {id:"rho", label:"液体密度 ρ", unit:"kg/m³", def:"1000"},
+   {id:"rpm", label:"转速", unit:"r/min", def:"120"},
+   {id:"d", label:"桨径 d", unit:"m", def:"0.5"},
+   {id:"mu", label:"液体粘度 μ", unit:"Pa·s", def:"0.001", hint:"水约 0.001 Pa·s"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var NP=Number(Np),RH=Number(rho),RM=Number(rpm),DD=Number(d),MU=Number(mu);if(!(NP>0))return {ok:false,msg:'功率准数无效'};if(!(RH>0))return {ok:false,msg:'密度须大于 0'};if(!(RM>=0))return {ok:false,msg:'转速不能为负'};if(!(DD>0))return {ok:false,msg:'桨径须大于 0'};if(!(MU>0))return {ok:false,msg:'粘度须大于 0'};var ns=RM/60;var P=NP*RH*Math.pow(ns,3)*Math.pow(DD,5);var Re=RH*ns*DD*DD/MU;var reg=(Re>=10000)?'湍流区，Np 恒定口径适用':((Re>=10)?'过渡区，Np 随 Re 变化，结果仅供参考':'层流区，应按层流公式（P 与 μ、n²、d³ 相关）另算，本结果不适用');return {ok:true,html:'<div class=\"big\">搅拌功率 P ≈ '+F(P/1000)+' kW</div><div class=\"row\">P = Np·ρ·n³·d⁵ = '+F(P)+' W（n = '+F(ns)+' r/s）；搅拌雷诺数 Re = ρnd²/μ = '+F(Re)+'，属'+reg+'</div>'};",
+  test:{inputs:{Np:"5", rho:1000, rpm:120, d:0.5, mu:0.001}, expect:"1250"}},
+ {id:"djcentrifuge", cat:"dj", icon:"🌀", name:"离心机分离因数", desc:"由转鼓半径与转速算分离因数与线速度",
+  formula:"分离因数 Fr = ω²r ÷ g = 1.118×10⁻⁶ × r(mm) × n²（n 为 r/min；常数由 (2π/60)² ÷ (9.81 × 1000) 导出）；线速度 v = ωr，ω = 2πn÷60",
+  inputs:[
+   {id:"r", label:"转鼓半径 r", unit:"mm", def:"200"},
+   {id:"n", label:"转速 n", unit:"r/min", def:"3000"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var RR=Number(r),NN=Number(n);if(!(RR>0))return {ok:false,msg:'转鼓半径须大于 0'};if(!(NN>=0))return {ok:false,msg:'转速不能为负'};var Fr=1.118e-6*RR*NN*NN;var w=2*Math.PI*NN/60;var v=w*RR/1000;return {ok:true,html:'<div class=\"big\">分离因数 Fr = '+F(Fr)+'</div><div class=\"row\">Fr = ω²r/g ≈ 1.118×10⁻⁶ × r(mm) × n²；转鼓线速度 v = ωr = '+F(v)+' m/s（ω = '+F(w)+' rad/s）</div>'};",
+  test:{inputs:{r:200, n:3000}, expect:"2012.4"}},
+ {id:"djnpsh", cat:"dj", icon:"🫧", name:"水泵汽蚀余量 NPSHa", desc:"大气压头减汽化压头、吸上高度与吸入损失，并与 NPSHr 比较",
+  formula:"NPSHa = 大气压头 − 汽化压头 − 吸上高度 − 吸入管损失（均为 m 液柱）；汽化压头按水温查表：0 ℃ 0.06、20 ℃ 0.24、40 ℃ 0.75、60 ℃ 2.03、80 ℃ 4.83、100 ℃ 10.33 m（饱和蒸汽压换算水柱）；海平面大气压头约 10.33 m，高原应按当地气压改",
+  inputs:[
+   {id:"temp", label:"水温（汽化压头）", def:"0.24", type:"select", options:[{v:"0.06", t:"0 ℃ → 0.06 m"}, {v:"0.24", t:"20 ℃ → 0.24 m"}, {v:"0.75", t:"40 ℃ → 0.75 m"}, {v:"2.03", t:"60 ℃ → 2.03 m"}, {v:"4.83", t:"80 ℃ → 4.83 m"}, {v:"10.33", t:"100 ℃ → 10.33 m"}]},
+   {id:"Patm", label:"大气压头", unit:"m", def:"10.33", hint:"海平面约 10.33 m"},
+   {id:"hs", label:"吸上高度", unit:"m", def:"2", hint:"灌注吸入取 0 或按负值工况另算"},
+   {id:"hf", label:"吸入管损失", unit:"m", def:"0.5"},
+   {id:"req", label:"所需 NPSHr", unit:"m", def:"3", hint:"查泵样本"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var PV=Number(temp),PA=Number(Patm),HS=Number(hs),HF=Number(hf),RQ=Number(req);if(!(PA>0))return {ok:false,msg:'大气压头须大于 0'};if(!(HS>=0))return {ok:false,msg:'吸上高度不能为负'};if(!(HF>=0))return {ok:false,msg:'吸入管损失不能为负'};if(!(RQ>=0))return {ok:false,msg:'NPSHr 不能为负'};var N=PA-PV-HS-HF;var mg=N-RQ;var vd=(N<0)?'NPSHa 为负：必然汽蚀，必须降低吸上高度、缩短吸入管或改为灌注/加压吸入':((mg<0)?'小于所需 NPSHr：汽蚀风险高':((mg<1)?'裕量偏小（建议 NPSHa − NPSHr ≥ 0.5~1 m 或按厂家要求）':'裕量充足'));return {ok:true,html:'<div class=\"big\">有效汽蚀余量 NPSHa = '+F(N)+' m</div><div class=\"row\">NPSHa = 大气压头 '+F(PA)+' − 汽化压头 '+F(PV)+' − 吸上高度 '+F(HS)+' − 吸入损失 '+F(HF)+'；与所需 NPSHr '+F(RQ)+' m 相比裕量 '+F(mg)+' m：'+vd+'</div>'};",
+  test:{inputs:{temp:"0.24", Patm:10.33, hs:2, hf:0.5, req:3}, expect:"7.59"}},
+ {id:"djpunch", cat:"dj", icon:"🔨", name:"冲裁力计算", desc:"冲裁周长、板厚与材料抗剪强度算冲裁力与卸料力",
+  formula:"冲裁力 F = L × t × τ（N，L 冲裁轮廓周长 mm，t 板厚 mm，τ 材料抗剪强度 MPa）；τ 按材料：低碳钢约 350、中碳钢约 470、不锈钢约 550、铝约 160、铜约 240 MPa（常用近似值）；卸料力约取冲裁力的 5%，设备公称压力应 ≥ F + 卸料力并另留安全裕量",
+  inputs:[
+   {id:"L", label:"冲裁周长 L", unit:"mm", def:"100"},
+   {id:"t", label:"板厚 t", unit:"mm", def:"2"},
+   {id:"mat", label:"材料（抗剪强度 τ）", def:"350", type:"select", options:[{v:"350", t:"低碳钢 τ≈350 MPa"}, {v:"470", t:"中碳钢 τ≈470 MPa"}, {v:"550", t:"不锈钢 τ≈550 MPa"}, {v:"160", t:"铝 τ≈160 MPa"}, {v:"240", t:"铜 τ≈240 MPa"}]}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var LL=Number(L),TT=Number(t),TA=Number(mat);if(!(LL>0))return {ok:false,msg:'冲裁周长须大于 0'};if(!(TT>0))return {ok:false,msg:'板厚须大于 0'};if(!(TA>0))return {ok:false,msg:'材料抗剪强度无效'};var Fc=LL*TT*TA;var strip=0.05*Fc;return {ok:true,html:'<div class=\"big\">冲裁力 F = '+F(Fc/1000)+' kN</div><div class=\"row\">F = L·t·τ = '+F(Fc)+' N；卸料力约 5% ≈ '+F(strip/1000)+' kN，设备公称压力建议 ≥ '+F((Fc+strip)/1000)+' kN（另留安全裕量）</div>'};",
+  test:{inputs:{L:100, t:2, mat:"350"}, expect:"70"}},
+ {id:"djwirerope", cat:"dj", icon:"🪢", name:"钢丝绳安全系数校核", desc:"经验破断拉力与工作载荷算安全系数并按用途判定",
+  formula:"破断拉力经验近似 F ≈ 0.5 × d²（kN，d 绳径 mm，6×37+FC 钢丝绳常用经验式，实际破断拉力以厂家样本/GB 标准为准）；安全系数 = 破断拉力 ÷ 工作载荷；要求：一般起重 ≥ 5、载人 ≥ 10（按用途 select）",
+  inputs:[
+   {id:"d", label:"钢丝绳直径 d", unit:"mm", def:"20"},
+   {id:"W", label:"工作载荷", unit:"kN", def:"30"},
+   {id:"use", label:"用途要求", def:"5", type:"select", options:[{v:"5", t:"一般起重（安全系数 ≥ 5）"}, {v:"10", t:"载人（安全系数 ≥ 10）"}]}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var DD=Number(d),WW=Number(W),RQ=Number(use);if(!(DD>0))return {ok:false,msg:'绳径须大于 0'};if(!(WW>0))return {ok:false,msg:'工作载荷须大于 0'};if(!(RQ>0))return {ok:false,msg:'用途要求无效'};var Fb=0.5*DD*DD;var SF=Fb/WW;return {ok:true,html:'<div class=\"big\">安全系数 ≈ '+F(SF)+'</div><div class=\"row\">破断拉力近似 F ≈ 0.5×d² = '+F(Fb)+' kN（6×37+FC 常用经验近似，实际以厂家样本为准）；工作载荷 '+F(WW)+' kN，要求 ≥ '+RQ+'：'+(SF>=RQ?'满足要求':'不满足要求，应加大绳径或减小载荷')+'</div>'};",
+  test:{inputs:{d:20, W:30, use:"5"}, expect:"6.6667"}},
+ {id:"djstepdiv", cat:"dj", icon:"🦶", name:"步进电机细分换算", desc:"整步角与细分数算步距角、每转步数、每步位移与脉冲频率",
+  formula:"细分后步距角 = 整步角 ÷ 细分数（整步角 1.8° 对应 200 步/转，0.9° 对应 400 步/转）；每转步数 = 基础步数 × 细分数；每步位移 = 导程 ÷ 每转步数；脉冲频率 = 每转步数 × 转速 ÷ 60（Hz）",
+  inputs:[
+   {id:"base", label:"整步角", def:"1.8", type:"select", options:[{v:"1.8", t:"1.8°（200 步/转）"}, {v:"0.9", t:"0.9°（400 步/转）"}]},
+   {id:"div", label:"细分数", def:"16", hint:"驱动器拨码细分数，如 2/4/8/16/32"},
+   {id:"lead", label:"丝杠导程", unit:"mm", def:"5"},
+   {id:"rpm", label:"转速", unit:"r/min", def:"300"}
+  ],
+  run:"function F(x){if(x===0)return '0';var ax=Math.abs(x);if(ax>=1e7||ax<1e-4)return x.toPrecision(4);var s=x.toFixed(4);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var A0=Number(base),DV=Number(div),LD=Number(lead),RM=Number(rpm);if(!(A0>0))return {ok:false,msg:'整步角无效'};if(!(DV>0)||Math.floor(DV)!==DV)return {ok:false,msg:'细分数须为正整数'};if(!(LD>0))return {ok:false,msg:'导程须大于 0'};if(!(RM>=0))return {ok:false,msg:'转速不能为负'};var steps=Math.round(360/A0)*DV;var ang=A0/DV;var disp=LD/steps;var freq=steps*RM/60;return {ok:true,html:'<div class=\"big\">每转步数 = '+steps+' 步/转</div><div class=\"row\">细分后步距角 = '+F(ang)+' °；每步位移 = 导程 ÷ 每转步数 = '+F(disp*1000)+' μm；转速 '+F(RM)+' r/min 时脉冲频率 = '+F(freq)+' Hz</div>'};",
+  test:{inputs:{base:"1.8", div:16, lead:5, rpm:300}, expect:"3200"}}
+);
+
 
 /* 数据驱动工具自动注册渲染器（必须在所有 TOOLS.push 之后、初始化之前执行） */
 TOOLS.forEach(function(t){ if(t.run&&!RENDER[t.id]){ RENDER[t.id]=function(tool){ renderDataTool(tool); }; } });
