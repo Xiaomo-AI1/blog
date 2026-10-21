@@ -1153,7 +1153,7 @@ TOOLS.push(
  {id:"dzbjtbase", cat:"dz", icon:"🔉", name:"三极管基极电阻", desc:"开关状态下基极限流电阻",
   formula:"Rb = (Vctl − Vbe) × β / Ic，Vbe≈0.7V",
   inputs:[{id:"v", label:"控制电压", unit:"V", def:"5", min:0.8},{id:"be", label:"放大倍数β", unit:"", def:"100", min:1},{id:"ic", label:"集电极电流", unit:"mA", def:"100", min:0.01}],
-  run:"if(!(ic>0)) return {ok:false,msg:'集电极电流须大于0'}; var rb=(v-0.7)*be/(ic/1000)/1000; return {ok:true,html:'<div class=\"big\">Rb ≈ '+rb.toFixed(2)+' kΩ</div><div class=\"row\">取 β 较小值保证饱和，电阻就近取小</div>'};",
+  run:"if(!(ic>0)) return {ok:false,msg:'集电极电流须大于0'}; if(!(be>0)) return {ok:false,msg:'β 须大于0'}; if(!(v>=0.7)) return {ok:false,msg:'控制电压须不低于 Vbe≈0.7V，否则基极无法导通'}; var rb=(v-0.7)*be/(ic/1000)/1000; return {ok:true,html:'<div class=\"big\">Rb ≈ '+rb.toFixed(2)+' kΩ</div><div class=\"row\">取 β 较小值保证饱和，电阻就近取小</div>'};",
   test:{inputs:{v:5,be:100,ic:100}, expect:"Rb ≈ 4.30 kΩ"}},
  {id:"dzbuck", cat:"dz", icon:"⬇️", name:"Buck占空比", desc:"降压型DC-DC的理论占空比",
   formula:"D = Vout / Vin",
@@ -5085,7 +5085,7 @@ TOOLS.push(
    {id:"r1", label:"R1（上偏置）", unit:"Ω", def:"10000", min:0.001},
    {id:"r2", label:"R2（下偏置）", unit:"Ω", def:"10000", min:0.001}
   ],
-  run:"var v=vin*r2/(r1+r2); return {ok:true,html:'<div class=\"big\">Vout = '+v.toFixed(2)+' V</div>'};",
+  run:"if(!(r1>=0)||!(r2>=0)||!(r1+r2>0)) return {ok:false,msg:'电阻不能为负，且 R1+R2 须大于 0'}; var v=vin*r2/(r1+r2); return {ok:true,html:'<div class=\"big\">Vout = '+v.toFixed(2)+' V</div>'};",
   test:{inputs:{vin:12,r1:10000,r2:10000}, expect:"6.00"}},
  {id:"dzcdiv", cat:"dz", icon:"🌊", name:"电阻分流", desc:"两支路并联求各支路电流",
   formula:"I₁ = I总 × R₂ ÷ (R₁ + R₂)，I₂ = I总 − I₁",
@@ -5094,7 +5094,7 @@ TOOLS.push(
    {id:"r1", label:"R1 支路", unit:"Ω", def:"100", min:0.001},
    {id:"r2", label:"R2 支路", unit:"Ω", def:"100", min:0.001}
   ],
-  run:"var i1=itot*r2/(r1+r2); var i2=itot*r1/(r1+r2); return {ok:true,html:'<div class=\"big\">I₁ = '+i1.toFixed(1)+' mA，I₂ = '+i2.toFixed(1)+' mA</div>'};",
+  run:"if(!(r1>=0)||!(r2>=0)||!(r1+r2>0)) return {ok:false,msg:'电阻不能为负，且 R1+R2 须大于 0'}; var i1=itot*r2/(r1+r2); var i2=itot*r1/(r1+r2); return {ok:true,html:'<div class=\"big\">I₁ = '+i1.toFixed(1)+' mA，I₂ = '+i2.toFixed(1)+' mA</div>'};",
   test:{inputs:{itot:100,r1:100,r2:100}, expect:"50.0"}},
 
 );
@@ -5154,7 +5154,7 @@ TOOLS.push(
    {id:"mode", label:"方向", type:"select", options:[{v:"todbm",t:"瓦特 → dBm"},{v:"tow",t:"dBm → 瓦特"}], def:"todbm"},
    {id:"val", label:"数值", def:"1", min:0.000001, hint:"瓦特方向填 W，dBm 方向填 dBm"}
   ],
-  run:"var x=parseFloat(val); if(!(x>0)) return {ok:false,msg:'数值必须大于 0'}; if(mode==='todbm'){ var db=10*Math.log10(x/0.001); return {ok:true,html:'<div class=\"big\">'+x+' W = '+db.toFixed(2)+' dBm</div>'}; } var w=Math.pow(10,(x-30)/10); var ws=w>=1?w.toFixed(3)+' W':(w*1000).toFixed(2)+' mW'; return {ok:true,html:'<div class=\"big\">'+x+' dBm = '+ws+'</div>'};",
+  run:"var x=parseFloat(val); if(mode==='todbm'){ if(!(x>0)) return {ok:false,msg:'瓦特数值必须大于 0'}; var db=10*Math.log10(x/0.001); return {ok:true,html:'<div class=\"big\">'+x+' W = '+db.toFixed(2)+' dBm</div>'}; } if(!isFinite(x)||x>200) return {ok:false,msg:'dBm 数值不合理'}; var w=Math.pow(10,(x-30)/10); var ws=w>=1?w.toFixed(3)+' W':(w>=0.001?(w*1000).toFixed(2)+' mW':(w>=1e-6?(w*1e6).toFixed(2)+' μW':(w*1e9).toFixed(2)+' nW')); return {ok:true,html:'<div class=\"big\">'+x+' dBm = '+ws+'</div>'};",
   test:{inputs:{mode:"todbm",val:1}, expect:"30.00"}}
 );
 TOOLS.push(
@@ -8753,6 +8753,278 @@ TOOLS.push(
   ],
   run:"function pd(s){var p=String(s).trim().split('-');if(p.length!==3)return null;var y=Number(p[0]),m=Number(p[1]),d=Number(p[2]);if(!isFinite(y)||!isFinite(m)||!isFinite(d)||Math.floor(y)!==y||Math.floor(m)!==m||Math.floor(d)!==d||y<1||y>9999||m<1||m>12||d<1||d>31)return null;var t=Date.UTC(y,m-1,d);var z=new Date(t);if(z.getUTCFullYear()!==y||z.getUTCMonth()!==m-1||z.getUTCDate()!==d)return null;return t;}function f2(x){return String(x).padStart(2,'0');}function fmt(t){var z=new Date(t);return z.getUTCFullYear()+'-'+f2(z.getUTCMonth()+1)+'-'+f2(z.getUTCDate());}var WN=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];var DAY=86400000;var B=pd(birth);if(B===null)return {ok:false,msg:'日期格式应为 YYYY-MM-DD 且日期须真实存在'};if(String(mode)==='d2b'){var T2=pd(target);if(T2===null)return {ok:false,msg:'日期格式应为 YYYY-MM-DD 且日期须真实存在'};if(T2<B)return {ok:false,msg:'目标日期不能早于出生日期'};var df=(T2-B)/DAY;return {ok:true,html:'<div class=\"big\">'+fmt(T2)+' 是出生第 '+(df+1)+' 天</div><div class=\"row\">已满 '+df+' 天；出生日 '+fmt(B)+'</div>'};}\n  var N=Number(n);if(!isFinite(N)||Math.floor(N)!==N||N<1||N>50000)return {ok:false,msg:'天数 N 须为 1~50000 的整数'};var dt2=B+(N-1)*DAY;return {ok:true,html:'<div class=\"big\">出生第 '+N+' 天是 '+fmt(dt2)+'</div><div class=\"row\">'+WN[new Date(dt2).getUTCDay()]+'；出生当天为第 1 天口径；已满 '+N+' 天的日期为 '+fmt(B+N*DAY)+'</div>'};",
   test:{inputs:{mode:"b2d", birth:"2000-01-01", n:10000, target:"2027-05-18"}, expect:"2027-05-18"}}
+);
+
+/* ===== R3-DZ2 电子电路第二轮 25 工具（2026-10-21，数据驱动） ===== */
+TOOLS.push(
+ {id:"dzflyback", cat:"dz", icon:"🔄", name:"反激电源估算", desc:"匝比、初级临界电感与次级峰值电流估算（CCM 临界口径）",
+  formula:"伏秒平衡：Vo/Vin = (Ns/Np)·D/(1−D) → 匝比 Ns/Np = (Vo/Vin)·(1−D)/D；CCM 临界电感 Lp = (Vin·D)²/(2·P·f)（由 ½·Lp·Ipk²·f = P、Ipk = Vin·D/(Lp·f) 导出，效率按 100% 口径，实际 Lp 应大于临界值并留裕量）；次级峰值电流（临界）Ispk = 2·Iout/(1−D)，Iout = P/Vo；初级峰值 Ipk = 2P/(Vin·D)",
+  inputs:[
+   {id:"Vin", label:"输入电压 Vin", unit:"V", def:"48"},
+   {id:"Vo", label:"输出电压 Vo", unit:"V", def:"12"},
+   {id:"D", label:"占空比上限 D", unit:"%", def:"40", hint:"反激常用 0.3~0.45，不宜超过 50% 太多"},
+   {id:"P", label:"输出功率 P", unit:"W", def:"24"},
+   {id:"f", label:"开关频率 f", unit:"kHz", def:"100"}
+  ],
+  run:"var vi=Number(Vin),vo=Number(Vo),dd=Number(D)/100,pp=Number(P),ff=Number(f)*1000;if(!(vi>0))return {ok:false,msg:'输入电压须大于 0'};if(!(vo>0))return {ok:false,msg:'输出电压须大于 0'};if(!(dd>0&&dd<0.9))return {ok:false,msg:'占空比须在 0~90% 之间'};if(!(pp>0))return {ok:false,msg:'输出功率须大于 0'};if(!(ff>0))return {ok:false,msg:'开关频率须大于 0'};var n=(vo/vi)*(1-dd)/dd;var Lp=(vi*dd)*(vi*dd)/(2*pp*ff);var io=pp/vo;var ispk=2*io/(1-dd);var ipk=2*pp/(vi*dd);return {ok:true,html:'<div class=\"big\">匝比 Ns/Np = '+n.toFixed(3)+'（Np/Ns = '+(1/n).toFixed(3)+')</div><div class=\"row\">CCM 临界初级电感 Lp ≥ '+(Lp*1e6).toFixed(2)+' μH；初级峰值电流 '+ipk.toFixed(3)+' A</div><div class=\"row\">输出电流 '+io.toFixed(3)+' A，次级峰值电流（临界）'+ispk.toFixed(3)+' A；效率按 100% 口径，实际选感量与电流额定须留裕量</div>'};",
+  test:{inputs:{Vin:48,Vo:12,D:40,P:24,f:100}, expect:"0.375"}},
+ {id:"dztvs", cat:"dz", icon:"⚡", name:"TVS 管选型校核", desc:"反向关断电压建议与峰值脉冲功率校核",
+  formula:"Vrwm 建议 ≥ 1.15 × 最大工作电压（留瞬态与容差裕量，厂商选型口径）；峰值脉冲功率 Pp = Vc（钳位电压）× Ipp（浪涌电流）；与所选额定功率档（600W/1500W/5000W，10/1000μs 波形口径）比较，Pp 不超过额定档为合格，接近额定 80% 以上提示裕量不足",
+  inputs:[
+   {id:"Vw", label:"电路最大工作电压", unit:"V", def:"12"},
+   {id:"Vc", label:"TVS 钳位电压 Vc", unit:"V", def:"20"},
+   {id:"Ipp", label:"浪涌电流 Ipp", unit:"A", def:"30"},
+   {id:"Pr", label:"所选 TVS 额定峰值功率", type:"select", def:"600", options:[{v:"600",t:"600 W（如 SMBJ 系列）"},{v:"1500",t:"1500 W（如 SMCJ 系列）"},{v:"5000",t:"5000 W（如 5KP 系列）"}]}
+  ],
+  run:"var vw=Number(Vw),vc=Number(Vc),ip=Number(Ipp),pr=Number(Pr);if(!(vw>0))return {ok:false,msg:'工作电压须大于 0'};var vr=1.15*vw;if(!(vc>vr))return {ok:false,msg:'钳位电压应大于建议 Vrwm = '+vr.toFixed(2)+' V，否则 TVS 可能在正常工作时导通'};if(!(ip>0))return {ok:false,msg:'浪涌电流须大于 0'};if([600,1500,5000].indexOf(pr)<0)return {ok:false,msg:'功率档无效'};var pp=vc*ip;var ratio=pp/pr;var verdict=ratio>1?'❌ 超过额定功率，需升档或并联分流':ratio>0.8?'⚠️ 可用但裕量不足（已用 '+(ratio*100).toFixed(1)+'%）':'✅ 合格（裕量 '+((1-ratio)*100).toFixed(1)+'%）';return {ok:true,html:'<div class=\"big\">峰值脉冲功率 Pp = '+pp.toFixed(1)+' W '+verdict+'</div><div class=\"row\">建议 Vrwm ≥ 1.15 × '+vw+' = '+vr.toFixed(2)+' V；Pp = Vc '+vc+' V × Ipp '+ip+' A = '+pp.toFixed(1)+' W，对照额定 '+pr+' W 档</div>'};",
+  test:{inputs:{Vw:12,Vc:20,Ipp:30,Pr:"600"}, expect:"600.0"}},
+ {id:"dzptc", cat:"dz", icon:"🌡️", name:"自恢复保险丝选型", desc:"按环境温度折减保持电流，反算所需标称 IH",
+  formula:"温度折减（厂商常用曲线口径，如 Littelfuse/ Bourns PPTC 典型值）：−20℃ 1.25、0℃ 1.12、23℃ 1.00、40℃ 0.88、60℃ 0.72、85℃ 0.52；高温下实际保持电流 IH(T) = IH(23℃) × 折减系数 → 所需标称 IH = 工作电流 ÷ 折减系数；触发电流 Itrip ≈ 2 × IH（23℃ 典型口径）",
+  inputs:[
+   {id:"Iw", label:"电路最大工作电流", unit:"A", def:"1"},
+   {id:"temp", label:"环境温度", type:"select", def:"60", options:[{v:"-20",t:"−20℃（系数 1.25）"},{v:"0",t:"0℃（系数 1.12）"},{v:"23",t:"23℃（系数 1.00）"},{v:"40",t:"40℃（系数 0.88）"},{v:"60",t:"60℃（系数 0.72）"},{v:"85",t:"85℃（系数 0.52）"}]}
+  ],
+  run:"var iw=Number(Iw);if(!(iw>0))return {ok:false,msg:'工作电流须大于 0'};var K={'-20':1.25,'0':1.12,'23':1,'40':0.88,'60':0.72,'85':0.52};var k=K[String(temp)];if(k===undefined)return {ok:false,msg:'温度档无效'};var ih=iw/k;var it=2*ih;return {ok:true,html:'<div class=\"big\">所需标称保持电流 IH ≥ '+ih.toFixed(3)+' A</div><div class=\"row\">'+temp+'℃ 折减系数 '+k+'：IH = '+iw+' ÷ '+k+' = '+ih.toFixed(3)+' A；对应触发电流 Itrip ≈ 2 × IH = '+it.toFixed(3)+' A</div><div class=\"row\">选型时标称 IH 向上取标准档，且耐压须高于电路电压；系数为厂商常用曲线口径，精确值查所选型号数据手册</div>'};",
+  test:{inputs:{Iw:1,temp:"60"}, expect:"1.389"}},
+ {id:"dzrelaydrv", cat:"dz", icon:"🔌", name:"继电器驱动校核", desc:"线圈电流功耗、三极管基极电流与基极电阻、续流提示",
+  formula:"线圈电流 Ic = Vcoil ÷ Rcoil，线圈功耗 P = Vcoil × Ic；三极管饱和驱动所需基极电流 Ib = Ic ÷ β × ksat（ksat 为过驱动倍数，常取 2~5）；基极电阻 Rb = (Vdrv − Vbe) ÷ Ib，Vbe 取 0.7 V 口径；线圈断电反峰由续流二极管泄放，二极管电流额定应 ≥ Ic",
+  inputs:[
+   {id:"Vc_", label:"线圈电压", unit:"V", def:"12"},
+   {id:"Rc", label:"线圈电阻", unit:"Ω", def:"120"},
+   {id:"Vdrv", label:"驱动信号电压", unit:"V", def:"5"},
+   {id:"beta", label:"三极管 β（hFE）", def:"100"},
+   {id:"ksat", label:"饱和过驱动倍数", def:"2", hint:"常取 2~5，保证深度饱和"}
+  ],
+  run:"var vc=Number(Vc_),rc=Number(Rc),vd=Number(Vdrv),be=Number(beta),ks=Number(ksat);if(!(vc>0))return {ok:false,msg:'线圈电压须大于 0'};if(!(rc>0))return {ok:false,msg:'线圈电阻须大于 0'};if(!(vd>0.7))return {ok:false,msg:'驱动电压须大于 Vbe 0.7 V'};if(!(be>0))return {ok:false,msg:'β 须大于 0'};if(!(ks>=1&&ks<=20))return {ok:false,msg:'过驱动倍数应在 1~20 之间'};var ic=vc/rc;var pw=vc*ic;var ib=ic/be*ks;var rb=(vd-0.7)/ib;return {ok:true,html:'<div class=\"big\">线圈电流 Ic = '+(ic*1000).toFixed(1)+' mA，功耗 '+pw.toFixed(2)+' W</div><div class=\"row\">所需基极电流 Ib = Ic ÷ β × '+ks+' = '+(ib*1000).toFixed(2)+' mA；基极电阻 Rb = ('+vd+' − 0.7) ÷ Ib = '+rb.toFixed(0)+' Ω（取标准值时向下取）</div><div class=\"row\">续流二极管电流额定应 ≥ '+(ic*1000).toFixed(1)+' mA，反向耐压 ≥ 线圈电压，常用 1N4148（小线圈）/1N4007</div>'};",
+  test:{inputs:{Vc_:12,Rc:120,Vdrv:5,beta:100,ksat:2}, expect:"2150"}},
+ {id:"dz420", cat:"dz", icon:"📟", name:"4-20mA 量程换算", desc:"电流与工程量/百分比双向换算（NAMUR 故障线提示）",
+  formula:"工程量 X = 下限 + (I − 4) ÷ 16 × (上限 − 下限)；百分比 = (I − 4) ÷ 16 × 100%；反算 I = 4 + 16 × (X − 下限) ÷ (上限 − 下限)；NAMUR NE43 口径：I ≤ 3.6 mA 为断线/故障低，I ≥ 21 mA 为故障高，4~20 mA 之外为超量程提示",
+  inputs:[
+   {id:"mode", label:"换算方向", type:"select", def:"i2e", options:[{v:"i2e",t:"电流 → 工程量"},{v:"e2i",t:"工程量 → 电流"}]},
+   {id:"lo", label:"量程下限", def:"0"},
+   {id:"hi", label:"量程上限", def:"10", hint:"如 0~10 MPa 压力变送器"},
+   {id:"I", label:"环路电流 I", unit:"mA", when:"mode=i2e", def:"12"},
+   {id:"X", label:"工程量 X", when:"mode=e2i", def:"5"}
+  ],
+  run:"var lo2=Number(lo),hi2=Number(hi);if(!isFinite(lo2)||!isFinite(hi2))return {ok:false,msg:'量程上下限须为数值'};if(!(hi2>lo2))return {ok:false,msg:'量程上限须大于下限'};var span=hi2-lo2;if(String(mode)==='i2e'){var ii=Number(I);if(!isFinite(ii))return {ok:false,msg:'电流无效'};var pct=(ii-4)/16*100;var x=lo2+(ii-4)/16*span;var warn=ii<=3.6?'⚠️ ≤3.6 mA：NAMUR 断线/故障低信号':ii>=21?'⚠️ ≥21 mA：NAMUR 故障高信号':(ii<4||ii>20)?'⚠️ 已超出 4~20 mA 正常量程':'在 4~20 mA 正常量程内';return {ok:true,html:'<div class=\"big\">工程量 = '+x.toFixed(3)+'（'+pct.toFixed(2)+'%）</div><div class=\"row\">X = '+lo2+' + ('+ii+' − 4) ÷ 16 × '+span+' = '+x.toFixed(3)+'；'+warn+'</div>'};}var xx=Number(X);if(!isFinite(xx))return {ok:false,msg:'工程量无效'};var pct2=(xx-lo2)/span*100;var ii2=4+16*(xx-lo2)/span;var warn2=(xx<lo2||xx>hi2)?'⚠️ 工程量超出量程，对应电流在 4~20 mA 之外':'在量程内';return {ok:true,html:'<div class=\"big\">环路电流 I = '+ii2.toFixed(3)+' mA（'+pct2.toFixed(2)+'%）</div><div class=\"row\">I = 4 + 16 × ('+xx+' − '+lo2+') ÷ '+span+' = '+ii2.toFixed(3)+' mA；'+warn2+'</div>'};",
+  test:{inputs:{mode:"i2e",lo:0,hi:10,I:12,X:5}, expect:"5.000"}}
+);
+TOOLS.push(
+ {id:"dzpt100", cat:"dz", icon:"🌡️", name:"PT100 温度换算", desc:"温度与电阻双向换算（Callendar–Van Dusen 正温段）",
+  formula:"正温段（t ≥ 0，−50~500℃ 本工具口径）：R = 100 × (1 + A·t + B·t²)，A = 3.9083e-3 /℃，B = −5.775e-7 /℃²（IEC 60751）；反解二次方程 B·t² + A·t + (1 − R/100) = 0 取物理根；负温段三次项 C·(t−100)·t³ 未计，−50~0℃ 结果为正温式外推近似（−50℃ 误差约 0.1Ω 内）",
+  inputs:[
+   {id:"mode", label:"换算方向", type:"select", def:"t2r", options:[{v:"t2r",t:"温度 → 电阻"},{v:"r2t",t:"电阻 → 温度"}]},
+   {id:"t", label:"温度 t", unit:"℃", when:"mode=t2r", def:"100"},
+   {id:"R", label:"电阻 R", unit:"Ω", when:"mode=r2t", def:"138.51"}
+  ],
+  run:"var A=3.9083e-3,B=-5.775e-7;if(String(mode)==='t2r'){var tt=Number(t);if(!(tt>=-50&&tt<=500))return {ok:false,msg:'温度须在 −50~500℃ 口径范围内'};var rr=100*(1+A*tt+B*tt*tt);return {ok:true,html:'<div class=\"big\">R = '+rr.toFixed(2)+' Ω</div><div class=\"row\">R = 100 × (1 + 3.9083e-3 × '+tt+' − 5.775e-7 × '+tt+'²) = '+rr.toFixed(2)+' Ω'+(tt<0?'；负温段为正温式外推（未计三次项）':'')+'</div>'};}var rr2=Number(R);if(!(rr2>=80&&rr2<=281.5))return {ok:false,msg:'电阻须在约 80.31~280.98 Ω（对应 −50~500℃）范围内'};var cc=1-rr2/100;var disc=A*A-4*B*cc;if(disc<0)return {ok:false,msg:'无实数解'};var t2=(-A+Math.sqrt(disc))/(2*B);if(!(t2>=-50.5&&t2<=500.5))return {ok:false,msg:'反解温度超出 −50~500℃ 口径范围'};return {ok:true,html:'<div class=\"big\">t = '+t2.toFixed(2)+' ℃</div><div class=\"row\">由 B·t² + A·t + (1 − R/100) = 0 取物理根，R = '+rr2+' Ω → t = '+t2.toFixed(2)+' ℃</div>'};",
+  test:{inputs:{mode:"t2r",t:100,R:138.51}, expect:"138.51"}},
+ {id:"dzadcspeed", cat:"dz", icon:"⏱️", name:"ADC 采样率计算", desc:"采样时钟与转换周期互算采样率及奈奎斯特带宽",
+  formula:"采样率 fs = fclk ÷ N（N 为每次转换总周期数 = 采样周期 + 转换周期）；反算所需时钟 fclk = fs × N；奈奎斯特可用带宽 = fs ÷ 2，实际抗混叠设计建议信号带宽 ≤ fs ÷ 2.5 留滤波过渡带",
+  inputs:[
+   {id:"mode", label:"计算方向", type:"select", def:"fwd", options:[{v:"fwd",t:"时钟 + 周期数 → 采样率"},{v:"rev",t:"目标采样率 → 所需时钟"}]},
+   {id:"fclk", label:"采样时钟 fclk", unit:"MHz", when:"mode=fwd", def:"16"},
+   {id:"ncyc", label:"每次转换总周期数 N", def:"16"},
+   {id:"fsps", label:"目标采样率", unit:"kSPS", when:"mode=rev", def:"1000"}
+  ],
+  run:"var nn=Number(ncyc);if(!(nn>0)||Math.floor(nn)!==nn)return {ok:false,msg:'转换周期数须为正整数'};if(String(mode)==='fwd'){var fc=Number(fclk)*1e6;if(!(fc>0))return {ok:false,msg:'采样时钟须大于 0'};var fs=fc/nn;return {ok:true,html:'<div class=\"big\">采样率 fs = '+Math.round(fs)+' SPS</div><div class=\"row\">fs = '+(fc/1e6)+' MHz ÷ '+nn+' = '+Math.round(fs)+' SPS（'+(fs/1000).toFixed(2)+' kSPS）；奈奎斯特带宽 '+(fs/2000).toFixed(2)+' kHz</div>'};}var tg=Number(fsps)*1000;if(!(tg>0))return {ok:false,msg:'目标采样率须大于 0'};var need=tg*nn;return {ok:true,html:'<div class=\"big\">所需时钟 fclk = '+(need/1e6).toFixed(3)+' MHz</div><div class=\"row\">fclk = '+(tg/1000)+' kSPS × '+nn+' 周期 = '+(need/1e6).toFixed(3)+' MHz；该采样率奈奎斯特带宽 '+(tg/2000).toFixed(2)+' kHz</div>'};",
+  test:{inputs:{mode:"fwd",fclk:16,ncyc:16,fsps:1000}, expect:"1000000"}},
+ {id:"dzcaprip", cat:"dz", icon:"🔋", name:"电解电容纹波温升", desc:"纹波电流负荷比、估算温升与寿命联动提示",
+  formula:"有效额定纹波 Ieff额 = 额定纹波 × 温度/频率修正系数 k；负荷比 r = 实际纹波 ÷ Ieff额；芯温升估算 ΔT ≈ r² × ΔT0，ΔT0 = 5℃ 口径（额定纹波下中心温升典型值，厂商应用笔记口径）；寿命联动提示：温度每升 10℃ 寿命约减半（阿伦尼乌斯 10℃ 法则），r > 1 为超额定使用",
+  inputs:[
+   {id:"Irip", label:"实际纹波电流", unit:"A", def:"0.8"},
+   {id:"I0", label:"额定纹波电流", unit:"A", def:"1", hint:"数据手册标称值（规定温度/频率下）"},
+   {id:"k", label:"温度/频率修正系数 k", def:"1", hint:"查手册修正表，如高温或低频时 <1"}
+  ],
+  run:"var ia=Number(Irip),i0=Number(I0),kk=Number(k);if(!(ia>=0))return {ok:false,msg:'纹波电流不能为负'};if(!(i0>0))return {ok:false,msg:'额定纹波须大于 0'};if(!(kk>0&&kk<=2))return {ok:false,msg:'修正系数应在 (0,2] 之间'};var eff=i0*kk;var r=ia/eff;var dt=r*r*5;var life=Math.pow(2,-dt/10);var verdict=r>1?'❌ 超额定纹波使用，寿命急剧缩短':r>0.8?'⚠️ 接近额定，注意散热与寿命':'✅ 负荷比合理';return {ok:true,html:'<div class=\"big\">估算温升 ΔT ≈ '+dt.toFixed(2)+' ℃ '+verdict+'</div><div class=\"row\">有效额定纹波 '+eff.toFixed(3)+' A，负荷比 r = '+ia+' ÷ '+eff.toFixed(3)+' = '+r.toFixed(3)+'；ΔT = r² × 5℃ = '+dt.toFixed(2)+' ℃</div><div class=\"row\">按 10℃ 法则，该温升下相对寿命系数约 '+life.toFixed(2)+'（相对额定温度点）；ΔT0 = 5℃ 为典型口径，精算查厂商寿命计算书</div>'};",
+  test:{inputs:{Irip:0.8,I0:1,k:1}, expect:"3.20"}},
+ {id:"dzindsat", cat:"dz", icon:"🧲", name:"电感饱和估算", desc:"由 AL 值或磁导率算工作磁通密度并与 Bsat 判定",
+  formula:"AL 口径：L = AL × N²（AL 单位 nH/匝²），B = L × I ÷ (N × Ae)；μe 口径：B = μ₀ × μe × N × I ÷ le，μ₀ = 4π×10⁻⁷；与材质饱和磁通 Bsat 比较：铁氧体约 0.35 T（高温下更低）、铁粉芯约 1.0 T、硅钢约 1.5 T 口径；B ≥ Bsat 判饱和，B > 0.8×Bsat 提示裕量不足",
+  inputs:[
+   {id:"mode", label:"已知口径", type:"select", def:"al", options:[{v:"al",t:"AL 值 + 有效截面积 Ae"},{v:"mue",t:"有效磁导率 μe + 磁路长度 le"}]},
+   {id:"Ae", label:"磁芯有效截面积 Ae", unit:"mm²", when:"mode=al", def:"100"},
+   {id:"AL", label:"电感系数 AL", unit:"nH/匝²", when:"mode=al", def:"100"},
+   {id:"mue", label:"有效磁导率 μe", when:"mode=mue", def:"100"},
+   {id:"le", label:"有效磁路长度 le", unit:"mm", when:"mode=mue", def:"50"},
+   {id:"N", label:"匝数 N", def:"20"},
+   {id:"I", label:"峰值电流 I", unit:"A", def:"5"},
+   {id:"mat", label:"磁芯材质（Bsat 口径）", type:"select", def:"0.35", options:[{v:"0.35",t:"铁氧体 0.35 T"},{v:"1.0",t:"铁粉芯 1.0 T"},{v:"1.5",t:"硅钢 1.5 T"},{v:"1.2",t:"非晶/纳米晶 1.2 T"}]}
+  ],
+  run:"var NN=Number(N),II=Number(I),bs=Number(mat);if(!(NN>0)||Math.floor(NN)!==NN)return {ok:false,msg:'匝数须为正整数'};if(!(II>=0))return {ok:false,msg:'电流不能为负'};if(!(bs>0))return {ok:false,msg:'材质无效'};var B,detail;if(String(mode)==='al'){var ae=Number(Ae),al=Number(AL);if(!(ae>0))return {ok:false,msg:'Ae 须大于 0'};if(!(al>0))return {ok:false,msg:'AL 须大于 0'};var L=al*1e-9*NN*NN;B=L*II/(NN*ae*1e-6);detail='L = AL × N² = '+(L*1e6).toFixed(2)+' μH；B = L × I ÷ (N × Ae)';}else{var mu=Number(mue),le2=Number(le);if(!(mu>0))return {ok:false,msg:'μe 须大于 0'};if(!(le2>0))return {ok:false,msg:'le 须大于 0'};B=4*Math.PI*1e-7*mu*NN*II/(le2/1000);detail='B = μ₀ × μe × N × I ÷ le';}var verdict=B>=bs?'❌ 已达/超过 Bsat，将饱和':B>0.8*bs?'⚠️ 接近饱和（B/Bsat = '+(B/bs*100).toFixed(1)+'%），裕量不足':'✅ 未饱和（B/Bsat = '+(B/bs*100).toFixed(1)+'%）';return {ok:true,html:'<div class=\"big\">工作磁通密度 B = '+B.toFixed(3)+' T '+verdict+'</div><div class=\"row\">'+detail+'；Bsat 口径 '+bs+' T（铁氧体高温时 Bsat 下降，精算查材质曲线）</div>'};",
+  test:{inputs:{mode:"al",Ae:100,AL:100,mue:100,le:50,N:20,I:5,mat:"0.35"}, expect:"0.100"}},
+ {id:"dzap", cat:"dz", icon:"📦", name:"磁芯面积积选型", desc:"Ap 法估算开关电源磁芯所需面积积",
+  formula:"面积积经验式（Ap 法）：Ap = P × 10⁴ ÷ (K × J × B × f)，Ap 单位 cm⁴，P 为功率 W，K 为窗口利用系数（常取 0.4），J 为电流密度 A/cm²（自然冷却常取 200~400），B 为工作磁通密度 T，f 为频率 Hz；10⁴ 为单位换算常数（经验式口径，不同拓扑系数略有差异）",
+  inputs:[
+   {id:"P", label:"传输功率 P", unit:"W", def:"100"},
+   {id:"K", label:"窗口利用系数 K", def:"0.4", hint:"含绝缘与占空，常取 0.3~0.4"},
+   {id:"J", label:"电流密度 J", unit:"A/cm²", def:"400", hint:"自然冷却 200~400，风冷可更高"},
+   {id:"B", label:"工作磁通密度 B", unit:"T", def:"0.2"},
+   {id:"f", label:"工作频率 f", unit:"kHz", def:"50"}
+  ],
+  run:"var pp=Number(P),kk=Number(K),jj=Number(J),bb=Number(B),ff=Number(f)*1000;if(!(pp>0))return {ok:false,msg:'功率须大于 0'};if(!(kk>0&&kk<=1))return {ok:false,msg:'窗口系数应在 (0,1] 之间'};if(!(jj>0))return {ok:false,msg:'电流密度须大于 0'};if(!(bb>0))return {ok:false,msg:'磁通密度须大于 0'};if(!(ff>0))return {ok:false,msg:'频率须大于 0'};var ap=pp*1e4/(kk*jj*bb*ff);return {ok:true,html:'<div class=\"big\">所需面积积 Ap ≥ '+ap.toFixed(3)+' cm⁴</div><div class=\"row\">Ap = '+pp+' × 10⁴ ÷ ('+kk+' × '+jj+' × '+bb+' × '+ff+') = '+ap.toFixed(3)+' cm⁴</div><div class=\"row\">选芯提示：查磁芯手册 Ap = Ae × Aw，选不小于计算值且最接近的标准磁芯（如 EE/EER/PQ 系列），再复核温升与窗口绕线</div>'};",
+  test:{inputs:{P:100,K:0.4,J:400,B:0.2,f:50}, expect:"0.625"}}
+);
+TOOLS.push(
+ {id:"dzholdup", cat:"dz", icon:"🔋", name:"保持时间电容计算", desc:"掉电保持时间所需母线电容（恒功率/恒流分支）",
+  formula:"恒功率负载：C = 2 × P × t ÷ (V1² − V2²)（由 ½C(V1²−V2²) = P·t 导出）；恒流负载：C = I × t ÷ (V1 − V2)；V1 为掉电前母线电压，V2 为允许最低母线电压，须 V1 > V2；储能 E = ½ × C × (V1² − V2²)",
+  inputs:[
+   {id:"mode", label:"负载类型", type:"select", def:"p", options:[{v:"p",t:"恒功率负载（开关电源）"},{v:"i",t:"恒流负载"}]},
+   {id:"P", label:"负载功率 P", unit:"W", when:"mode=p", def:"50"},
+   {id:"I", label:"放电电流 I", unit:"A", when:"mode=i", def:"0.5"},
+   {id:"t", label:"保持时间 t", unit:"ms", def:"20"},
+   {id:"V1", label:"初始母线电压 V1", unit:"V", def:"400"},
+   {id:"V2", label:"最低母线电压 V2", unit:"V", def:"300"}
+  ],
+  run:"var tt=Number(t)/1000,v1=Number(V1),v2=Number(V2);if(!(tt>0))return {ok:false,msg:'保持时间须大于 0'};if(!(v1>0))return {ok:false,msg:'初始电压须大于 0'};if(!(v2>=0))return {ok:false,msg:'最低电压不能为负'};if(!(v1>v2))return {ok:false,msg:'初始电压 V1 须大于最低电压 V2（相等时电容无穷大）'};var C,E;if(String(mode)==='p'){var pp=Number(P);if(!(pp>0))return {ok:false,msg:'负载功率须大于 0'};C=2*pp*tt/(v1*v1-v2*v2);E=pp*tt;}else{var ii=Number(I);if(!(ii>0))return {ok:false,msg:'放电电流须大于 0'};C=ii*tt/(v1-v2);E=0.5*C*(v1*v1-v2*v2);}return {ok:true,html:'<div class=\"big\">所需母线电容 C ≥ '+(C*1e6).toFixed(2)+' μF</div><div class=\"row\">可用储能 E = '+E.toFixed(3)+' J（½C(V1² − V2²)）；电容容差与老化后容量下降，选型建议再放大 20%~30% 并核对耐压 ≥ V1</div>'};",
+  test:{inputs:{mode:"p",P:50,I:0.5,t:20,V1:400,V2:300}, expect:"28.57"}},
+ {id:"dzboot", cat:"dz", icon:"🚀", name:"自举电容估算", desc:"高边栅极驱动自举电容最小值估算",
+  formula:"C ≥ (Qg + Iq × ton) ÷ ΔV；Qg 为 MOS 栅极总电荷，Iq × ton 为驱动 IC 静态/偏置电流在最长导通时间内的耗电荷，ΔV 为允许的自举电压跌落（常取 0.3~1 V）；工程上常再取计算值的 2 倍以上并选低 ESR 陶瓷电容（驱动手册常用口径）",
+  inputs:[
+   {id:"Qg", label:"栅极总电荷 Qg", unit:"nC", def:"50"},
+   {id:"dV", label:"允许电压跌落 ΔV", unit:"V", def:"0.5"},
+   {id:"Iq", label:"驱动静态电流 Iq", unit:"μA", def:"100"},
+   {id:"ton", label:"最长导通时间 ton", unit:"ms", def:"1", hint:"低占空比/100% 占空比受限场景尤其重要"}
+  ],
+  run:"var qg=Number(Qg),dv=Number(dV),iq=Number(Iq),tn=Number(ton);if(!(qg>0))return {ok:false,msg:'栅极电荷须大于 0'};if(!(dv>0))return {ok:false,msg:'允许跌落须大于 0'};if(!(iq>=0))return {ok:false,msg:'静态电流不能为负'};if(!(tn>=0))return {ok:false,msg:'导通时间不能为负'};var qq=iq*tn;var C=(qg+qq)/dv;return {ok:true,html:'<div class=\"big\">自举电容 C ≥ '+C.toFixed(1)+' nF</div><div class=\"row\">静态耗电荷 Iq × ton = '+iq+' μA × '+tn+' ms = '+qq.toFixed(2)+' nC；总电荷 '+(qg+qq).toFixed(2)+' nC ÷ ΔV '+dv+' V = '+C.toFixed(1)+' nF</div><div class=\"row\">建议取计算值 2 倍以上标准容值（如 '+(C*2).toFixed(0)+' nF 以上），用低 ESR 陶瓷并紧靠驱动 IC 放置</div>'};",
+  test:{inputs:{Qg:50,dV:0.5,Iq:100,ton:1}, expect:"300.0"}},
+ {id:"dznotch", cat:"dz", icon:"🎯", name:"双 T 陷波器设计", desc:"按陷波频率互算 R/C 并给出成套元件值",
+  formula:"双 T 网络陷波频率 f0 = 1 ÷ (2πRC)；元件关系（本工具口径）：串臂 R、R 与 2C 接地，并臂 C、C 与 R/2 接地，另一等价画法写作 R 与 2R、C 与 2C 配对；给 R 求 C = 1 ÷ (2π × f0 × R)，给 C 求 R = 1 ÷ (2π × f0 × C)；无源双 T 的 Q 约 0.25，深陷波需元件高精度匹配",
+  inputs:[
+   {id:"mode", label:"已知量", type:"select", def:"r", options:[{v:"r",t:"给 R 求 C"},{v:"c",t:"给 C 求 R"}]},
+   {id:"f0", label:"陷波频率 f0", unit:"Hz", def:"1000"},
+   {id:"R", label:"电阻 R", unit:"kΩ", when:"mode=r", def:"10"},
+   {id:"C", label:"电容 C", unit:"nF", when:"mode=c", def:"15.92"}
+  ],
+  run:"var f=Number(f0);if(!(f>0))return {ok:false,msg:'陷波频率须大于 0'};var RR,CC;if(String(mode)==='r'){RR=Number(R)*1000;if(!(RR>0))return {ok:false,msg:'电阻须大于 0'};CC=1/(2*Math.PI*f*RR);}else{CC=Number(C)*1e-9;if(!(CC>0))return {ok:false,msg:'电容须大于 0'};RR=1/(2*Math.PI*f*CC);}return {ok:true,html:'<div class=\"big\">C = '+(CC*1e9).toFixed(2)+' nF，R = '+(RR/1000).toFixed(3)+' kΩ</div><div class=\"row\">成套元件：串臂 R = '+(RR/1000).toFixed(3)+' kΩ ×2、并到地 2C = '+(CC*2e9).toFixed(2)+' nF；并臂 C = '+(CC*1e9).toFixed(2)+' nF ×2、并到地 R/2 = '+(RR/2000).toFixed(3)+' kΩ（等价写作 2R = '+(RR*2/1000).toFixed(3)+' kΩ 配对口径）</div><div class=\"row\">f0 = 1 ÷ (2πRC) = '+f+' Hz；工频 50 Hz 陷波常用此结构，元件匹配精度决定陷波深度</div>'};",
+  test:{inputs:{mode:"r",f0:1000,R:10,C:15.92}, expect:"15.92"}},
+ {id:"dzbutterlc", cat:"dz", icon:"🪜", name:"巴特沃斯 LC 滤波器", desc:"二阶/三阶梯形 LC 低通与高通对偶元件值",
+  formula:"归一化 g 值（巴特沃斯）：n = 2 时 g = 1.4142、1.4142；n = 3 时 g = 1、2、1；低通（串 L 并 C 交替）：L = g × R ÷ (2πfc)，C = g ÷ (R × 2πfc)；高通为对偶：串 C = 1 ÷ (g × R × 2πfc)，并 L = R ÷ (g × 2πfc)；R 为源/负载阻抗（双端接等阻抗口径）",
+  inputs:[
+   {id:"type", label:"滤波器类型", type:"select", def:"lp", options:[{v:"lp",t:"低通"},{v:"hp",t:"高通（对偶）"}]},
+   {id:"ord", label:"阶数", type:"select", def:"2", options:[{v:"2",t:"二阶"},{v:"3",t:"三阶"}]},
+   {id:"R", label:"端接阻抗 R", unit:"Ω", def:"50"},
+   {id:"fc", label:"截止频率 fc", unit:"Hz", def:"1000"}
+  ],
+  run:"var rr=Number(R),f=Number(fc);if(!(rr>0))return {ok:false,msg:'端接阻抗须大于 0'};if(!(f>0))return {ok:false,msg:'截止频率须大于 0'};var G=String(ord)==='3'?[1,2,1]:[1.4142,1.4142];var w=2*Math.PI*f;var parts=[];for(var i=0;i<G.length;i++){var g=G[i];var series=(i%2===0);if(String(type)==='lp'){if(series)parts.push('L'+(i+1)+' = '+(g*rr/w*1000).toFixed(3)+' mH');else parts.push('C'+(i+1)+' = '+(g/(rr*w)*1e6).toFixed(3)+' μF');}else{if(series)parts.push('C'+(i+1)+' = '+(1/(g*rr*w)*1e6).toFixed(3)+' μF');else parts.push('L'+(i+1)+' = '+(rr/(g*w)*1000).toFixed(3)+' mH');}}return {ok:true,html:'<div class=\"big\">'+parts[0]+'</div><div class=\"row\">'+parts.join('；')+'</div><div class=\"row\">g 值 = '+G.join(' / ')+'，R = '+rr+' Ω，fc = '+f+' Hz；梯形结构从源端起串臂/并臂交替</div>'};",
+  test:{inputs:{type:"lp",ord:"2",R:50,fc:1000}, expect:"11.254"}},
+ {id:"dzphaseshift", cat:"dz", icon:"🌊", name:"RC 移相计算", desc:"单级/多级 RC 高通或低通移相角与幅值衰减",
+  formula:"单级低通：φ = −arctan(f ÷ fc)，|H| = 1 ÷ √(1 + (f/fc)²)；单级高通：φ = +arctan(fc ÷ f)，|H| = 1 ÷ √(1 + (fc/f)²)；fc = 1 ÷ (2πRC)；f = fc 时单级移相恰为 45°、幅值 0.707（−3 dB）；多级总移相 = 单级 × 级数，总幅值 = 单级幅值的级数次幂（级间无缓冲时为近似口径，实际有负载效应）",
+  inputs:[
+   {id:"type", label:"网络类型", type:"select", def:"lp", options:[{v:"lp",t:"RC 低通"},{v:"hp",t:"RC 高通"}]},
+   {id:"stg", label:"级数", type:"select", def:"1", options:[{v:"1",t:"1 级"},{v:"2",t:"2 级"},{v:"3",t:"3 级"}]},
+   {id:"f", label:"信号频率 f", unit:"Hz", def:"1000"},
+   {id:"fc", label:"截止频率 fc", unit:"Hz", def:"1000"}
+  ],
+  run:"var ff=Number(f),fc2=Number(fc),ns=Number(stg);if(!(ff>0))return {ok:false,msg:'信号频率须大于 0'};if(!(fc2>0))return {ok:false,msg:'截止频率须大于 0'};if([1,2,3].indexOf(ns)<0)return {ok:false,msg:'级数无效'};var phi,mag;if(String(type)==='lp'){phi=-Math.atan(ff/fc2)*180/Math.PI;mag=1/Math.sqrt(1+(ff/fc2)*(ff/fc2));}else{phi=Math.atan(fc2/ff)*180/Math.PI;mag=1/Math.sqrt(1+(fc2/ff)*(fc2/ff));}var tot=phi*ns;var mt=Math.pow(mag,ns);var db=20*Math.log(mt)/Math.LN10;return {ok:true,html:'<div class=\"big\">单级移相 '+(phi>=0?'+':'')+phi.toFixed(2)+'°，'+ns+' 级总移相 '+(tot>=0?'+':'')+tot.toFixed(2)+'°</div><div class=\"row\">单级幅值比 '+mag.toFixed(4)+'，总幅值比 '+mt.toFixed(4)+'（'+db.toFixed(2)+' dB）；f/fc = '+(ff/fc2).toFixed(3)+'</div>'};",
+  test:{inputs:{type:"hp",stg:"1",f:1000,fc:1000}, expect:"45.00"}}
+);
+TOOLS.push(
+ {id:"dzsoc", cat:"dz", icon:"🔋", name:"电池电量 SOC 估算", desc:"静置开路电压查表线性插值估算剩余电量",
+  formula:"静置开路电压（OCV）查表线性插值口径（静置 ≥30 min、无负载；带载电压不可直接套用）。三元锂单体（V→SOC%）：3.0→0、3.4→10、3.6→25、3.7→45、3.8→65、3.9→80、4.0→90、4.1→97、4.2→100；磷酸铁锂单体：2.8→0、3.0→10、3.2→30、3.25→50、3.3→70、3.35→85、3.4→95、3.65→100；铅酸 12V：11.8→0、11.9→10、12.1→25、12.3→50、12.5→75、12.73→100。平台区（如铁锂 3.2~3.3V）电压法误差大，仅作粗估",
+  inputs:[
+   {id:"type", label:"电池类型", type:"select", def:"ncm", options:[{v:"ncm",t:"三元锂（单体 3.0~4.2V）"},{v:"lfp",t:"磷酸铁锂（单体 2.8~3.65V）"},{v:"pb",t:"铅酸 12V（11.8~12.73V）"}]},
+   {id:"V", label:"静置开路电压", unit:"V", def:"3.7"}
+  ],
+  run:"var TAB={ncm:[[3.0,0],[3.4,10],[3.6,25],[3.7,45],[3.8,65],[3.9,80],[4.0,90],[4.1,97],[4.2,100]],lfp:[[2.8,0],[3.0,10],[3.2,30],[3.25,50],[3.3,70],[3.35,85],[3.4,95],[3.65,100]],pb:[[11.8,0],[11.9,10],[12.1,25],[12.3,50],[12.5,75],[12.73,100]]};var tb=TAB[String(type)];if(!tb)return {ok:false,msg:'电池类型无效'};var vv=Number(V);if(!isFinite(vv))return {ok:false,msg:'电压无效'};if(vv<tb[0][0]||vv>tb[tb.length-1][0])return {ok:false,msg:'电压超出该类电池 OCV 表范围（'+tb[0][0]+'~'+tb[tb.length-1][0]+' V）'};var soc=null;for(var i=0;i<tb.length-1;i++){if(vv>=tb[i][0]&&vv<=tb[i+1][0]){soc=tb[i][1]+(vv-tb[i][0])/(tb[i+1][0]-tb[i][0])*(tb[i+1][1]-tb[i][1]);break;}}if(soc===null)soc=tb[tb.length-1][1];return {ok:true,html:'<div class=\"big\">估算 SOC ≈ '+soc.toFixed(1)+' %</div><div class=\"row\">静置开路电压 '+vv+' V 查表线性插值；须静置 ≥30 min 且无负载，带载/刚充放完的电压会明显偏离</div><div class=\"row\">平台区电压变化小，SOC 误差可达 ±15%，精确计量请用电量计/库仑计</div>'};",
+  test:{inputs:{type:"ncm",V:3.7}, expect:"45.0"}},
+ {id:"dzpatch", cat:"dz", icon:"📡", name:"微带贴片天线尺寸", desc:"矩形贴片天线宽度与含边缘修正的长度",
+  formula:"贴片宽 W = c ÷ (2f) × √(2 ÷ (εr + 1))，c = 3×10⁸ m/s；有效介电常数 εeff = (εr+1)/2 + (εr−1)/2 × (1 + 12h/W)^(−1/2)；边缘延伸 ΔL = 0.412h × [(εeff+0.3)(W/h+0.264)] ÷ [(εeff−0.258)(W/h+0.8)]；贴片长 L = c ÷ (2f√εeff) − 2ΔL（Hammerstad 口径，FR4 εr 常取 4.4，Rogers 板材按其标称 εr）",
+  inputs:[
+   {id:"f", label:"谐振频率 f", unit:"GHz", def:"2.45"},
+   {id:"er", label:"基板介电常数 εr", def:"4.4", hint:"FR4 约 4.4，Rogers RO4003 约 3.55"},
+   {id:"h", label:"基板厚度 h", unit:"mm", def:"1.6"}
+  ],
+  run:"var ff=Number(f)*1e9,er2=Number(er),hh=Number(h);if(!(ff>0))return {ok:false,msg:'频率须大于 0'};if(!(er2>1))return {ok:false,msg:'介电常数须大于 1'};if(!(hh>0))return {ok:false,msg:'基板厚度须大于 0'};var c=3e8;var W=c/(2*ff)*Math.sqrt(2/(er2+1))*1000;var wh=W/hh;var eeff=(er2+1)/2+(er2-1)/2*Math.pow(1+12/wh,-0.5);var dL=0.412*hh*((eeff+0.3)*(wh+0.264))/((eeff-0.258)*(wh+0.8));var Leff=c/(2*ff*Math.sqrt(eeff))*1000;var L=Leff-2*dL;if(!(L>0))return {ok:false,msg:'参数组合下贴片长度不为正，请检查 εr 与 h'};return {ok:true,html:'<div class=\"big\">贴片宽 W = '+W.toFixed(2)+' mm，长 L = '+L.toFixed(2)+' mm</div><div class=\"row\">εeff = '+eeff.toFixed(3)+'，边缘延伸 ΔL = '+dL.toFixed(3)+' mm，有效长 '+Leff.toFixed(2)+' mm</div><div class=\"row\">解析公式口径，实际谐振受馈电方式与加工公差影响，投板前建议电磁仿真微调</div>'};",
+  test:{inputs:{f:2.45,er:4.4,h:1.6}, expect:"37.26"}},
+ {id:"dzustrip", cat:"dz", icon:"〰️", name:"微带线阻抗计算", desc:"Hammerstad 公式按宽高比双分支算特性阻抗",
+  formula:"εeff = (εr+1)/2 + (εr−1)/2 × [(1 + 12h/w)^(−1/2)（w/h ≤ 1 时另加 0.04(1−w/h)² 项）]；w/h ≤ 1：Z0 = 60 ÷ √εeff × ln(8h/w + w/(4h))；w/h > 1：Z0 = 120π ÷ [√εeff × (w/h + 1.393 + 0.667 × ln(w/h + 1.444))]（Hammerstad 口径，精度约 ±5%，未计铜厚修正）",
+  inputs:[
+   {id:"w", label:"线宽 w", unit:"mm", def:"3"},
+   {id:"h", label:"介质厚度 h", unit:"mm", def:"1.6"},
+   {id:"er", label:"介电常数 εr", def:"4.4"}
+  ],
+  run:"var ww=Number(w),hh=Number(h),er2=Number(er);if(!(ww>0))return {ok:false,msg:'线宽须大于 0'};if(!(hh>0))return {ok:false,msg:'介质厚度须大于 0'};if(!(er2>1))return {ok:false,msg:'介电常数须大于 1'};var ratio=ww/hh;var corr=Math.pow(1+12/ratio,-0.5);if(ratio<=1)corr+=0.04*(1-ratio)*(1-ratio);var eeff=(er2+1)/2+(er2-1)/2*corr;var z0;if(ratio<=1)z0=60/Math.sqrt(eeff)*Math.log(8/ratio+ratio/4);else z0=120*Math.PI/(Math.sqrt(eeff)*(ratio+1.393+0.667*Math.log(ratio+1.444)));return {ok:true,html:'<div class=\"big\">特性阻抗 Z0 = '+z0.toFixed(2)+' Ω</div><div class=\"row\">w/h = '+ratio.toFixed(3)+'（'+(ratio<=1?'≤1 窄带式':' >1 宽带式')+'），εeff = '+eeff.toFixed(3)+'；Hammerstad 口径精度约 ±5%，未计铜厚与阻焊影响</div>'};",
+  test:{inputs:{w:3,h:1.6,er:4.4}, expect:"50.82"}},
+ {id:"dzwaveguide", cat:"dz", icon:"📐", name:"矩形波导截止频率", desc:"TE10 主模截止频率与推荐可用频段",
+  formula:"TE10 截止频率 fc = c ÷ (2a)（空气填充，a 为波导宽边内尺寸）；介质填充时 fc ÷ √εr；单模推荐可用频段约 1.25fc ~ 1.9fc（下限避开截止衰减，上限避开 TE20 高次模 fc 的 2 倍）；c = 3×10⁸ m/s",
+  inputs:[
+   {id:"a", label:"宽边内尺寸 a", unit:"mm", def:"22.86", hint:"如 WR90 为 22.86 mm，WR75 为 19.05 mm"},
+   {id:"er", label:"填充介质 εr", def:"1", hint:"空气填 1；介质填充填其相对介电常数"}
+  ],
+  run:"var aa=Number(a),er2=Number(er);if(!(aa>0))return {ok:false,msg:'宽边尺寸须大于 0'};if(!(er2>=1))return {ok:false,msg:'介电常数不能小于 1'};var fc=3e8/(2*aa/1000)/Math.sqrt(er2)/1e9;return {ok:true,html:'<div class=\"big\">TE10 截止频率 fc = '+fc.toFixed(2)+' GHz</div><div class=\"row\">推荐单模可用频段约 '+(1.25*fc).toFixed(2)+' ~ '+(1.9*fc).toFixed(2)+' GHz；低于 fc 的信号在波导内衰减不传播</div><div class=\"row\">TE20 截止为 '+(2*fc).toFixed(2)+' GHz，频段上限据此留裕量</div>'};",
+  test:{inputs:{a:22.86,er:1}, expect:"6.56"}},
+ {id:"dzheatsink", cat:"dz", icon:"❄️", name:"散热器热阻选型", desc:"由功耗与允许温升反算散热器热阻目标",
+  formula:"所需总热阻 Rth(总) = ΔT ÷ P（ΔT 为结到环境的允许温升）；散热器目标 Rth(散热器) = Rth(总) − Rth(结-壳) − Rth(界面)；结果 ≤ 0 说明仅靠所选封装/界面已无法满足，须降功耗、换封装或加风冷；自然冷却散热器热阻体积较大，风冷可显著降低（查厂商曲线口径）",
+  inputs:[
+   {id:"P", label:"器件功耗 P", unit:"W", def:"10"},
+   {id:"dT", label:"允许温升 ΔT（结到环境）", unit:"℃", def:"60", hint:"如最高结温 125℃、环境 65℃ 时填 60"},
+   {id:"Rjc", label:"结-壳热阻 Rjc", unit:"℃/W", def:"1.5"},
+   {id:"Rcs", label:"界面热阻 Rcs（垫片/硅脂）", unit:"℃/W", def:"0.5"}
+  ],
+  run:"var pp=Number(P),dt=Number(dT),rjc=Number(Rjc),rcs=Number(Rcs);if(!(pp>0))return {ok:false,msg:'功耗须大于 0'};if(!(dt>0))return {ok:false,msg:'允许温升须大于 0'};if(!(rjc>=0)||!(rcs>=0))return {ok:false,msg:'热阻不能为负'};var tot=dt/pp;var rsa=tot-rjc-rcs;if(!(rsa>0))return {ok:false,msg:'总热阻预算 '+tot.toFixed(2)+' ℃/W 已被结-壳与界面热阻占满（合计 '+(rjc+rcs).toFixed(2)+'），无散热器可选：请降功耗、换低 Rjc 封装或强迫风冷'};return {ok:true,html:'<div class=\"big\">散热器热阻须 ≤ '+rsa.toFixed(2)+' ℃/W</div><div class=\"row\">总热阻预算 '+tot.toFixed(2)+' ℃/W − 结壳 '+rjc+' − 界面 '+rcs+' = '+rsa.toFixed(2)+' ℃/W</div><div class=\"row\">选购时按厂商自然冷却/风冷曲线挑不大于该值的散热器，并留 20% 以上裕量</div>'};",
+  test:{inputs:{P:10,dT:60,Rjc:1.5,Rcs:0.5}, expect:"4.00"}}
+);
+TOOLS.push(
+ {id:"dzcooling", cat:"dz", icon:"🌀", name:"散热风量换算", desc:"由功耗与允许温升算风量，CFM 与 m³/h 互转",
+  formula:"所需风量 CFM = 1.76 × P(W) ÷ ΔT(℃)（由 Q = P ÷ (ρ·cp·ΔT) 换算的英制经验口径，空气常温密度）；1 CFM = 1.699 m³/h；实际选风扇应在计算风量上留 1.5~2 倍裕量（系统阻抗使工作点风量低于标称空载风量）",
+  inputs:[
+   {id:"mode", label:"计算模式", type:"select", def:"calc", options:[{v:"calc",t:"功耗 + 温升 → 风量"},{v:"c2m",t:"CFM → m³/h"},{v:"m2c",t:"m³/h → CFM"}]},
+   {id:"P", label:"发热功率 P", unit:"W", when:"mode=calc", def:"100"},
+   {id:"dT", label:"允许空气温升 ΔT", unit:"℃", when:"mode=calc", def:"10"},
+   {id:"cfm", label:"风量", unit:"CFM", when:"mode=c2m", def:"17.6"},
+   {id:"mh", label:"风量", unit:"m³/h", when:"mode=m2c", def:"29.9"}
+  ],
+  run:"if(String(mode)==='calc'){var pp=Number(P),dt=Number(dT);if(!(pp>0))return {ok:false,msg:'功率须大于 0'};if(!(dt>0))return {ok:false,msg:'温升须大于 0'};var cf=1.76*pp/dt;return {ok:true,html:'<div class=\"big\">所需风量 ≈ '+cf.toFixed(2)+' CFM（'+(cf*1.699).toFixed(2)+' m³/h）</div><div class=\"row\">CFM = 1.76 × '+pp+' ÷ '+dt+' = '+cf.toFixed(2)+'；风扇选型建议留 1.5~2 倍裕量</div>'};}if(String(mode)==='c2m'){var cf2=Number(cfm);if(!(cf2>=0))return {ok:false,msg:'风量不能为负'};return {ok:true,html:'<div class=\"big\">'+cf2+' CFM = '+(cf2*1.699).toFixed(2)+' m³/h</div><div class=\"row\">1 CFM = 1.699 m³/h</div>'};}var mh2=Number(mh);if(!(mh2>=0))return {ok:false,msg:'风量不能为负'};return {ok:true,html:'<div class=\"big\">'+mh2+' m³/h = '+(mh2/1.699).toFixed(2)+' CFM</div><div class=\"row\">1 m³/h = '+(1/1.699).toFixed(3)+' CFM</div>'};",
+  test:{inputs:{mode:"calc",P:100,dT:10,cfm:17.6,mh:29.9}, expect:"17.60"}},
+ {id:"dzvia", cat:"dz", icon:"🕳️", name:"PCB 过孔估算", desc:"过孔镀铜环形截面电阻与载流估算",
+  formula:"镀铜环形截面积 A = π × [(d/2)² − (d/2 − t)²]（d 孔径、t 镀层厚）；电阻 R = ρ × L ÷ A，铜 ρ = 1.7×10⁻⁸ Ω·m，L 为板厚；载流按 IPC-2221 内层口径近似 I = 0.024 × ΔT^0.44 × A(mil²)^0.725，ΔT 取 10℃（近似口径，精算按 IPC-2152）",
+  inputs:[
+   {id:"d", label:"成品孔径 d", unit:"mm", def:"0.3"},
+   {id:"t", label:"孔壁镀铜厚 t", unit:"μm", def:"25"},
+   {id:"L", label:"板厚 L", unit:"mm", def:"1.6"}
+  ],
+  run:"var dd=Number(d),tt=Number(t)/1000,ll=Number(L);if(!(dd>0))return {ok:false,msg:'孔径须大于 0'};if(!(tt>0))return {ok:false,msg:'镀层厚须大于 0'};if(tt>=dd/2)return {ok:false,msg:'镀层厚须小于孔半径'};if(!(ll>0))return {ok:false,msg:'板厚须大于 0'};var A=Math.PI*((dd/2)*(dd/2)-(dd/2-tt)*(dd/2-tt));var R=1.7e-8*(ll/1000)/(A*1e-6);var Amil=A/6.4516e-4;var Iest=0.024*Math.pow(10,0.44)*Math.pow(Amil,0.725);return {ok:true,html:'<div class=\"big\">过孔电阻 ≈ '+(R*1000).toFixed(2)+' mΩ，载流 ≈ '+Iest.toFixed(2)+' A（ΔT 10℃）</div><div class=\"row\">镀铜截面积 '+A.toFixed(4)+' mm²（'+Amil.toFixed(1)+' mil²）；R = ρL/A，ρ铜 = 1.7e-8 Ω·m，板厚 '+ll+' mm</div><div class=\"row\">大电流请多孔并联分摊；载流为 IPC-2221 内层近似口径</div>'};",
+  test:{inputs:{d:0.3,t:25,L:1.6}, expect:"1.26"}},
+ {id:"dzppm", cat:"dz", icon:"🎯", name:"频率精度换算", desc:"ppm、绝对偏差与相对误差互转，含年老化漂移",
+  formula:"绝对偏差 Δf = 标称频率 × ppm ÷ 10⁶；相对误差 % = ppm ÷ 10⁴；老化口径：总漂移 ppm ≈ 初始 ppm + 年老化率(ppm/年) × 年数，再按 Δf 公式换算（线性累积近似口径）",
+  inputs:[
+   {id:"mode", label:"换算模式", type:"select", def:"p2a", options:[{v:"p2a",t:"ppm → 绝对偏差"},{v:"a2p",t:"绝对偏差 → ppm"},{v:"p2r",t:"ppm → 相对误差 %"},{v:"r2p",t:"相对误差 % → ppm"},{v:"age",t:"含老化的总漂移"}]},
+   {id:"f0", label:"标称频率", unit:"MHz", when:"mode=p2a", def:"100"},
+   {id:"ppm", label:"精度", unit:"ppm", when:"mode=p2a", def:"20"},
+   {id:"df", label:"绝对偏差 Δf", unit:"Hz", when:"mode=a2p", def:"2000"},
+   {id:"f0b", label:"标称频率", unit:"MHz", when:"mode=a2p", def:"100"},
+   {id:"ppm2", label:"精度", unit:"ppm", when:"mode=p2r", def:"20"},
+   {id:"pct", label:"相对误差", unit:"%", when:"mode=r2p", def:"0.002"},
+   {id:"f0c", label:"标称频率", unit:"MHz", when:"mode=age", def:"100"},
+   {id:"ppm0", label:"初始精度", unit:"ppm", when:"mode=age", def:"20"},
+   {id:"ageppm", label:"年老化率", unit:"ppm/年", when:"mode=age", def:"2"},
+   {id:"years", label:"使用年数", unit:"年", when:"mode=age", def:"5"}
+  ],
+  run:"var m=String(mode);if(m==='p2a'){var f=Number(f0)*1e6,p=Number(ppm);if(!(f>0))return {ok:false,msg:'标称频率须大于 0'};if(!isFinite(p))return {ok:false,msg:'ppm 无效'};var df2=f*p/1e6;return {ok:true,html:'<div class=\"big\">绝对偏差 Δf = '+df2.toFixed(1)+' Hz</div><div class=\"row\">Δf = '+(f/1e6)+' MHz × '+p+' ppm ÷ 10⁶ = '+df2.toFixed(1)+' Hz（频率范围 '+(f-df2).toFixed(1)+' ~ '+(f+df2).toFixed(1)+' Hz）</div>'};}if(m==='a2p'){var f2=Number(f0b)*1e6,d2=Number(df);if(!(f2>0))return {ok:false,msg:'标称频率须大于 0'};if(!isFinite(d2))return {ok:false,msg:'偏差无效'};var p2=d2/f2*1e6;return {ok:true,html:'<div class=\"big\">精度 = '+p2.toFixed(2)+' ppm</div><div class=\"row\">ppm = Δf ÷ f × 10⁶ = '+d2+' ÷ '+(f2/1e6)+' MHz = '+p2.toFixed(2)+' ppm</div>'};}if(m==='p2r'){var p3=Number(ppm2);if(!isFinite(p3))return {ok:false,msg:'ppm 无效'};return {ok:true,html:'<div class=\"big\">相对误差 = '+(p3/1e4).toFixed(6)+' %</div><div class=\"row\">% = ppm ÷ 10⁴ = '+p3+' ÷ 10000；1% = 10000 ppm</div>'};}if(m==='r2p'){var pc=Number(pct);if(!isFinite(pc))return {ok:false,msg:'相对误差无效'};return {ok:true,html:'<div class=\"big\">精度 = '+(pc*1e4).toFixed(1)+' ppm</div><div class=\"row\">ppm = % × 10⁴ = '+pc+' × 10000</div>'};}var f3=Number(f0c)*1e6,p0=Number(ppm0),ap=Number(ageppm),yr=Number(years);if(!(f3>0))return {ok:false,msg:'标称频率须大于 0'};if(!isFinite(p0)||!isFinite(ap))return {ok:false,msg:'精度/老化率无效'};if(!(yr>=0))return {ok:false,msg:'年数不能为负'};var tot=p0+ap*yr;var df3=f3*tot/1e6;return {ok:true,html:'<div class=\"big\">'+yr+' 年后总漂移 ≈ '+tot.toFixed(1)+' ppm（Δf = '+df3.toFixed(1)+' Hz）</div><div class=\"row\">总 ppm = 初始 '+p0+' + 老化 '+ap+' ppm/年 × '+yr+' 年 = '+tot.toFixed(1)+' ppm；线性累积近似，晶振老化多为逐年递减的对数趋势</div>'};",
+  test:{inputs:{mode:"p2a",f0:100,ppm:20,df:2000,f0b:100,ppm2:20,pct:0.002,f0c:100,ppm0:20,ageppm:2,years:5}, expect:"2000.0"}},
+ {id:"dzcmirror", cat:"dz", icon:"🪞", name:"电流镜设计", desc:"基本电流镜参考电阻与 Widlar 电流源发射极电阻",
+  formula:"基本型：Iref = (Vcc − Vbe) ÷ Rref，Vbe 取 0.7 V 口径，Iout ≈ Iref（β 有限时 Iout = Iref ÷ (1 + 2/β)，本工具按 β 足够大近似并注明）；反算 Rref = (Vcc − Vbe) ÷ 目标 Iref；Widlar 型：Re = Vt × ln(Iref ÷ Iout) ÷ Iout，Vt 取 25.85 mV（300 K 口径），用于以小电阻获得微小输出电流",
+  inputs:[
+   {id:"mode", label:"设计模式", type:"select", def:"basic", options:[{v:"basic",t:"基本型：Rref → Iref"},{v:"basicR",t:"基本型：目标 Iref → Rref"},{v:"widlar",t:"Widlar：Iref/Iout → Re"}]},
+   {id:"Vcc", label:"电源电压 Vcc", unit:"V", when:"mode=basic", def:"5"},
+   {id:"Rref", label:"参考电阻 Rref", unit:"kΩ", when:"mode=basic", def:"4.3"},
+   {id:"Vcc2", label:"电源电压 Vcc", unit:"V", when:"mode=basicR", def:"5"},
+   {id:"Itgt", label:"目标参考电流", unit:"mA", when:"mode=basicR", def:"1"},
+   {id:"Irefw", label:"参考电流 Iref", unit:"mA", when:"mode=widlar", def:"1"},
+   {id:"Ioutw", label:"目标输出电流 Iout", unit:"mA", when:"mode=widlar", def:"0.1"}
+  ],
+  run:"var m=String(mode);if(m==='basic'){var v=Number(Vcc),r=Number(Rref)*1000;if(!(v>0.7))return {ok:false,msg:'Vcc 须大于 Vbe 0.7 V'};if(!(r>0))return {ok:false,msg:'Rref 须大于 0'};var ir=(v-0.7)/r;return {ok:true,html:'<div class=\"big\">Iref = '+(ir*1000).toFixed(3)+' mA，Iout ≈ Iref</div><div class=\"row\">Iref = ('+v+' − 0.7) ÷ '+(r/1000)+' kΩ = '+(ir*1000).toFixed(3)+' mA；β 有限时 Iout = Iref ÷ (1 + 2/β) 略小</div>'};}if(m==='basicR'){var v2=Number(Vcc2),it=Number(Itgt)/1000;if(!(v2>0.7))return {ok:false,msg:'Vcc 须大于 Vbe 0.7 V'};if(!(it>0))return {ok:false,msg:'目标电流须大于 0'};var rr=(v2-0.7)/it;return {ok:true,html:'<div class=\"big\">Rref = '+(rr/1000).toFixed(3)+' kΩ</div><div class=\"row\">Rref = ('+v2+' − 0.7) ÷ '+(it*1000)+' mA = '+rr.toFixed(1)+' Ω，取标准值后复算 Iref</div>'};}var ir2=Number(Irefw)/1000,io2=Number(Ioutw)/1000;if(!(ir2>0)||!(io2>0))return {ok:false,msg:'电流须大于 0'};if(!(io2<ir2))return {ok:false,msg:'Widlar 要求 Iout 小于 Iref'};var re=0.02585*Math.log(ir2/io2)/io2;return {ok:true,html:'<div class=\"big\">发射极电阻 Re = '+re.toFixed(1)+' Ω</div><div class=\"row\">ΔVbe = Vt × ln(Iref/Iout) = 25.85 mV × ln('+(ir2/io2).toFixed(2)+') = '+(0.02585*Math.log(ir2/io2)*1000).toFixed(2)+' mV；Re = ΔVbe ÷ Iout = '+re.toFixed(1)+' Ω（Vt 为 300 K 口径）</div>'};",
+  test:{inputs:{mode:"basic",Vcc:5,Rref:4.3,Vcc2:5,Itgt:1,Irefw:1,Ioutw:0.1}, expect:"1.000"}},
+ {id:"dzwincmp", cat:"dz", icon:"🪟", name:"窗口比较器设计", desc:"双阈值三电阻分压链反算与回差窗口",
+  formula:"三电阻串联分压链（R1 上、R2 中、R3 下）：上阈值 Vhi = Vcc × (R2 + R3) ÷ (R1 + R2 + R3)，下阈值 Vlo = Vcc × R3 ÷ (R1 + R2 + R3)；由总链电流 I 定总阻 R总 = Vcc ÷ I，反算 R3 = Vlo ÷ I、R1 = (Vcc − Vhi) ÷ I、R2 = R总 − R1 − R3；回差（窗口宽度）= Vhi − Vlo",
+  inputs:[
+   {id:"Vcc", label:"电源/分压电压 Vcc", unit:"V", def:"5"},
+   {id:"Vhi", label:"上阈值 Vhi", unit:"V", def:"3"},
+   {id:"Vlo", label:"下阈值 Vlo", unit:"V", def:"2"},
+   {id:"I", label:"分压链总电流 I", unit:"μA", def:"100", hint:"兼顾功耗与抗干扰，常取 10~500 μA"}
+  ],
+  run:"var v=Number(Vcc),vh=Number(Vhi),vl=Number(Vlo),ii=Number(I)/1e6;if(!(v>0))return {ok:false,msg:'电源电压须大于 0'};if(!(vl>0))return {ok:false,msg:'下阈值须大于 0'};if(!(vh>vl))return {ok:false,msg:'上阈值须大于下阈值'};if(!(vh<v))return {ok:false,msg:'上阈值须小于电源电压'};if(!(ii>0))return {ok:false,msg:'链电流须大于 0'};var rt=v/ii;var r3=vl/ii;var r1=(v-vh)/ii;var r2=rt-r1-r3;return {ok:true,html:'<div class=\"big\">R1 = '+(r1/1000).toFixed(2)+' kΩ，R2 = '+(r2/1000).toFixed(2)+' kΩ，R3 = '+(r3/1000).toFixed(2)+' kΩ</div><div class=\"row\">总阻 '+(rt/1000).toFixed(2)+' kΩ（链电流 '+(ii*1e6)+' μA）；窗口（回差）= Vhi − Vlo = '+(vh-vl).toFixed(3)+' V</div><div class=\"row\">取 E96/E24 标准值后阈值会略移，按分压公式复算实际 Vhi/Vlo 再定版</div>'};",
+  test:{inputs:{Vcc:5,Vhi:3,Vlo:2,I:100}, expect:"10.00"}}
 );
 
 
