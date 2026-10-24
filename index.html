@@ -761,7 +761,7 @@ TOOLS.push(
  {id:"dglossrate", cat:"dgjs", icon:"📉", name:"线损率计算", desc:"供电损耗占供电量的比例",
   formula:"线损率=(供电量−售电量)/供电量×100%",
   inputs:[{id:"supply", label:"供电量", unit:"kWh", def:"10000", min:1},{id:"sold", label:"售电量", unit:"kWh", def:"9500", min:0}],
-  run:"var s=Number(supply),e=Number(sold); if(e>s) return {ok:false,msg:'售电量不能大于供电量'}; return {ok:true,html:'<div class=\"big\">线损率 '+((s-e)/s*100).toFixed(2)+'%</div>'};",
+  run:"var s=Number(supply),e=Number(sold); if(!(s>0)) return {ok:false,msg:'供电量须大于0'}; if(e>s) return {ok:false,msg:'售电量不能大于供电量'}; return {ok:true,html:'<div class=\"big\">线损率 '+((s-e)/s*100).toFixed(2)+'%</div>'};",
   test:{inputs:{supply:10000,sold:9500}, expect:"5.00"}},
  {id:"dgpt", cat:"dgjs", icon:"🔄", name:"电压互感器换算", desc:"一次电压折算二次电压",
   formula:"U₂=U₁×二次额定/一次额定",
