@@ -18533,14 +18533,14 @@ TOOLS.push(
 );
 TOOLS.push(
  {id:"dgstorage", cat:"dgjs", icon:"🏠", name:"光伏储能自发自用率估算", desc:"日发电/日负荷/日间负荷占比与储能可用容量估算自发自用率与自给率",
-  formula:"简化日能量平衡模型（口径透明、非逐时仿真）：日间负荷=E负荷×日间占比；直接自用=min(E光伏, 日间负荷)；余电=min(E光伏−直接自用, 储能可用容量) 入储并当日用尽；自发自用率=(直接自用+入储)÷E光伏，自给率=(直接自用+入储)÷E负荷。逐时曲线差异较大时结果仅作方案初估",
+  formula:"简化日能量平衡模型（口径透明、非逐时仿真）：日间负荷=E负荷×日间占比；直接自用=min(E光伏, 日间负荷)；入储消纳=min(余电, 储能可用容量, 剩余负荷)（自用总量封顶于日用电量，自给率不超过 100%）；自发自用率=(直接自用+入储消纳)÷E光伏，自给率=(直接自用+入储消纳)÷E负荷。逐时曲线差异较大时结果仅作方案初估",
   inputs:[
    {id:"epv", label:"日发电量", unit:"kWh", def:"40"},
    {id:"eld", label:"日用电量", unit:"kWh", def:"35"},
    {id:"fd", label:"日间负荷占比", unit:"%", def:"50"},
    {id:"cap", label:"储能可用容量", unit:"kWh", def:"10"}
   ],
-  run:"var p=Number(epv),l=Number(eld),f=Number(fd)/100,c=Number(cap);if(!(p>0))return {ok:false,msg:'日发电量须大于 0'};if(!(l>0))return {ok:false,msg:'日用电量须大于 0'};if(!(f>=0&&f<=1))return {ok:false,msg:'日间占比须在 0~100%'};if(!(c>=0))return {ok:false,msg:'储能容量不能为负'};var direct=Math.min(p,l*f);var surplus=p-direct;var stored=Math.min(surplus,c);var used=direct+stored;return {ok:true,html:'<div class=\"big\">自发自用率 '+(used/p*100).toFixed(2)+'%，自给率 '+(used/l*100).toFixed(2)+'%</div><div class=\"row\">直接自用 '+direct.toFixed(1)+' kWh，入储消纳 '+stored.toFixed(1)+' kWh，上网/弃光 '+(p-used).toFixed(1)+' kWh'+(c===0?'（无储能口径）':'')+'</div>'};",
+  run:"var p=Number(epv),l=Number(eld),f=Number(fd)/100,c=Number(cap);if(!(p>0))return {ok:false,msg:'日发电量须大于 0'};if(!(l>0))return {ok:false,msg:'日用电量须大于 0'};if(!(f>=0&&f<=1))return {ok:false,msg:'日间占比须在 0~100%'};if(!(c>=0))return {ok:false,msg:'储能容量不能为负'};var direct=Math.min(p,l*f);var surplus=p-direct;var stored=Math.min(surplus,c,Math.max(0,l-direct));var used=direct+stored;return {ok:true,html:'<div class=\"big\">自发自用率 '+(used/p*100).toFixed(2)+'%，自给率 '+(used/l*100).toFixed(2)+'%</div><div class=\"row\">直接自用 '+direct.toFixed(1)+' kWh，入储消纳 '+stored.toFixed(1)+' kWh，上网/弃光 '+(p-used).toFixed(1)+' kWh'+(c===0?'（无储能口径）':'')+'</div>'};",
   test:{inputs:{epv:40, eld:35, fd:50, cap:10}, expect:"68.75"}},
  {id:"dgwelding2", cat:"dgjs", icon:"🧑‍🏭", name:"多台焊机组需量计算", desc:"焊机组按暂载率折算连续负荷并计入组需量系数（与 dgweld 单台暂载率换算分工）",
   formula:"与 dgweld（单台暂载率换算）分工：本工具算焊机组计算负荷。单台连续有功=S铭牌×cosφ×√(ED÷100)；组需量系数 K 按台数节选（供配电手册焊机组口径近似）：1 台 1.00、2 台 0.85、3~4 台 0.75、5~10 台 0.65、10 台以上 0.55；P组=K×n×单台连续有功",
@@ -18638,7 +18638,7 @@ TOOLS.push(
    {id:"ssc", label:"系统短路容量 Ssc", unit:"MVA", def:"20"},
    {id:"qc", label:"补偿总容量 Qc", unit:"kvar", def:"400"}
   ],
-  run:"var s=Number(ssc),q=Number(qc);if(!(s>0))return {ok:false,msg:'短路容量须大于 0'};if(!(q>0))return {ok:false,msg:'补偿容量须大于 0'};var h=Math.sqrt(s*1000/q);var chars=[5,7,11,13];var danger='';for(var i=0;i<chars.length;i++){if(Math.abs(h-chars[i])<=0.7)danger=chars[i]+' 次';}return {ok:true,html:'<div class=\"big\">并联谐振点约 '+h.toFixed(2)+' 次（'+(h*50).toFixed(0)+' Hz）</div><div class=\"row\">'+(danger?('⚠️ 谐振点接近 '+danger+' 谐波，放大风险高：建议串接调谐电抗器、改分组或实测背景谐波后定方案'):'未落入 5/7/11/13 次特征谐波 ±0.7 危险带，仍建议投运后实测谐波复核')+'</div>'};",
+  run:"var s=Number(ssc),q=Number(qc);if(!(s>0))return {ok:false,msg:'短路容量须大于 0'};if(!(q>0))return {ok:false,msg:'补偿容量须大于 0'};var h=Math.sqrt(s*1000/q);var chars=[5,7,11,13];var danger='';for(var i=0;i<chars.length;i++){if(Math.abs(h-chars[i])<=0.7+1e-9)danger=chars[i]+' 次';}return {ok:true,html:'<div class=\"big\">并联谐振点约 '+h.toFixed(2)+' 次（'+(h*50).toFixed(0)+' Hz）</div><div class=\"row\">'+(danger?('⚠️ 谐振点接近 '+danger+' 谐波，放大风险高：建议串接调谐电抗器、改分组或实测背景谐波后定方案'):'未落入 5/7/11/13 次特征谐波 ±0.7 危险带，仍建议投运后实测谐波复核')+'</div>'};",
   test:{inputs:{ssc:20, qc:400}, expect:"7.07"}}
 );
 
