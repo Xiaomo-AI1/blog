@@ -865,7 +865,7 @@ TOOLS.push(
  {id:"yqpt100", cat:"yqj", icon:"🌡️", name:"PT100温度换算", desc:"PT100铂电阻温度-阻值换算",
   formula:"R≈100(1+3.9083×10⁻³t)（0~100℃近似）",
   inputs:[{id:"t", label:"温度", unit:"℃", def:"50"}],
-  run:"var t=Number(t); if(!(t>=0&&t<=100)) return {ok:false,msg:'一次项近似仅适用于 0~100℃，超出范围误差过大（需精确值请用完整 Callendar–Van Dusen 公式）'}; var R=100*(1+0.0039083*t); return {ok:true,html:'<div class=\"big\">R ≈ '+R.toFixed(2)+' Ω</div><div class=\"row\">一次项近似，0~100℃误差<0.4℃</div>'};",
+  run:"var t=Number(t); if(!(t>=0&&t<=100)) return {ok:false,msg:'一次项近似仅适用于 0~100℃，超出范围误差过大（需精确值请用完整 Callendar–Van Dusen 公式）'}; var R=100*(1+0.0039083*t); return {ok:true,html:'<div class=\"big\">R ≈ '+R.toFixed(2)+' Ω</div><div class=\"row\">一次项近似，相对完整 CVD 公式误差约 50℃时 0.4℃、100℃时 1.5℃</div>'};",
   test:{inputs:{t:50}, expect:"119.54"}},
  {id:"yqlednum", cat:"yqj", icon:"💡", name:"LED串联个数", desc:"电源电压下可串联的LED数",
   formula:"N=⌊(Vs−2)/Vf⌋（留2V余量给限流电阻）",
@@ -2995,7 +2995,7 @@ TOOLS.push(
    {id:"re_", label:"发射极电阻 R_E", unit:"kΩ", def:"1"},
    {id:"beta", label:"电流放大倍数 β", def:"100"}
   ],
-  run:"if(!(Number(vcc)>0&&Number(re_)>0&&Number(r1)+Number(r2)>0&&Number(rc)>=0&&Number(beta)>0))return {ok:false,msg:'参数不对：电源、R_E、β 须大于 0'};var VB=Number(vcc)*Number(r2)/(Number(r1)+Number(r2)),VE=VB-0.7;if(!(VE>0))return {ok:false,msg:'偏置不足：基极电压低于 0.7 V，管子未导通'};var IE=VE/Number(re_),IC=IE*Number(beta)/(Number(beta)+1),IB=IE/(Number(beta)+1),VC=Number(vcc)-IC*Number(rc),VCE=VC-VE;return {ok:true,html:'<div class=\"big\">I_C ≈ '+IC.toFixed(2)+' mA · V_CE '+(VCE<0.3?'≈ 0 V（饱和）':'≈ '+VCE.toFixed(2)+' V')+'</div><div class=\"row\">V_B = '+VB.toFixed(2)+' V，V_E = '+VE.toFixed(2)+' V，I_B ≈ '+(IB*1000).toFixed(1)+' μA'+(VCE<0.3?'；V_CE 过低，已进入饱和区（实际 V_CE(sat) 约 0.1~0.3 V，I_C 实际值小于上方线性外推）':'')+'</div>'};",
+  run:"if(!(Number(vcc)>0&&Number(re_)>0&&Number(r1)>=0&&Number(r2)>=0&&Number(r1)+Number(r2)>0&&Number(rc)>=0&&Number(beta)>0))return {ok:false,msg:'参数不对：电源、R_E、β 须大于 0，偏置电阻不能为负'};var VB=Number(vcc)*Number(r2)/(Number(r1)+Number(r2)),VE=VB-0.7;if(!(VE>0))return {ok:false,msg:'偏置不足：基极电压低于 0.7 V，管子未导通'};var IE=VE/Number(re_),IC=IE*Number(beta)/(Number(beta)+1),IB=IE/(Number(beta)+1),VC=Number(vcc)-IC*Number(rc),VCE=VC-VE;return {ok:true,html:'<div class=\"big\">I_C ≈ '+IC.toFixed(2)+' mA · V_CE '+(VCE<0.3?'≈ 0 V（饱和）':'≈ '+VCE.toFixed(2)+' V')+'</div><div class=\"row\">V_B = '+VB.toFixed(2)+' V，V_E = '+VE.toFixed(2)+' V，I_B ≈ '+(IB*1000).toFixed(1)+' μA'+(VCE<0.3?'；V_CE 过低，已进入饱和区（实际 V_CE(sat) 约 0.1~0.3 V，I_C 实际值小于上方线性外推）':'')+'</div>'};",
   test:{inputs:{"vcc": 12, "r1": 47, "r2": 10, "rc": 2, "re_": 1, "beta": 100}, expect:"mA"}},
  {id:"hxhenry", cat:"hx", icon:"🫧", name:"亨利定律溶解度", desc:"气体在液体中的溶解度（亨利定律）",
   formula:"c = k_H · p（25℃，k_H 为亨利溶解度常数，p 为气体分压 atm）",
@@ -3175,7 +3175,7 @@ TOOLS.push(
    {id:"iff", label:"目标正向电流", unit:"mA", def:"10"},
    {id:"ctr", label:"电流传输比 CTR", unit:"%", def:"100"}
   ],
-  run:"if(!(Number(iff)>0))return {ok:false,msg:'正向电流须大于 0'};var R=(Number(vin)-Number(vf))/(Number(iff)/1000);if(!(R>0))return {ok:false,msg:'输入电压须高于 LED 压降'};var ic=Number(iff)*Number(ctr)/100;return {ok:true,html:'<div class=\"big\">限流电阻 ≈ '+R.toFixed(0)+' Ω</div><div class=\"row\">输出可驱动电流上限 ≈ '+ic.toFixed(1)+' mA；电阻取标称值并留功率余量（本例功耗约 '+((Number(vin)-Number(vf))*Number(iff)/1000).toFixed(3)+' W）</div>'};",
+  run:"if(!(Number(iff)>0))return {ok:false,msg:'正向电流须大于 0'};if(!(Number(ctr)>=0))return {ok:false,msg:'CTR 不能为负'};var R=(Number(vin)-Number(vf))/(Number(iff)/1000);if(!(R>0))return {ok:false,msg:'输入电压须高于 LED 压降'};var ic=Number(iff)*Number(ctr)/100;return {ok:true,html:'<div class=\"big\">限流电阻 ≈ '+R.toFixed(0)+' Ω</div><div class=\"row\">输出可驱动电流上限 ≈ '+ic.toFixed(1)+' mA；电阻取标称值并留功率余量（本例功耗约 '+((Number(vin)-Number(vf))*Number(iff)/1000).toFixed(3)+' W）</div>'};",
   test:{inputs:{"vin": 5, "vf": 1.2, "iff": 10, "ctr": 100}, expect:"380"}},
  {id:"kfdl", cat:"kf", icon:"⬇️", name:"文件传输时间", desc:"按带宽估算文件下载/传输耗时",
   formula:"时间 = 文件大小 × 8 ÷ 带宽（十进制单位，另计约 10% 协议开销的实际值）",
