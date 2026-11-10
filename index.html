@@ -13472,7 +13472,7 @@ TOOLS.push(
    ]
   }
  ],
- "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x)||!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e9)return {ok:false,msg:'数值过大'};var A={a4:0.06237,a3:0.12474,a5:0.03108,a2:0.24948,a1:0.499554,a0:0.999949,qk:0.859404,dd:1.061526};var a=A[size];if(!a)return {ok:false,msg:'请选择规格'};if(mode==='gsm2wt'){var sheet=x*a;var ream=sheet*500/1000;return {ok:true,html:'<div class=\"big\">单张 '+F(sheet)+' g · 一令(500张) '+F(ream)+' kg</div><div class=\"row\">克重 '+F(x)+' g/㎡ × 单张面积 '+F(a)+' ㎡</div>'};}var gsm=x*1000/500/a;var sheet2=x*1000/500;return {ok:true,html:'<div class=\"big\">克重 '+F(gsm)+' g/㎡ · 单张 '+F(sheet2)+' g</div><div class=\"row\">令重 '+F(x)+' kg ÷ 500 张 ÷ 单张面积 '+F(a)+' ㎡</div>'};",
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x)||!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e9)return {ok:false,msg:'数值过大'};var A={a4:0.06237,a3:0.12474,a5:0.03108,a2:0.24948,a1:0.499554,a0:0.999949,qk:0.859404,dd:1.061466};var a=A[size];if(!a)return {ok:false,msg:'请选择规格'};if(mode==='gsm2wt'){var sheet=x*a;var ream=sheet*500/1000;return {ok:true,html:'<div class=\"big\">单张 '+F(sheet)+' g · 一令(500张) '+F(ream)+' kg</div><div class=\"row\">克重 '+F(x)+' g/㎡ × 单张面积 '+F(a)+' ㎡</div>'};}var gsm=x*1000/500/a;var sheet2=x*1000/500;return {ok:true,html:'<div class=\"big\">克重 '+F(gsm)+' g/㎡ · 单张 '+F(sheet2)+' g</div><div class=\"row\">令重 '+F(x)+' kg ÷ 500 张 ÷ 单张面积 '+F(a)+' ㎡</div>'};",
  "test": {
   "inputs": {
    "v": 80,
@@ -14168,7 +14168,7 @@ TOOLS.push(
    ]
   }
  ],
- "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x)||!(x>0))return {ok:false,msg:'数值须大于 0'};var sg,api;if(from==='sg'){if(x<0.5||x>1.5)return {ok:false,msg:'SG 须在 0.5~1.5'};sg=x;api=141.5/sg-131.5;}else{if(x<=-100||x>120)return {ok:false,msg:'API 度超出合理范围'};api=x;sg=141.5/(api+131.5);if(!(sg>0))return {ok:false,msg:'换算结果无效'};}var den=sg*999.016;var grade=api>31.1?'轻质原油':api>=22.3?'中质原油':'重质原油';return {ok:true,html:'<div class=\"big\">API '+F(api)+' 度 · SG '+F(sg)+'</div><div class=\"row\">密度 ≈ '+F(den)+' kg/m³（60°F 口径）· 分级：'+grade+'</div>'};",
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};var sg,api;if(from==='sg'){if(x<0.5||x>1.5)return {ok:false,msg:'SG 须在 0.5~1.5'};sg=x;api=141.5/sg-131.5;}else{if(x<=-100||x>120)return {ok:false,msg:'API 度超出合理范围'};api=x;sg=141.5/(api+131.5);if(!(sg>0))return {ok:false,msg:'换算结果无效'};}var den=sg*999.016;var grade=api>31.1?'轻质原油':api>=22.3?'中质原油':'重质原油';return {ok:true,html:'<div class=\"big\">API '+F(api)+' 度 · SG '+F(sg)+'</div><div class=\"row\">密度 ≈ '+F(den)+' kg/m³（60°F 口径）· 分级：'+grade+'</div>'};",
  "test": {
   "inputs": {
    "v": 0.85,
@@ -14623,14 +14623,14 @@ TOOLS.push(
    ]
   }
  ],
- "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};if(!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e12)return {ok:false,msg:'数值过大'};var K={\"m2\": 1, \"mu\": 666.6666667, \"ha\": 10000, \"ping\": 3.305785124, \"fen\": 969.9175537, \"jia\": 9699.175537, \"acre\": 4046.8564224};var LB={\"m2\": \"\\u5e73\\u65b9\\u7c73(\\u33a1)\", \"mu\": \"\\u4ea9\", \"ha\": \"\\u516c\\u9877\", \"ping\": \"\\u576a\", \"fen\": \"\\u5206\", \"jia\": \"\\u7532\", \"acre\": \"\\u82f1\\u4ea9\"};if(K[from]===undefined||K[to]===undefined)return {ok:false,msg:'请选择单位'};var r=x*K[from]/K[to];return {ok:true,html:'<div class=\"big\">'+F(x)+' '+LB[from]+' = '+F(r)+' '+LB[to]+'</div><div class=\"row\">台湾 1 甲 = 10 分 = 2934 坪；大陆亩与台分/甲口径完全不同</div>'};",
+ "run": "function F(x){if(!isFinite(x))return '超出范围';if(x===0)return '0';var a=Math.abs(x);if(a>=1e15||a<1e-6)return x.toPrecision(6);var s=x.toFixed(10);if(s.indexOf('.')>=0){s=s.replace(/0+$/,'').replace(/\\.$/,'');}return s;}var x=Number(v);if(!isFinite(x))return {ok:false,msg:'请输入有效数值'};if(!(x>0))return {ok:false,msg:'数值须大于 0'};if(x>1e12)return {ok:false,msg:'数值过大'};var K={\"m2\": 1, \"mu\": 666.6666667, \"ha\": 10000, \"ping\": 3.305785124, \"fen\": 969.9173554, \"jia\": 9699.1735537, \"acre\": 4046.8564224};var LB={\"m2\": \"\\u5e73\\u65b9\\u7c73(\\u33a1)\", \"mu\": \"\\u4ea9\", \"ha\": \"\\u516c\\u9877\", \"ping\": \"\\u576a\", \"fen\": \"\\u5206\", \"jia\": \"\\u7532\", \"acre\": \"\\u82f1\\u4ea9\"};if(K[from]===undefined||K[to]===undefined)return {ok:false,msg:'请选择单位'};var r=x*K[from]/K[to];return {ok:true,html:'<div class=\"big\">'+F(x)+' '+LB[from]+' = '+F(r)+' '+LB[to]+'</div><div class=\"row\">台湾 1 甲 = 10 分 = 2934 坪；大陆亩与台分/甲口径完全不同</div>'};",
  "test": {
   "inputs": {
    "v": 1,
    "from": "jia",
    "to": "m2"
   },
-  "expect": "9699.1755"
+  "expect": "9699.1735"
  }
 },
 {
