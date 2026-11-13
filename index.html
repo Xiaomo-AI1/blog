@@ -19040,7 +19040,7 @@ function doSearch(){
     if(arr.length>=4){
       const c0=arr[0].t.cat;
       if(c0!==activeCat&&arr[1].t.cat===c0&&arr[2].t.cat===c0){
-        activeCat=c0; query=""; $("#q").value="";
+        activeCat=c0;
         buildSidebar(); buildGrid(); window.scrollTo(0,0);
         return;
       }
